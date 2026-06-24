@@ -50,11 +50,11 @@ function Logo() {
 }
 
 const navItems = [
-  { key: "nav.services", href: "#services" },
-  { key: "nav.work", href: "#work" },
-  { key: "nav.about", href: "#about" },
-  { key: "nav.journal", href: "#journal" },
-  { key: "nav.contact", href: "#contact" },
+  { key: "nav.services", to: "/services" },
+  { key: "nav.work", to: "/work" },
+  { key: "nav.about", to: "/about" },
+  { key: "nav.journal", to: "/journal" },
+  { key: "nav.contact", to: "/contact" },
 ] as const;
 
 export function Header() {
@@ -69,13 +69,15 @@ export function Header() {
 
           <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => (
-              <a
+              <Link
                 key={item.key}
-                href={item.href}
-                className="rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                to={item.to}
+                activeProps={{ className: "bg-secondary text-foreground" }}
+                inactiveProps={{ className: "text-muted-foreground hover:bg-secondary hover:text-foreground" }}
+                className="rounded-full px-3 py-1.5 text-sm transition-colors"
               >
                 {t(item.key)}
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -83,9 +85,9 @@ export function Header() {
             <LocaleSwitcher />
             <ThemeToggle />
             <Button variant="brand" size="sm" asChild>
-              <a href="#contact">
+              <Link to="/contact">
                 {t("cta.book")} <ArrowUpRight className="size-3.5" />
-              </a>
+              </Link>
             </Button>
           </div>
 
@@ -101,22 +103,22 @@ export function Header() {
                 <SheetTitle className="sr-only">Menu</SheetTitle>
                 <div className="mt-10 flex flex-col gap-1">
                   {navItems.map((item) => (
-                    <a
+                    <Link
                       key={item.key}
-                      href={item.href}
+                      to={item.to}
                       onClick={() => setOpen(false)}
                       className="rounded-xl px-4 py-3 text-2xl font-display font-semibold tracking-tight text-foreground transition-colors hover:bg-secondary"
                     >
                       {t(item.key)}
-                    </a>
+                    </Link>
                   ))}
                 </div>
                 <div className="mt-8 flex items-center justify-between">
                   <LocaleSwitcher />
                   <Button variant="brand" size="sm" asChild>
-                    <a href="#contact" onClick={() => setOpen(false)}>
+                    <Link to="/contact" onClick={() => setOpen(false)}>
                       {t("cta.book")}
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </SheetContent>

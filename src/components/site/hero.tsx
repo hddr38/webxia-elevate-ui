@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/locale-context";
 
@@ -51,12 +52,12 @@ export function Hero() {
             className="mt-10 flex flex-wrap items-center justify-center gap-3"
           >
             <Button variant="hero" size="xl" asChild>
-              <a href="#contact">
+              <Link to="/contact">
                 {t("hero.primary")} <ArrowRight className="size-4" />
-              </a>
+              </Link>
             </Button>
             <Button variant="glass" size="xl" asChild>
-              <a href="#work">{t("hero.secondary")}</a>
+              <Link to="/work">{t("hero.secondary")}</Link>
             </Button>
           </motion.div>
         </motion.div>

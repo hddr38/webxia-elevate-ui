@@ -11,6 +11,11 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { ThemeProvider } from "@/lib/theme-context";
+import { LocaleProvider } from "@/lib/locale-context";
+import { Header } from "@/components/site/header";
+import { Footer } from "@/components/site/footer";
+import { FloatingCTA } from "@/components/site/floating-cta";
 
 function NotFoundComponent() {
   return (
@@ -77,19 +82,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "WebXIA — Premium web & AI studio" },
+      {
+        name: "description",
+        content:
+          "WebXIA is a senior product team designing and shipping high-performance websites, applications and AI tooling for ambitious brands.",
+      },
+      { name: "author", content: "WebXIA" },
+      { property: "og:title", content: "WebXIA — Premium web & AI studio" },
+      { property: "og:description", content: "Engineered web experiences for ambitious brands." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { property: "og:site_name", content: "WebXIA" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.json" },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: appCss,
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap",
       },
     ],
   }),
@@ -118,8 +131,18 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <ThemeProvider>
+        <LocaleProvider>
+          <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
+            <Header />
+            <main>
+              <Outlet />
+            </main>
+            <Footer />
+            <FloatingCTA />
+          </div>
+        </LocaleProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

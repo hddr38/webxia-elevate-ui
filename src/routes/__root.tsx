@@ -11,6 +11,11 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { ThemeProvider } from "@/lib/theme-context";
+import { LocaleProvider } from "@/lib/locale-context";
+import { Header } from "@/components/site/header";
+import { Footer } from "@/components/site/footer";
+import { FloatingCTA } from "@/components/site/floating-cta";
 
 function NotFoundComponent() {
   return (

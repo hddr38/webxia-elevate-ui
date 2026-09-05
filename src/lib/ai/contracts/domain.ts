@@ -419,7 +419,7 @@ export function createAgentError(
     requestId?: string;
     conversationId?: string;
     details?: Record<string, unknown>;
-  } = {}
+  } = {},
 ): AgentError {
   const error = new Error(message) as AgentError;
   error.code = code;

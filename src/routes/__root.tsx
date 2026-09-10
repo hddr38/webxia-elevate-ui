@@ -15,7 +15,8 @@ import { ThemeProvider } from "@/lib/theme-context";
 import { LocaleProvider, useLocale } from "@/lib/locale-context";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
-import { FloatingCTA } from "@/components/site/floating-cta";
+import { ChatWidget } from "@/components/chat";
+import { Toaster } from "@/components/ui/sonner";
 import { seo } from "@/lib/seo";
 
 function NotFoundComponent() {
@@ -25,9 +26,7 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">{t("error.404.title")}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t("error.404.description")}
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("error.404.description")}</p>
         <div className="mt-6">
           <Link
             to="/"
@@ -52,9 +51,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           {t("error.500.title")}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t("error.500.description")}
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("error.500.description")}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -84,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     return {
       meta: [
         { charSet: "utf-8" },
-        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
         { title: s.title },
         { name: "description", content: s.description },
         { name: "author", content: "WebXIA" },
@@ -119,7 +116,9 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <ThemeProvider>
+          <LocaleProvider>{children}</LocaleProvider>
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>
@@ -133,18 +132,15 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <LocaleProvider>
-          <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
-            {!isAdmin && <Header />}
-            <main>
-              <Outlet />
-            </main>
-            {!isAdmin && <Footer />}
-            {!isAdmin && <FloatingCTA />}
-          </div>
-        </LocaleProvider>
-      </ThemeProvider>
+      <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
+        {!isAdmin && <Header />}
+        <main>
+          <Outlet />
+        </main>
+        {!isAdmin && <Footer />}
+        {!isAdmin && <ChatWidget />}
+        <Toaster position="bottom-right" richColors />
+      </div>
     </QueryClientProvider>
   );
 }

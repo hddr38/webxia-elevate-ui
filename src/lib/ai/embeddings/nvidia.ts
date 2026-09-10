@@ -5,11 +5,12 @@ import {
   ProviderErrorCode,
   mapHttpErrorToProviderError,
 } from "../providers";
+import { EMBEDDING_CONFIG, assertEmbeddingDimensions, resolveEmbeddingModel } from "./config";
 
 export class NvidiaEmbeddingProvider implements EmbeddingProvider {
   readonly id = "nvidia";
   readonly name = "NVIDIA NIM Embeddings";
-  readonly dimensions = 1536;
+  readonly dimensions: number = EMBEDDING_CONFIG.dimensions;
 
   private config: ProviderConfig | null = null;
   private initialized = false;
@@ -40,7 +41,11 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
 
   async embed(text: string): Promise<number[]> {
     const results = await this.batchEmbed([text]);
-    return results[0];
+    const first = results[0];
+    if (!first) {
+      throw new ProviderError("Empty embeddings response", "INVALID_RESPONSE", this.id, false);
+    }
+    return first;
   }
 
   async batchEmbed(texts: string[]): Promise<number[][]> {
@@ -63,7 +68,9 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
         method: "POST",
         headers: this.getHeaders(),
         body: JSON.stringify({
-          model: "nvidia/nv-embedqa-e5-v5",
+          // Single source of truth: EMBEDDING_CONFIG (env override allowed for
+          // the model NAME only — dimensions stay enforced by the guard below).
+          model: resolveEmbeddingModel(),
           input: texts,
           encoding_format: "float",
         }),
@@ -88,9 +95,37 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
         );
       }
 
-      return data.data
-        .sort((a: { index: number }, b: { index: number }) => a.index - b.index)
-        .map((item: { embedding: number[] }) => item.embedding);
+      const vectors = (data.data as Array<{ index: number; embedding: unknown }>)
+        .slice()
+        .sort((a, b) => a.index - b.index)
+        .map((item) => {
+          if (
+            !Array.isArray(item.embedding) ||
+            !item.embedding.every((n) => typeof n === "number")
+          ) {
+            throw new ProviderError(
+              "Invalid embedding vector in response",
+              "INVALID_RESPONSE",
+              this.id,
+              false,
+            );
+          }
+          const vector = item.embedding as number[];
+          // Fails loudly on dimension mismatch — never truncates/pads/slices.
+          assertEmbeddingDimensions(vector);
+          return vector;
+        });
+
+      if (vectors.length !== texts.length) {
+        throw new ProviderError(
+          `Embedding count mismatch: expected ${texts.length}, received ${vectors.length}`,
+          "INVALID_RESPONSE",
+          this.id,
+          false,
+        );
+      }
+
+      return vectors;
     } catch (error) {
       clearTimeout(timeout);
       if (error instanceof ProviderError) throw error;

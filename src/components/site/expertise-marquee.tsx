@@ -5,12 +5,36 @@ import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
 
 const marqueeKeys = [
-  { icon: "🌐", titleKey: "expertises.marquee.1.title" as const, descKey: "expertises.marquee.1.desc" as const },
-  { icon: "🎨", titleKey: "expertises.marquee.2.title" as const, descKey: "expertises.marquee.2.desc" as const },
-  { icon: "📈", titleKey: "expertises.marquee.3.title" as const, descKey: "expertises.marquee.3.desc" as const },
-  { icon: "🤖", titleKey: "expertises.marquee.4.title" as const, descKey: "expertises.marquee.4.desc" as const },
-  { icon: "⚙️", titleKey: "expertises.marquee.5.title" as const, descKey: "expertises.marquee.5.desc" as const },
-  { icon: "🔧", titleKey: "expertises.marquee.6.title" as const, descKey: "expertises.marquee.6.desc" as const },
+  {
+    icon: "🌐",
+    titleKey: "expertises.marquee.1.title" as const,
+    descKey: "expertises.marquee.1.desc" as const,
+  },
+  {
+    icon: "🎨",
+    titleKey: "expertises.marquee.2.title" as const,
+    descKey: "expertises.marquee.2.desc" as const,
+  },
+  {
+    icon: "📈",
+    titleKey: "expertises.marquee.3.title" as const,
+    descKey: "expertises.marquee.3.desc" as const,
+  },
+  {
+    icon: "🤖",
+    titleKey: "expertises.marquee.4.title" as const,
+    descKey: "expertises.marquee.4.desc" as const,
+  },
+  {
+    icon: "⚙️",
+    titleKey: "expertises.marquee.5.title" as const,
+    descKey: "expertises.marquee.5.desc" as const,
+  },
+  {
+    icon: "🔧",
+    titleKey: "expertises.marquee.6.title" as const,
+    descKey: "expertises.marquee.6.desc" as const,
+  },
 ];
 
 const itemWidth = 280;

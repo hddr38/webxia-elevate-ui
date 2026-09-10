@@ -178,7 +178,9 @@ function ArticlesListPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(article.created_at).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US")}
+                      {new Date(article.created_at).toLocaleDateString(
+                        locale === "fr" ? "fr-FR" : "en-US",
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -195,13 +197,17 @@ function ArticlesListPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>{t("admin.articles.deleteConfirm")}</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                {t("admin.articles.deleteConfirm")}
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
                                 {t("admin.articles.deleteDesc")}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>{t("admin.articles.deleteCancel")}</AlertDialogCancel>
+                              <AlertDialogCancel>
+                                {t("admin.articles.deleteCancel")}
+                              </AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDelete(article.id)}
                                 className="bg-red-600 hover:bg-red-700"

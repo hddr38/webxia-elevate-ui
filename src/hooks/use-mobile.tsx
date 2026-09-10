@@ -1,6 +1,7 @@
 import * as React from "react";
+import { MOBILE_BREAKPOINT_PX } from "@/components/chat/constants";
 
-const MOBILE_BREAKPOINT = 768;
+const MOBILE_BREAKPOINT = MOBILE_BREAKPOINT_PX;
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);

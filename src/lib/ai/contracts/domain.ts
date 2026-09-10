@@ -132,6 +132,7 @@ export interface RAGContext {
 }
 
 export interface ScoredDocument {
+  /** Stable unique id of the retrieved unit (the chunk id). */
   id: string;
   title: string;
   content: string;
@@ -139,6 +140,10 @@ export interface ScoredDocument {
   metadata: DocumentMetadata;
   score: number;
   distance: number;
+  /** Chunk identity — always kept separate from the document identity. */
+  chunkId: string;
+  chunkIndex: number;
+  documentId: string;
 }
 
 export interface DocumentSource {
@@ -155,6 +160,9 @@ export interface DocumentMetadata {
   tags: string[];
   locale: string;
   priority: number;
+  chunkId?: string;
+  // Extra domain fields are preserved through jsonb columns as JSON.
+  [key: string]: string | number | boolean | string[] | undefined;
 }
 
 export type RetrievalStrategy = "semantic" | "keyword" | "hybrid" | "rerank";
@@ -166,7 +174,7 @@ export interface LLMProvider {
 
   initialize(config: ProviderConfig): Promise<void>;
   complete(request: ProviderRequest): Promise<ProviderResponse>;
-  stream(request: ProviderRequest): AsyncIterable<StreamEvent>;
+  stream(request: ProviderRequest): AsyncIterable<StreamChunk>;
   abort(): void;
   getModel(modelId: string): AIModel | undefined;
   isAvailable(): boolean;
@@ -177,8 +185,10 @@ export interface EmbeddingProvider {
   readonly name: string;
   readonly dimensions: number;
 
+  initialize(config: ProviderConfig): Promise<void>;
   embed(text: string): Promise<number[]>;
   batchEmbed(texts: string[]): Promise<number[][]>;
+  isAvailable(): boolean;
 }
 
 export interface ProviderConfig {
@@ -194,6 +204,9 @@ export interface ProviderCapabilities {
   structuredOutput: boolean;
   embeddings: boolean;
   vision: boolean;
+  /** Reasoning toggle (chat_template_kwargs.enable_thinking) documented for
+   * this model by official NVIDIA samples. Absent = never send the flag. */
+  thinking?: boolean;
 }
 
 export interface AIModel {
@@ -236,6 +249,18 @@ export interface TokenUsage {
 }
 
 export type FinishReason = "stop" | "length" | "tool_calls" | "error" | "abort";
+
+export interface StreamChunk {
+  type: "chunk" | "done" | "error" | "tool_calls";
+  content?: string;
+  toolCalls?: ToolCall[];
+  usage?: TokenUsage;
+  finishReason?: FinishReason;
+  error?: { code: string; message: string; recoverable: boolean };
+  /** Thinking deltas observed on this stream (reasoning models). Informational. */
+  reasoningChunks?: number;
+  index: number;
+}
 
 export interface ToolDefinition {
   type: "function";
@@ -300,6 +325,11 @@ export interface Citation {
   source: string;
   excerpt: string;
   relevance: number;
+  documentId?: string;
+  chunkId?: string;
+  /** Denormalized citation identity (derived ONLY from server retrieval). */
+  title?: string;
+  chunkIndex?: number;
 }
 
 export type AgentEventType =
@@ -341,36 +371,63 @@ export interface StreamEvent<T = unknown> {
 export interface MessageStartEvent {
   type: "message_start";
   data: { messageId: string };
+  timestamp: number;
+  conversationId: string;
+  requestId: string;
 }
 
 export interface TextDeltaEvent {
   type: "text_delta";
   data: { content: string; index: number };
+  timestamp: number;
+  conversationId: string;
+  requestId: string;
 }
 
 export interface ToolStartEvent {
   type: "tool_start";
   data: { toolCallId: string; toolName: string; arguments: string };
+  timestamp: number;
+  conversationId: string;
+  requestId: string;
 }
 
 export interface ToolResultEvent {
   type: "tool_result";
   data: ToolResult;
+  timestamp: number;
+  conversationId: string;
+  requestId: string;
 }
 
 export interface CitationEvent {
   type: "citation";
   data: Citation;
+  timestamp: number;
+  conversationId: string;
+  requestId: string;
 }
 
 export interface MessageCompleteEvent {
   type: "message_complete";
-  data: { fullContent: string; usage: TokenUsage; toolCalls?: ToolCall[] };
+  data: {
+    fullContent: string;
+    usage: TokenUsage;
+    toolCalls?: ToolCall[];
+    conversationId: string;
+  };
+  timestamp: number;
+  conversationId: string;
+  requestId: string;
+  durationMs?: number;
 }
 
 export interface StreamErrorEvent {
   type: "error";
   data: { code: string; message: string; recoverable: boolean };
+  timestamp: number;
+  conversationId: string;
+  requestId: string;
 }
 
 export type TypedStreamEvent =
@@ -388,11 +445,15 @@ export type AgentErrorCode =
   | "PROVIDER_AUTH_ERROR"
   | "PROVIDER_RATE_LIMIT"
   | "PROVIDER_INVALID_REQUEST"
+  | "PROVIDER_ERROR"
   | "INVALID_TOOL_CALL"
   | "TOOL_UNAUTHORIZED"
   | "TOOL_EXECUTION_FAILED"
   | "TOOL_VALIDATION_FAILED"
   | "MAX_STEPS_EXCEEDED"
+  | "MAX_TOOL_CALLS_EXCEEDED"
+  | "GLOBAL_TIMEOUT"
+  | "UNKNOWN_ERROR"
   | "CONTEXT_TOO_LARGE"
   | "TOOL_RESULT_TOO_LARGE"
   | "RAG_UNAVAILABLE"

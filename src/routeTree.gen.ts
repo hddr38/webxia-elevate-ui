@@ -21,6 +21,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as JournalSlugRouteImport } from './routes/journal.$slug'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AdminLayoutRouteImport } from './routes/admin/_layout'
 import { Route as AdminRealisationsIndexRouteImport } from './routes/admin/realisations/index'
 import { Route as AdminArticlesIndexRouteImport } from './routes/admin/articles/index'
@@ -91,6 +92,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminLayoutRoute = AdminLayoutRouteImport.update({
   id: '/admin/_layout',
   path: '/admin',
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof ServicesRoute
   '/work': typeof WorkRoute
   '/admin': typeof AdminLayoutRoute
+  '/api/chat': typeof ApiChatRoute
   '/auth/login': typeof AuthLoginRoute
   '/journal/$slug': typeof JournalSlugRoute
   '/admin/': typeof AdminIndexRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/services': typeof ServicesRoute
   '/work': typeof WorkRoute
   '/admin': typeof AdminIndexRoute
+  '/api/chat': typeof ApiChatRoute
   '/auth/login': typeof AuthLoginRoute
   '/journal/$slug': typeof JournalSlugRoute
   '/admin/articles/$id': typeof AdminArticlesIdRoute
@@ -187,6 +195,7 @@ export interface FileRoutesById {
   '/services': typeof ServicesRoute
   '/work': typeof WorkRoute
   '/admin/_layout': typeof AdminLayoutRoute
+  '/api/chat': typeof ApiChatRoute
   '/auth/login': typeof AuthLoginRoute
   '/journal/$slug': typeof JournalSlugRoute
   '/admin/': typeof AdminIndexRoute
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/work'
     | '/admin'
+    | '/api/chat'
     | '/auth/login'
     | '/journal/$slug'
     | '/admin/'
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/work'
     | '/admin'
+    | '/api/chat'
     | '/auth/login'
     | '/journal/$slug'
     | '/admin/articles/$id'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/work'
     | '/admin/_layout'
+    | '/api/chat'
     | '/auth/login'
     | '/journal/$slug'
     | '/admin/'
@@ -277,6 +289,7 @@ export interface RootRouteChildren {
   ServicesRoute: typeof ServicesRoute
   WorkRoute: typeof WorkRoute
   AdminLayoutRoute: typeof AdminLayoutRoute
+  ApiChatRoute: typeof ApiChatRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminArticlesIdRoute: typeof AdminArticlesIdRoute
@@ -374,6 +387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/_layout': {
       id: '/admin/_layout'
       path: '/admin'
@@ -455,6 +475,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServicesRoute: ServicesRoute,
   WorkRoute: WorkRoute,
   AdminLayoutRoute: AdminLayoutRoute,
+  ApiChatRoute: ApiChatRoute,
   AuthLoginRoute: AuthLoginRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminArticlesIdRoute: AdminArticlesIdRoute,

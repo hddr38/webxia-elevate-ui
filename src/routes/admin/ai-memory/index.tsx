@@ -140,7 +140,9 @@ function AIMemoryPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("admin.dashboard.totalArticles")}</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("admin.dashboard.totalArticles")}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{total}</div>
@@ -250,7 +252,9 @@ function AIMemoryPage() {
                       {memory.session_id.slice(0, 8)}...
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(memory.created_at).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US")}
+                      {new Date(memory.created_at).toLocaleDateString(
+                        locale === "fr" ? "fr-FR" : "en-US",
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -315,13 +319,17 @@ function AIMemoryPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>{t("admin.aiMemory.deleteConfirm")}</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                {t("admin.aiMemory.deleteConfirm")}
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
                                 {t("admin.aiMemory.deleteDesc")}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>{t("admin.aiMemory.deleteCancel")}</AlertDialogCancel>
+                              <AlertDialogCancel>
+                                {t("admin.aiMemory.deleteCancel")}
+                              </AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDelete(memory.id)}
                                 className="bg-red-600 hover:bg-red-700"

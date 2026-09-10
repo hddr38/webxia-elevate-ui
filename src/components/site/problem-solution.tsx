@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
 
 export function ProblemSolution() {
@@ -80,9 +81,9 @@ export function ProblemSolution() {
             </ul>
             <div className="mt-8 flex justify-center">
               <Button variant="outline" size="lg" asChild>
-                <a href="#services">
+                <Link to="/journal">
                   {t("home.problemSolution.ctaLeft")} <ArrowRight className="size-4" />
-                </a>
+                </Link>
               </Button>
             </div>
           </motion.article>
@@ -151,9 +152,9 @@ export function ProblemSolution() {
             </ul>
             <div className="mt-8 flex justify-center">
               <Button variant="brand" size="lg" asChild>
-                <a href="#services">
+                <Link to="/services">
                   {t("home.problemSolution.cta")} <ArrowRight className="size-4" />
-                </a>
+                </Link>
               </Button>
             </div>
           </motion.article>

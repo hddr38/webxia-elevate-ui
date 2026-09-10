@@ -317,7 +317,10 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
                 {galleryImages.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {galleryImages.map((img, index) => (
-                      <div key={index} className="flex items-center gap-2 bg-muted px-3 py-1 rounded">
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 bg-muted px-3 py-1 rounded"
+                      >
                         <Image className="h-4 w-4" />
                         <span className="text-sm truncate max-w-[200px]">{img}</span>
                         <Button

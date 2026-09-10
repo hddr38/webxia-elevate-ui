@@ -65,10 +65,14 @@ function AdminDashboard() {
               <p className="text-xs text-muted-foreground">
                 {card.published !== undefined && (
                   <>
-                    <span className="text-green-600">{card.published} {t("admin.dashboard.publishedArticles")}</span>
+                    <span className="text-green-600">
+                      {card.published} {t("admin.dashboard.publishedArticles")}
+                    </span>
                     {card.drafts !== undefined && <span className="mx-1 text-gray-400">·</span>}
                     {card.drafts !== undefined && (
-                      <span className="text-yellow-600">{card.drafts} {t("admin.dashboard.draftArticles")}</span>
+                      <span className="text-yellow-600">
+                        {card.drafts} {t("admin.dashboard.draftArticles")}
+                      </span>
                     )}
                   </>
                 )}
@@ -122,7 +126,9 @@ function AdminDashboard() {
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t("admin.dashboard.publishedArticles")}</span>
+              <span className="text-muted-foreground">
+                {t("admin.dashboard.publishedArticles")}
+              </span>
               <span className="font-medium text-green-600">
                 {(stats?.articles.published ?? 0) + (stats?.realisations.published ?? 0)}
               </span>

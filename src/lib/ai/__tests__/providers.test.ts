@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NvidiaProvider } from "../providers/nvidia";
 import { NvidiaEmbeddingProvider } from "../embeddings/nvidia";
 import { ModelRouter, createModelRouter } from "../providers/model-router";
+import type { AIModel, StreamChunk } from "../contracts";
 import {
   ProviderError,
   ProviderErrorCode,
@@ -9,6 +10,7 @@ import {
   mapHttpErrorToProviderError,
 } from "../providers/errors";
 import { createMockProvider, createMockRequest, createMockStreamRequest } from "./test-utils";
+import { EMBEDDING_CONFIG } from "../embeddings/config";
 
 describe("Provider Errors", () => {
   it("creates retryable errors correctly", () => {
@@ -83,7 +85,7 @@ describe("NvidiaProvider", () => {
   });
 
   it("throws when streaming without initialization", async () => {
-    const stream = provider.stream(createMockStreamRequest());
+    const stream = provider.stream(createMockStreamRequest())[Symbol.asyncIterator]();
     await expect(stream.next()).rejects.toThrow("Provider not initialized");
   });
 
@@ -105,10 +107,11 @@ describe("NvidiaEmbeddingProvider", () => {
     provider = new NvidiaEmbeddingProvider();
   });
 
-  it("has correct id, name, and dimensions", () => {
+  it("has correct id, name, and dimensions from EmbeddingConfig", () => {
     expect(provider.id).toBe("nvidia");
     expect(provider.name).toBe("NVIDIA NIM Embeddings");
-    expect(provider.dimensions).toBe(1536);
+    expect(provider.dimensions).toBe(EMBEDDING_CONFIG.dimensions);
+    expect(provider.dimensions).toBe(2048);
   });
 
   it("is not available before initialization", () => {
@@ -131,6 +134,133 @@ describe("NvidiaEmbeddingProvider", () => {
       maxRetries: 2,
     });
     expect(provider.isAvailable()).toBe(true);
+  });
+
+  function mockEmbeddingFetch(vectors: number[][] | "invalid" | { status: number }) {
+    return vi.fn().mockImplementation(() => {
+      if (typeof vectors === "object" && !Array.isArray(vectors) && "status" in vectors) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ message: "error" }), { status: vectors.status }),
+        );
+      }
+      const data =
+        vectors === "invalid"
+          ? { unexpected: true }
+          : {
+              data: (vectors as number[][]).map((embedding, index) => ({ index, embedding })),
+            };
+      return Promise.resolve(new Response(JSON.stringify(data), { status: 200 }));
+    });
+  }
+
+  async function initProvider() {
+    await provider.initialize({
+      apiKey: "test-key",
+      baseUrl: "https://test.api/v1",
+      timeout: 30000,
+      maxRetries: 2,
+    });
+  }
+
+  function dims(n: number): number[] {
+    return new Array(n).fill(0.1);
+  }
+
+  it("accepts 2048-dim embeddings and preserves index order", async () => {
+    await initProvider();
+    const fetchMock = mockEmbeddingFetch([dims(2048), dims(2048)]);
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const vectors = await provider.batchEmbed(["b", "a-reordered"]);
+      expect(vectors).toHaveLength(2);
+      expect(vectors[0]).toHaveLength(2048);
+      expect(vectors[1]).toHaveLength(2048);
+      const body = JSON.parse(String(fetchMock.mock.calls[0][1].body)) as { model: string };
+      expect(body.model).toBe("nvidia/nemotron-3-embed-1b");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("rejects wrong-dimension vectors without resizing", async () => {
+    await initProvider();
+    vi.stubGlobal("fetch", mockEmbeddingFetch([dims(1536)]));
+    try {
+      await expect(provider.batchEmbed(["test"])).rejects.toThrow(/dimension/i);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("rejects embedding count mismatches", async () => {
+    await initProvider();
+    vi.stubGlobal("fetch", mockEmbeddingFetch([dims(2048)]));
+    try {
+      await expect(provider.batchEmbed(["one", "two"])).rejects.toThrow(/count mismatch/i);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("rejects invalid response shapes", async () => {
+    await initProvider();
+    vi.stubGlobal("fetch", mockEmbeddingFetch("invalid"));
+    try {
+      await expect(provider.batchEmbed(["test"])).rejects.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("maps HTTP 400 to INVALID_REQUEST", async () => {
+    await initProvider();
+    vi.stubGlobal("fetch", mockEmbeddingFetch({ status: 400 }));
+    try {
+      await expect(provider.batchEmbed(["test"])).rejects.toMatchObject({
+        code: "INVALID_REQUEST",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("maps HTTP 429 to recoverable RATE_LIMIT", async () => {
+    await initProvider();
+    vi.stubGlobal("fetch", mockEmbeddingFetch({ status: 429 }));
+    try {
+      await expect(provider.batchEmbed(["test"])).rejects.toMatchObject({
+        code: "RATE_LIMIT",
+        recoverable: true,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("maps HTTP 5xx to recoverable UNAVAILABLE", async () => {
+    await initProvider();
+    vi.stubGlobal("fetch", mockEmbeddingFetch({ status: 503 }));
+    try {
+      await expect(provider.batchEmbed(["test"])).rejects.toMatchObject({
+        code: "UNAVAILABLE",
+        recoverable: true,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("returns [] for empty batch without calling fetch", async () => {
+    await initProvider();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      await expect(provider.batchEmbed([])).resolves.toEqual([]);
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 
@@ -179,9 +309,10 @@ describe("ModelRouter", () => {
     const router2 = new ModelRouter({
       primaryProvider: "test",
       primaryModel: "nonexistent",
+      enableFallback: false,
     });
     const mockProvider2 = createMockProvider({
-      getModel: vi.fn().mockReturnValue(undefined),
+      getModel: vi.fn<(modelId: string) => AIModel | undefined>().mockReturnValue(undefined),
     });
     router2.register(mockProvider2);
     expect(() => router2.getDefaultModel()).toThrow("not found");
@@ -194,11 +325,7 @@ describe("ModelRouter", () => {
   });
 
   it("streams with primary provider", async () => {
-    const chunks: Awaited<ReturnType<typeof router.streamWithFallback>> extends AsyncIterable<
-      infer T
-    >
-      ? T
-      : never[] = [];
+    const chunks: StreamChunk[] = [];
     for await (const chunk of router.streamWithFallback(createMockStreamRequest())) {
       chunks.push(chunk);
     }

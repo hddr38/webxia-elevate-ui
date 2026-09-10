@@ -88,9 +88,7 @@ export function Contact() {
             >
               <div className="mb-6">
                 <h3 className="text-2xl font-semibold tracking-tight">{t("contact.form.title")}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {t("contact.form.hint")}
-                </p>
+                <p className="text-sm text-muted-foreground">{t("contact.form.hint")}</p>
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label={t("form.name")} error={errors.name?.message}>

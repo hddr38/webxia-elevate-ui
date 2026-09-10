@@ -83,6 +83,27 @@ const translations: Record<Locale, Dict> = {
     "footer.madeby": "Designed and developed by WebXIA",
     "floating.cta": "Let's talk",
 
+    "chat.widget.title": "Chat with Webi",
+    "chat.widget.subtitle": "Your AI assistant",
+    "chat.input.placeholder": "Ask your question…",
+    "chat.input.send": "Send",
+    "chat.typing": "Webi is typing…",
+    "chat.tool.search_knowledge": "Webi searching knowledge base…",
+    "chat.tool.summarize": "Webi summarizing…",
+    "chat.tool.executing": "Webi executing…",
+    "chat.tool.result": "Tool result",
+    "chat.error.generic": "An error occurred. Please try again.",
+    "chat.error.rate_limit": "Too many requests. Contact us to continue.",
+    "chat.error.unavailable": "Service temporarily unavailable.",
+    "chat.reset": "New conversation",
+    "chat.close": "Close",
+    "chat.contact.cta": "Talk to a human",
+    "chat.contact.description": "Need personalized help? Contact our team.",
+    "chat.limit.remaining": "messages remaining",
+    "chat.limit.reached": "Message limit reached",
+    "chat.limit.description": "You have reached the message limit for this session.",
+    "chat.citations.title": "Sources ({count})",
+    "chat.empty": "Start a conversation with Webi",
     "work.eyebrow": "Selected work",
     "work.title": "Products we shipped. Outcomes we own.",
     "work.subtitle": "A selection of recent engagements across web, app, AI and brand.",
@@ -212,6 +233,7 @@ const translations: Record<Locale, Dict> = {
     "home.whyChooseUs.6": "Human support at every step",
     "home.whyChooseUs.7": "Measurable results",
     "home.whyChooseUs.8": "A trusted long-term partner",
+    "home.whyChooseUs.cta": "Request a free quote",
 
     "contact.form.title": "Send us a message",
     "contact.form.hint": "We'll get back to you within one business day.",
@@ -245,11 +267,9 @@ const translations: Record<Locale, Dict> = {
     "seo.services.description":
       "Web design, branding, SEO, custom development, AI integration and growth — a focused team for ambitious projects.",
     "seo.contact.title": "Contact — WebXIA",
-    "seo.contact.description":
-      "Tell us about your project. We reply within one business day.",
+    "seo.contact.description": "Tell us about your project. We reply within one business day.",
     "seo.journal.title": "Journal — WebXIA",
-    "seo.journal.description":
-      "Articles, case studies and news from the WebXIA studio.",
+    "seo.journal.description": "Articles, case studies and news from the WebXIA studio.",
 
     "team.founder.role": "Founder · WebXIA",
     "team.founder.bio":
@@ -434,6 +454,27 @@ const translations: Record<Locale, Dict> = {
     "footer.madeby": "Conçu et développé par WebXIA",
     "floating.cta": "Discutons",
 
+    "chat.widget.title": "Discutez avec Webi",
+    "chat.widget.subtitle": "Votre assistant IA",
+    "chat.input.placeholder": "Posez votre question…",
+    "chat.input.send": "Envoyer",
+    "chat.typing": "Webi écrit…",
+    "chat.tool.search_knowledge": "Webi recherche dans ses connaissances…",
+    "chat.tool.summarize": "Webi résume…",
+    "chat.tool.executing": "Webi exécute…",
+    "chat.tool.result": "Résultat de l'outil",
+    "chat.error.generic": "Une erreur est survenue. Réessayez.",
+    "chat.error.rate_limit": "Trop de requêtes. Contactez-nous pour continuer.",
+    "chat.error.unavailable": "Service temporairement indisponible.",
+    "chat.reset": "Nouvelle conversation",
+    "chat.close": "Fermer",
+    "chat.contact.cta": "Parler à un humain",
+    "chat.contact.description": "Besoin d'aide personnalisée ? Contactez notre équipe.",
+    "chat.limit.remaining": "messages restants",
+    "chat.limit.reached": "Limite de messages atteinte",
+    "chat.limit.description": "Vous avez atteint la limite de messages pour cette session.",
+    "chat.citations.title": "Sources ({count})",
+    "chat.empty": "Commencez une conversation avec Webi",
     "work.eyebrow": "Réalisations",
     "work.title": "Des produits livrés. Des résultats assumés.",
     "work.subtitle": "Une sélection de projets récents — web, app, IA et identité.",
@@ -568,6 +609,7 @@ const translations: Record<Locale, Dict> = {
     "home.whyChooseUs.6": "Un accompagnement humain à chaque étape",
     "home.whyChooseUs.7": "Des résultats mesurables",
     "home.whyChooseUs.8": "Un partenaire de confiance sur le long terme",
+    "home.whyChooseUs.cta": "Demander un devis gratuit",
 
     "contact.form.title": "Envoyez-nous un message",
     "contact.form.hint": "Nous vous répondrons dans les plus brefs délais.",
@@ -583,8 +625,7 @@ const translations: Record<Locale, Dict> = {
     "about.team.photoAlt": "Photo de Mehdi E.",
 
     "error.404.title": "Page introuvable",
-    "error.404.description":
-      "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "error.404.description": "La page que vous recherchez n'existe pas ou a été déplacée.",
     "error.404.cta": "Retour à l'accueil",
     "error.500.title": "Cette page n'a pas pu se charger",
     "error.500.description":
@@ -602,11 +643,9 @@ const translations: Record<Locale, Dict> = {
     "seo.services.description":
       "Création web, branding, SEO, développement sur mesure, intégration IA et croissance — une équipe focus pour des projets ambitieux.",
     "seo.contact.title": "Contact — WebXIA",
-    "seo.contact.description":
-      "Parlez-nous de votre projet. Nous répondons sous un jour ouvré.",
+    "seo.contact.description": "Parlez-nous de votre projet. Nous répondons sous un jour ouvré.",
     "seo.journal.title": "Journal — WebXIA",
-    "seo.journal.description":
-      "Articles, études de cas et actualités du studio WebXIA.",
+    "seo.journal.description": "Articles, études de cas et actualités du studio WebXIA.",
 
     "team.founder.role": "Fondateur · WebXIA",
     "team.founder.bio":
@@ -721,7 +760,7 @@ const translations: Record<Locale, Dict> = {
 const LocaleContext = createContext<{
   locale: Locale;
   setLocale: (l: Locale) => void;
-  t: (key: keyof typeof translations.en) => string;
+  t: (key: keyof typeof translations.en, params?: Record<string, string | number>) => string;
 } | null>(null);
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
@@ -738,7 +777,15 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = locale;
   }, [locale]);
 
-  const t = (key: keyof typeof translations.en) => translations[locale][key] ?? String(key);
+  const t = (key: keyof typeof translations.en, params?: Record<string, string | number>) => {
+    let value = translations[locale][key] ?? String(key);
+    if (params) {
+      for (const [name, val] of Object.entries(params)) {
+        value = value.replace(`{${name}}`, String(val));
+      }
+    }
+    return value;
+  };
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale, t }}>{children}</LocaleContext.Provider>

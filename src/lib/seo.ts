@@ -40,8 +40,7 @@ export const seo: Record<"fr" | "en", SeoPage> = {
     },
     journal: {
       title: "Journal — WebXIA",
-      description:
-        "Articles, études de cas et actualités du studio WebXIA.",
+      description: "Articles, études de cas et actualités du studio WebXIA.",
       ogDescription: "Notes de terrain du studio.",
     },
   },
@@ -54,8 +53,7 @@ export const seo: Record<"fr" | "en", SeoPage> = {
     },
     about: {
       title: "About — WebXIA",
-      description:
-        "A small, senior digital team obsessed with craft, design, development and AI.",
+      description: "A small, senior digital team obsessed with craft, design, development and AI.",
       ogDescription: "A senior digital team obsessed with craft and outcomes.",
     },
     services: {
@@ -72,8 +70,7 @@ export const seo: Record<"fr" | "en", SeoPage> = {
     },
     journal: {
       title: "Journal — WebXIA",
-      description:
-        "Articles, case studies and news from the WebXIA studio.",
+      description: "Articles, case studies and news from the WebXIA studio.",
       ogDescription: "Field notes from the studio.",
     },
   },

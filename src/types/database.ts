@@ -21,6 +21,12 @@ export type CreateRealisationInput = Omit<RealisationInsert, "author_id">;
 export type CreateAIMemoryInput = Omit<AIMemoryInsert, "user_id">;
 
 // --- Update types (require id) ---
-export type UpdateArticleInput = Partial<Database["public"]["Tables"]["articles"]["Update"]> & { id: string };
-export type UpdateRealisationInput = Partial<Database["public"]["Tables"]["realisations"]["Update"]> & { id: string };
-export type UpdateAIMemoryInput = Partial<Database["public"]["Tables"]["ai_memory"]["Update"]> & { id: string };
+export type UpdateArticleInput = Partial<Database["public"]["Tables"]["articles"]["Update"]> & {
+  id: string;
+};
+export type UpdateRealisationInput = Partial<
+  Database["public"]["Tables"]["realisations"]["Update"]
+> & { id: string };
+export type UpdateAIMemoryInput = Partial<Database["public"]["Tables"]["ai_memory"]["Update"]> & {
+  id: string;
+};

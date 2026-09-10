@@ -9,8 +9,13 @@ import { seo } from "@/lib/seo";
 
 export const Route = createFileRoute("/journal")({
   loader: async () => {
-    const result = await getPublishedArticles({ data: {} });
-    return { articles: result.data.map(articleToDisplay) };
+    try {
+      const result = await getPublishedArticles({ data: {} });
+      return { articles: result.data.map(articleToDisplay) };
+    } catch (error) {
+      console.error("[journal] Failed to load articles:", error);
+      return { articles: [] as DisplayArticle[] };
+    }
   },
   head: () => {
     const locale = (typeof window !== "undefined" && localStorage.getItem("webxia-locale")) || "fr";

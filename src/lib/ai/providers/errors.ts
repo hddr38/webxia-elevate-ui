@@ -19,7 +19,8 @@ export type ProviderErrorCode =
   | "INVALID_REQUEST"
   | "UNSUPPORTED_CAPABILITY"
   | "INVALID_RESPONSE"
-  | "STREAM_ERROR";
+  | "STREAM_ERROR"
+  | "INTERNAL_ERROR";
 
 export function isRetryableError(error: ProviderError): boolean {
   return (

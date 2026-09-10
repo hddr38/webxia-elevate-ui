@@ -21,44 +21,44 @@ WebXIA est une agence web qui affiche une identé **premium, épurée et techniq
 
 ### Light mode (thème par défaut)
 
-| Nom fonctionnel | HEX | RGB | Usage |
-|---|---|---|---|
-| **Background** | `#FCFCFD` | `252, 252, 253` | Fond de page principal |
-| **Foreground** | `#262629` | `38, 38, 41` | Texte corps, icônes |
-| **Surface** | `#F6F6F8` | `246, 246, 248` | Sections alternées, fond subtil |
-| **Card** | `#FFFFFF` | `255, 255, 255` | Cartes, modales, popovers |
-| **Primary** | `#262629` | `38, 38, 41` | Boutons principaux sombres, éléments forts |
-| **Primary Foreground** | `#FCFCFD` | `252, 252, 253` | Texte sur Primary |
-| **Secondary** | `#F4F4F5` | `244, 244, 245` | Boutons secondaires, badges subtils |
-| **Muted** | `#F4F4F5` | `244, 244, 245` | Fond désactivé, arrière-plans neutres |
-| **Muted Foreground** | `#7C7C85` | `124, 124, 133` | Texte secondaire, labels, placeholders |
-| **Brand** | `#1D4ED8` | `29, 78, 216` | CTA, liens actifs, accents principaux |
-| **Brand Glow** | `#6D8DF5` | `109, 141, 245` | Ombres portées, dégradés brand |
-| **Accent** | `#9333EA` | `147, 51, 234` | Accent violet, badges spéciaux |
-| **Border** | `#E2E2E5` | `226, 226, 229` | Bordures globales, séparateurs |
-| **Input** | `#DCDFE4` | `220, 223, 228` | Bordures de champs de formulaire |
-| **Ring** | `#3B6BF8` | `59, 107, 248` | Focus ring (accessibilité) |
-| **Destructive** | `#DC2626` | `220, 38, 38` | Erreurs, alertes critiques |
+| Nom fonctionnel        | HEX       | RGB             | Usage                                      |
+| ---------------------- | --------- | --------------- | ------------------------------------------ |
+| **Background**         | `#FCFCFD` | `252, 252, 253` | Fond de page principal                     |
+| **Foreground**         | `#262629` | `38, 38, 41`    | Texte corps, icônes                        |
+| **Surface**            | `#F6F6F8` | `246, 246, 248` | Sections alternées, fond subtil            |
+| **Card**               | `#FFFFFF` | `255, 255, 255` | Cartes, modales, popovers                  |
+| **Primary**            | `#262629` | `38, 38, 41`    | Boutons principaux sombres, éléments forts |
+| **Primary Foreground** | `#FCFCFD` | `252, 252, 253` | Texte sur Primary                          |
+| **Secondary**          | `#F4F4F5` | `244, 244, 245` | Boutons secondaires, badges subtils        |
+| **Muted**              | `#F4F4F5` | `244, 244, 245` | Fond désactivé, arrière-plans neutres      |
+| **Muted Foreground**   | `#7C7C85` | `124, 124, 133` | Texte secondaire, labels, placeholders     |
+| **Brand**              | `#1D4ED8` | `29, 78, 216`   | CTA, liens actifs, accents principaux      |
+| **Brand Glow**         | `#6D8DF5` | `109, 141, 245` | Ombres portées, dégradés brand             |
+| **Accent**             | `#9333EA` | `147, 51, 234`  | Accent violet, badges spéciaux             |
+| **Border**             | `#E2E2E5` | `226, 226, 229` | Bordures globales, séparateurs             |
+| **Input**              | `#DCDFE4` | `220, 223, 228` | Bordures de champs de formulaire           |
+| **Ring**               | `#3B6BF8` | `59, 107, 248`  | Focus ring (accessibilité)                 |
+| **Destructive**        | `#DC2626` | `220, 38, 38`   | Erreurs, alertes critiques                 |
 
 ### Dark mode (`.dark`)
 
-| Nom fonctionnel | HEX | RGB | Usage |
-|---|---|---|---|
-| **Background** | `#191B23` | `25, 27, 35` | Fond de page dark |
-| **Foreground** | `#F8F8FA` | `248, 248, 250` | Texte principal dark |
-| **Surface** | `#23252D` | `35, 37, 45` | Surfaces surélevées |
-| **Card** | `#262830` | `38, 40, 48` | Cartes dark |
-| **Primary** | `#F8F8FA` | `248, 248, 250` | Boutons primaires inversés |
-| **Primary Foreground** | `#191B23` | `25, 27, 35` | Texte sur Primary dark |
-| **Secondary** | `#303239` | `48, 50, 57` | Boutons secondaires dark |
-| **Muted** | `#2D2F37` | `45, 47, 55` | Zones désactivées dark |
-| **Muted Foreground** | `#A6A6AD` | `166, 166, 173` | Texte secondaire dark |
-| **Brand** | `#4D7BF9` | `77, 123, 249` | CTA et accents (légèrement éclaircis) |
-| **Brand Glow** | `#8DA3FB` | `141, 163, 251` | Glow plus marqué en dark |
-| **Accent** | `#B166F4` | `177, 102, 244` | Accent violet éclairci |
-| **Border** | `#FFFFFF14` | `255, 255, 255 / 8%` | Bordures translucides |
-| **Ring** | `#5C8BFB` | `92, 139, 251` | Focus ring dark |
-| **Destructive** | `#EF4444` | `239, 68, 68` | Erreurs dark |
+| Nom fonctionnel        | HEX         | RGB                  | Usage                                 |
+| ---------------------- | ----------- | -------------------- | ------------------------------------- |
+| **Background**         | `#191B23`   | `25, 27, 35`         | Fond de page dark                     |
+| **Foreground**         | `#F8F8FA`   | `248, 248, 250`      | Texte principal dark                  |
+| **Surface**            | `#23252D`   | `35, 37, 45`         | Surfaces surélevées                   |
+| **Card**               | `#262830`   | `38, 40, 48`         | Cartes dark                           |
+| **Primary**            | `#F8F8FA`   | `248, 248, 250`      | Boutons primaires inversés            |
+| **Primary Foreground** | `#191B23`   | `25, 27, 35`         | Texte sur Primary dark                |
+| **Secondary**          | `#303239`   | `48, 50, 57`         | Boutons secondaires dark              |
+| **Muted**              | `#2D2F37`   | `45, 47, 55`         | Zones désactivées dark                |
+| **Muted Foreground**   | `#A6A6AD`   | `166, 166, 173`      | Texte secondaire dark                 |
+| **Brand**              | `#4D7BF9`   | `77, 123, 249`       | CTA et accents (légèrement éclaircis) |
+| **Brand Glow**         | `#8DA3FB`   | `141, 163, 251`      | Glow plus marqué en dark              |
+| **Accent**             | `#B166F4`   | `177, 102, 244`      | Accent violet éclairci                |
+| **Border**             | `#FFFFFF14` | `255, 255, 255 / 8%` | Bordures translucides                 |
+| **Ring**               | `#5C8BFB`   | `92, 139, 251`       | Focus ring dark                       |
+| **Destructive**        | `#EF4444`   | `239, 68, 68`        | Erreurs dark                          |
 
 ---
 
@@ -68,14 +68,14 @@ WebXIA est une agence web qui affiche une identé **premium, épurée et techniq
 
 ### Hiérarchie
 
-| Rôle | Taille | Graisse | Line height | Tracking | Exemple |
-|---|---|---|---|---|---|
-| **H1 (Hero)** | `5xl → 7xl → 88px` | `semibold (600)` | `0.95` | `-0.04em` | Titre principal hero |
-| **H2 (Section)** | `4xl → 5xl → 6xl` | `semibold (600)` | `1.1` | `-0.03em` | Titres de section |
-| **H3 (Card title)** | `xl → 2xl` | `semibold (600)` | `1.2` | `-0.02em` | Titres de cartes services |
-| **Body** | `base → lg` | `normal (400)` | `1.6` | normal | Paragraphes, descriptions |
-| **Small / Caption** | `xs → sm` | `medium (500)` | `1.5` | normal | Labels, badges, metadata |
-| **Eyebrow** | `xs` | `medium (500)` | `1` | `0.2em` | Catégories, labels au-dessus des titres |
+| Rôle                | Taille             | Graisse          | Line height | Tracking  | Exemple                                 |
+| ------------------- | ------------------ | ---------------- | ----------- | --------- | --------------------------------------- |
+| **H1 (Hero)**       | `5xl → 7xl → 88px` | `semibold (600)` | `0.95`      | `-0.04em` | Titre principal hero                    |
+| **H2 (Section)**    | `4xl → 5xl → 6xl`  | `semibold (600)` | `1.1`       | `-0.03em` | Titres de section                       |
+| **H3 (Card title)** | `xl → 2xl`         | `semibold (600)` | `1.2`       | `-0.02em` | Titres de cartes services               |
+| **Body**            | `base → lg`        | `normal (400)`   | `1.6`       | normal    | Paragraphes, descriptions               |
+| **Small / Caption** | `xs → sm`          | `medium (500)`   | `1.5`       | normal    | Labels, badges, metadata                |
+| **Eyebrow**         | `xs`               | `medium (500)`   | `1`         | `0.2em`   | Catégories, labels au-dessus des titres |
 
 ### Tableau récapitulatif Tailwind
 
@@ -89,6 +89,7 @@ Eyebrow: text-xs font-medium uppercase tracking-[0.2em] text-brand
 ```
 
 ### Notes
+
 - `text-balance` est appliqué sur les titres et sous-titres pour éviter les orphelins.
 - `font-feature-settings: "ss01", "cv11"` est activé sur `<body>` pour optimiser l'affichage d'Inter.
 
@@ -98,19 +99,19 @@ Eyebrow: text-xs font-medium uppercase tracking-[0.2em] text-brand
 
 ### Fichiers trouvés
 
-| Fichier | Chemin relatif | Description |
-|---|---|---|
-| `logo.svg` | `public/logo.svg` | Logo principal (357×296, multi-paths, palette violet-bleu) |
-| `logo (1).svg` | `public/logo (1).svg` | Logo alternatif (357×425, chemin fermé, même palette) |
+| Fichier        | Chemin relatif        | Description                                                |
+| -------------- | --------------------- | ---------------------------------------------------------- |
+| `logo.svg`     | `public/logo.svg`     | Logo principal (357×296, multi-paths, palette violet-bleu) |
+| `logo (1).svg` | `public/logo (1).svg` | Logo alternatif (357×425, chemin fermé, même palette)      |
 
 ### Palette du logo (couleurs extraites des SVG)
 
-| Couleur | HEX | Usage dans le logo |
-|---|---|---|
+| Couleur         | HEX       | Usage dans le logo |
+| --------------- | --------- | ------------------ |
 | Bleu électrique | `#3961F8` | Formes principales |
-| Violet profond | `#7928CA` | Accents centraux |
-| Violet vif | `#8147F9` | Pièces lumineuses |
-| Indigo foncé | `#1E144E` | Ombres, contours |
+| Violet profond  | `#7928CA` | Accents centraux   |
+| Violet vif      | `#8147F9` | Pièces lumineuses  |
+| Indigo foncé    | `#1E144E` | Ombres, contours   |
 
 ### Règles d'usage
 
@@ -128,15 +129,15 @@ Eyebrow: text-xs font-medium uppercase tracking-[0.2em] text-brand
 
 ### Boutons
 
-| Variante | Style | Arrondi | Ombre / Effet |
-|---|---|---|---|
-| `default` | `bg-primary text-primary-foreground` | `rounded-full` | `shadow` + hover `opacity/90` |
-| `brand` | `bg-brand text-brand-foreground` | `rounded-full` | `shadow-[0_8px_24px_-8px_brand]` + hover `shadow-[0_12px_32px]` + `hover:-translate-y-0.5` |
-| `hero` | `bg-foreground text-background` | `rounded-full` | `shadow-[0_10px_30px_-12px foreground/60%]` + `hover:-translate-y-0.5` |
-| `glass` | `bg-background/40 backdrop-blur-xl` | `rounded-full` | `border border-border` + hover `bg-background/60` |
-| `outline` | `border border-border bg-transparent` | `rounded-full` | hover `bg-secondary` |
-| `ghost` | `bg-transparent` | `rounded-full` | hover `bg-secondary` |
-| `link` | `text-brand underline-offset-4` | `rounded-none` | hover `underline` |
+| Variante  | Style                                 | Arrondi        | Ombre / Effet                                                                              |
+| --------- | ------------------------------------- | -------------- | ------------------------------------------------------------------------------------------ |
+| `default` | `bg-primary text-primary-foreground`  | `rounded-full` | `shadow` + hover `opacity/90`                                                              |
+| `brand`   | `bg-brand text-brand-foreground`      | `rounded-full` | `shadow-[0_8px_24px_-8px_brand]` + hover `shadow-[0_12px_32px]` + `hover:-translate-y-0.5` |
+| `hero`    | `bg-foreground text-background`       | `rounded-full` | `shadow-[0_10px_30px_-12px foreground/60%]` + `hover:-translate-y-0.5`                     |
+| `glass`   | `bg-background/40 backdrop-blur-xl`   | `rounded-full` | `border border-border` + hover `bg-background/60`                                          |
+| `outline` | `border border-border bg-transparent` | `rounded-full` | hover `bg-secondary`                                                                       |
+| `ghost`   | `bg-transparent`                      | `rounded-full` | hover `bg-secondary`                                                                       |
+| `link`    | `text-brand underline-offset-4`       | `rounded-none` | hover `underline`                                                                          |
 
 **Tailles** : `sm` (32px), `default` (40px), `lg` (48px), `xl` (56px), `icon` (40×40).
 **Transitions** : `transition-all duration-300`, easing `cubic-bezier(0.22, 1, 0.36, 1)`.
@@ -144,12 +145,12 @@ Eyebrow: text-xs font-medium uppercase tracking-[0.2em] text-brand
 
 ### Cartes
 
-| Type | Arrondi | Bordure | Ombre | Hover |
-|---|---|---|---|---|
-| **Project card** | `rounded-2xl` (16px) | `border-border` | `shadow-card` | `hover:-translate-y-1` + `hover:border-brand/40` + `hover:shadow-[...brand]` |
-| **Service card** | `rounded-2xl` | `border-border` | none (ajouté au hover) | `hover:-translate-y-1` + `hover:border-brand/40` + `hover:shadow-[...brand]` |
-| **CTA strip** | `rounded-3xl` (24px) | `border-border` | `shadow-[...foreground/25%]` | none |
-| **Contact form** | `rounded-3xl` | `border-border` | `shadow-[...foreground/25%]` | none |
+| Type             | Arrondi              | Bordure         | Ombre                        | Hover                                                                        |
+| ---------------- | -------------------- | --------------- | ---------------------------- | ---------------------------------------------------------------------------- |
+| **Project card** | `rounded-2xl` (16px) | `border-border` | `shadow-card`                | `hover:-translate-y-1` + `hover:border-brand/40` + `hover:shadow-[...brand]` |
+| **Service card** | `rounded-2xl`        | `border-border` | none (ajouté au hover)       | `hover:-translate-y-1` + `hover:border-brand/40` + `hover:shadow-[...brand]` |
+| **CTA strip**    | `rounded-3xl` (24px) | `border-border` | `shadow-[...foreground/25%]` | none                                                                         |
+| **Contact form** | `rounded-3xl`        | `border-border` | `shadow-[...foreground/25%]` | none                                                                         |
 
 **Contenu typique** : badge eyebrow (`rounded-full bg-black/30 text-[10px] uppercase tracking-[0.18em]`), tags (`rounded-full border bg-background/60 text-[10px]`).
 
@@ -168,13 +169,25 @@ Eyebrow: text-xs font-medium uppercase tracking-[0.2em] text-brand
 
 ```html
 <nav class="fixed inset-x-0 top-0 z-50 mt-4 flex justify-center px-4">
-  <div class="flex items-center gap-4 rounded-full border border-border bg-background/60 px-4 py-2 backdrop-blur-xl shadow-[0_8px_30px_-12px_rgba(0,0,0,0.15)]">
+  <div
+    class="flex items-center gap-4 rounded-full border border-border bg-background/60 px-4 py-2 backdrop-blur-xl shadow-[0_8px_30px_-12px_rgba(0,0,0,0.15)]"
+  >
     <img src="/logo.svg" alt="WebXIA" class="h-8 w-auto" />
-    <span class="font-display text-base font-semibold tracking-tight">WebXIA<span class="text-brand">.</span></span>
+    <span class="font-display text-base font-semibold tracking-tight"
+      >WebXIA<span class="text-brand">.</span></span
+    >
     <a href="#" class="rounded-full px-3 py-1.5 text-sm bg-secondary text-foreground">Accueil</a>
-    <a href="#" class="rounded-full px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground">Services</a>
-    <a href="#" class="rounded-full px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground">Réalisations</a>
-    <a href="#" class="ml-auto rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-foreground shadow-[0_8px_24px_-8px_var(--brand)] hover:shadow-[0_12px_32px_-8px_var(--brand)] hover:-translate-y-0.5 transition-all duration-300">Contact</a>
+    <a href="#" class="rounded-full px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >Services</a
+    >
+    <a href="#" class="rounded-full px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >Réalisations</a
+    >
+    <a
+      href="#"
+      class="ml-auto rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-foreground shadow-[0_8px_24px_-8px_var(--brand)] hover:shadow-[0_12px_32px_-8px_var(--brand)] hover:-translate-y-0.5 transition-all duration-300"
+      >Contact</a
+    >
   </div>
 </nav>
 ```
@@ -182,7 +195,9 @@ Eyebrow: text-xs font-medium uppercase tracking-[0.2em] text-brand
 ### 6.2 Bouton CTA (Hero)
 
 ```html
-<button class="relative overflow-hidden rounded-full bg-foreground px-9 py-4 text-base font-medium text-background shadow-[0_10px_30px_-12px_rgba(38,38,41,0.6)] hover:bg-foreground/90 hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]">
+<button
+  class="relative overflow-hidden rounded-full bg-foreground px-9 py-4 text-base font-medium text-background shadow-[0_10px_30px_-12px_rgba(38,38,41,0.6)] hover:bg-foreground/90 hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]"
+>
   Démarrer un projet
 </button>
 ```
@@ -190,15 +205,26 @@ Eyebrow: text-xs font-medium uppercase tracking-[0.2em] text-brand
 ### 6.3 Carte de projet
 
 ```html
-<article class="group rounded-2xl border border-border bg-card overflow-hidden hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_30px_80px_-30px_rgba(29,78,216,0.4)] transition-all duration-300">
+<article
+  class="group rounded-2xl border border-border bg-card overflow-hidden hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_30px_80px_-30px_rgba(29,78,216,0.4)] transition-all duration-300"
+>
   <div class="relative aspect-[4/3] bg-muted">
-    <span class="absolute top-3 left-3 rounded-full bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white backdrop-blur-md">E-commerce</span>
+    <span
+      class="absolute top-3 left-3 rounded-full bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white backdrop-blur-md"
+      >E-commerce</span
+    >
   </div>
   <div class="p-5">
     <h3 class="font-display text-lg font-semibold leading-tight tracking-tight">Nom du projet</h3>
     <div class="mt-3 flex flex-wrap gap-1.5">
-      <span class="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">React</span>
-      <span class="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Supabase</span>
+      <span
+        class="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+        >React</span
+      >
+      <span
+        class="rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+        >Supabase</span
+      >
     </div>
   </div>
 </article>
@@ -209,8 +235,14 @@ Eyebrow: text-xs font-medium uppercase tracking-[0.2em] text-brand
 ```html
 <section class="py-20">
   <p class="text-xs font-medium uppercase tracking-[0.2em] text-brand mb-4">Nos services</p>
-  <h2 class="font-display text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl md:text-6xl">
-    Construire <span class="bg-gradient-to-r from-foreground via-brand to-brand-glow bg-clip-text text-transparent">l'avenir digital</span>
+  <h2
+    class="font-display text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl md:text-6xl"
+  >
+    Construire
+    <span
+      class="bg-gradient-to-r from-foreground via-brand to-brand-glow bg-clip-text text-transparent"
+      >l'avenir digital</span
+    >
   </h2>
   <p class="mt-4 max-w-2xl text-balance text-base text-muted-foreground sm:text-lg">
     Des solutions web sur mesure pour les entreprises ambitieuses.
@@ -242,52 +274,52 @@ Tous les tokens sont définis dans `src/styles.css` et utilisables via `var(--to
 
 ```css
 /* Light mode (:root) */
---background: #FCFCFD;        /* oklch(0.99 0.002 240) */
---foreground: #262629;        /* oklch(0.18 0.02 260) */
---surface: #F6F6F8;           /* oklch(0.97 0.004 240) */
---surface-elevated: #FFFFFF;  /* oklch(1 0 0) */
---card: #FFFFFF;              /* oklch(1 0 0) */
---card-foreground: #262629;   /* oklch(0.18 0.02 260) */
---primary: #262629;           /* oklch(0.18 0.02 260) */
---primary-foreground: #FCFCFD;/* oklch(0.99 0.002 240) */
---secondary: #F4F4F5;         /* oklch(0.96 0.005 240) */
+--background: #fcfcfd; /* oklch(0.99 0.002 240) */
+--foreground: #262629; /* oklch(0.18 0.02 260) */
+--surface: #f6f6f8; /* oklch(0.97 0.004 240) */
+--surface-elevated: #ffffff; /* oklch(1 0 0) */
+--card: #ffffff; /* oklch(1 0 0) */
+--card-foreground: #262629; /* oklch(0.18 0.02 260) */
+--primary: #262629; /* oklch(0.18 0.02 260) */
+--primary-foreground: #fcfcfd; /* oklch(0.99 0.002 240) */
+--secondary: #f4f4f5; /* oklch(0.96 0.005 240) */
 --secondary-foreground: #262629;
---muted: #F4F4F5;             /* oklch(0.96 0.005 240) */
---muted-foreground: #7C7C85;  /* oklch(0.5 0.015 260) */
---brand: #1D4ED8;             /* oklch(0.62 0.2 258) */
---brand-foreground: #FCFCFD;
---brand-glow: #6D8DF5;        /* oklch(0.72 0.18 270) */
---accent: #9333EA;            /* oklch(0.72 0.16 295) */
+--muted: #f4f4f5; /* oklch(0.96 0.005 240) */
+--muted-foreground: #7c7c85; /* oklch(0.5 0.015 260) */
+--brand: #1d4ed8; /* oklch(0.62 0.2 258) */
+--brand-foreground: #fcfcfd;
+--brand-glow: #6d8df5; /* oklch(0.72 0.18 270) */
+--accent: #9333ea; /* oklch(0.72 0.16 295) */
 --accent-foreground: #262629;
---destructive: #DC2626;       /* oklch(0.6 0.22 25) */
---destructive-foreground: #FCFCFD;
---border: #E2E2E5;            /* oklch(0.9 0.008 250) */
---input: #DCDFE4;             /* oklch(0.92 0.008 250) */
---ring: #3B6BF8;              /* oklch(0.62 0.18 255) */
+--destructive: #dc2626; /* oklch(0.6 0.22 25) */
+--destructive-foreground: #fcfcfd;
+--border: #e2e2e5; /* oklch(0.9 0.008 250) */
+--input: #dcdfe4; /* oklch(0.92 0.008 250) */
+--ring: #3b6bf8; /* oklch(0.62 0.18 255) */
 
 /* Dark mode (.dark) */
---background: #191B23;
---foreground: #F8F8FA;
---surface: #23252D;
---surface-elevated: #2A2C34;
+--background: #191b23;
+--foreground: #f8f8fa;
+--surface: #23252d;
+--surface-elevated: #2a2c34;
 --card: #262830;
---card-foreground: #F8F8FA;
---primary: #F8F8FA;
---primary-foreground: #191B23;
+--card-foreground: #f8f8fa;
+--primary: #f8f8fa;
+--primary-foreground: #191b23;
 --secondary: #303239;
---secondary-foreground: #F8F8FA;
---muted: #2D2F37;
---muted-foreground: #A6A6AD;
---brand: #4D7BF9;
---brand-foreground: #191B23;
---brand-glow: #8DA3FB;
---accent: #B166F4;
---accent-foreground: #191B23;
---destructive: #EF4444;
---destructive-foreground: #F8F8FA;
+--secondary-foreground: #f8f8fa;
+--muted: #2d2f37;
+--muted-foreground: #a6a6ad;
+--brand: #4d7bf9;
+--brand-foreground: #191b23;
+--brand-glow: #8da3fb;
+--accent: #b166f4;
+--accent-foreground: #191b23;
+--destructive: #ef4444;
+--destructive-foreground: #f8f8fa;
 --border: rgba(255, 255, 255, 0.08);
 --input: rgba(255, 255, 255, 0.12);
---ring: #5C8BFB;
+--ring: #5c8bfb;
 ```
 
 ### Polices
@@ -376,5 +408,5 @@ active:scale-[0.98]     → tous les boutons
 
 ---
 
-*Document généré automatiquement à partir du code source du projet WebXIA.*
-*Dernière mise à jour : septembre 2026.*
+_Document généré automatiquement à partir du code source du projet WebXIA._
+_Dernière mise à jour : septembre 2026._

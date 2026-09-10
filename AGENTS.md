@@ -89,11 +89,11 @@ src/
 
 ### Client / Server Boundary (TanStack Start)
 
-| Domain | Execution | Access |
-|--------|-----------|--------|
-| **Server** 🔒 | Server Functions / Nitro | Providers, RAG, DB, Skills, Prompts, Secrets |
-| **Client** 🌍 | Browser | UI, Zustand, Hooks, Streaming display, Analytics |
-| **Shared** 🔄 | Both | Types, Zod schemas, Pure utilities, Constants |
+| Domain        | Execution                | Access                                           |
+| ------------- | ------------------------ | ------------------------------------------------ |
+| **Server** 🔒 | Server Functions / Nitro | Providers, RAG, DB, Skills, Prompts, Secrets     |
+| **Client** 🌍 | Browser                  | UI, Zustand, Hooks, Streaming display, Analytics |
+| **Shared** 🔄 | Both                     | Types, Zod schemas, Pure utilities, Constants    |
 
 **Rule**: Server Functions are the ONLY way to call server code from client. Never import server-only code in client components.
 
@@ -167,13 +167,13 @@ export const myFunction = createServerFn({ method: "POST" })
 
 ### Environment Variables
 
-| Variable | Scope | Required |
-|----------|-------|----------|
-| `VITE_SUPABASE_URL` | Client + Server | Yes |
-| `VITE_SUPABASE_ANON_KEY` | Client + Server | Yes |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only | Yes |
-| `NVIDIA_NIM_API_KEY` | Server only | For Prompt 1+ |
-| `NVIDIA_NIM_BASE_URL` | Server only | For Prompt 1+ |
+| Variable                    | Scope           | Required      |
+| --------------------------- | --------------- | ------------- |
+| `VITE_SUPABASE_URL`         | Client + Server | Yes           |
+| `VITE_SUPABASE_ANON_KEY`    | Client + Server | Yes           |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only     | Yes           |
+| `NVIDIA_NIM_API_KEY`        | Server only     | For Prompt 1+ |
+| `NVIDIA_NIM_BASE_URL`       | Server only     | For Prompt 1+ |
 
 **Never expose secrets to client**. Use `import.meta.env` only for `VITE_*` prefixed vars.
 
@@ -258,18 +258,18 @@ Limits: `maxAgentSteps`, `maxToolCalls`, `globalTimeoutMs`, `maxContextTokens`, 
 
 ## Webi Implementation Status
 
-| Prompt | Feature | Status |
-|--------|---------|--------|
-| 0 | Audit, Architecture, Contracts | ✅ Done |
-| 1 | LLM Infrastructure / NVIDIA NIM | ⏳ Next |
-| 2 | Conversations, Memory, Event Bus | ⏳ |
-| 3 | RAG / Knowledge Layer | ⏳ |
-| 4 | Skills / Tools Engine | ⏳ |
-| 5 | Agent Orchestrator / Loop | ⏳ |
-| 6 | Security / Auth / Rate Limiting | ⏳ |
-| 7 | TanStack Start API + Streaming | ⏳ |
-| 8 | Chat UI + Zustand + TanStack Query | ⏳ |
-| 9 | E2E Tests + Observability + Deploy | ⏳ |
+| Prompt | Feature                            | Status  |
+| ------ | ---------------------------------- | ------- |
+| 0      | Audit, Architecture, Contracts     | ✅ Done |
+| 1      | LLM Infrastructure / NVIDIA NIM    | ✅ Done |
+| 2      | Conversations, Memory, Event Bus   | ✅ Done |
+| 3      | RAG / Knowledge Layer              | ✅ Done |
+| 4      | Skills / Tools Engine              | ✅ Done |
+| 5      | Agent Orchestrator / Loop          | ✅ Done |
+| 6      | Security / Auth / Rate Limiting    | ✅ Done |
+| 7      | TanStack Start API + Streaming     | ⏳ Next |
+| 8      | Chat UI + Zustand + TanStack Query | ⏳      |
+| 9      | E2E Tests + Observability + Deploy | ⏳      |
 
 ---
 

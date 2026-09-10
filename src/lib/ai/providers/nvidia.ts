@@ -1,5 +1,6 @@
 import {
   LLMProvider,
+  Message,
   StreamChunk,
   ProviderConfig,
   ProviderRequest,
@@ -16,6 +17,9 @@ import { ProviderError, ProviderErrorCode, mapHttpErrorToProviderError } from ".
 interface NvidiaMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string | null;
+  /** Reasoning-model thinking deltas (Nemotron reasoning models). Never
+   * rendered as answer text — observed for progress accounting only. */
+  reasoning_content?: string | null;
   tool_calls?: NvidiaToolCall[];
   tool_call_id?: string;
 }
@@ -23,6 +27,7 @@ interface NvidiaMessage {
 interface NvidiaToolCall {
   id: string;
   type: "function";
+  index?: number;
   function: {
     name: string;
     arguments: string;
@@ -46,6 +51,10 @@ interface NvidiaRequest {
   stream?: boolean;
   tools?: NvidiaToolDefinition[];
   tool_choice?: "auto" | "none" | { type: "function"; function: { name: string } };
+  /** Explicit reasoning toggle for Nemotron reasoning models. Set to false:
+   * Webi is a customer-service bot where time-to-first-token matters more
+   * than exposed chain-of-thought. Reversible in one line. */
+  chat_template_kwargs?: { enable_thinking: boolean };
 }
 
 interface NvidiaResponse {
@@ -76,6 +85,7 @@ interface NvidiaStreamChunk {
   created: number;
   model: string;
   choices: NvidiaStreamChoice[];
+  usage?: NvidiaUsage;
 }
 
 interface NvidiaStreamChoice {
@@ -92,6 +102,36 @@ export class NvidiaProvider implements LLMProvider {
     {
       id: "nemotron-3-ultra",
       name: "Nemotron 3 Ultra",
+      provider: "nvidia",
+      capabilities: {
+        streaming: true,
+        toolCalling: true,
+        structuredOutput: false,
+        embeddings: false,
+        vision: false,
+        thinking: true,
+      },
+      maxTokens: 128_000,
+      costPerToken: { input: 0, output: 0 },
+    },
+    {
+      id: "nvidia/nemotron-3.5-lightning-30b-a3b",
+      name: "Nemotron 3.5 Lightning 30B",
+      provider: "nvidia",
+      capabilities: {
+        streaming: true,
+        toolCalling: true,
+        structuredOutput: false,
+        embeddings: false,
+        vision: false,
+        thinking: true,
+      },
+      maxTokens: 128_000,
+      costPerToken: { input: 0, output: 0 },
+    },
+    {
+      id: "nvidia/nemotron-3-super-120b-a12b",
+      name: "Nemotron 3 Super 120B",
       provider: "nvidia",
       capabilities: {
         streaming: true,
@@ -257,6 +297,9 @@ export class NvidiaProvider implements LLMProvider {
     let index = 0;
     let accumulatedContent = "";
     let toolCalls: ToolCall[] | undefined;
+    // Thinking deltas observed (reasoning models). Counted for latency
+    // diagnosis, never rendered as answer text.
+    let reasoningChunks = 0;
 
     try {
       const response = await fetch(`${this.getBaseUrl()}/chat/completions`, {
@@ -297,7 +340,11 @@ export class NvidiaProvider implements LLMProvider {
           try {
             const chunk: NvidiaStreamChunk = JSON.parse(data);
             const choice = chunk.choices[0];
-            if (!choice) continue;
+            if (!choice || !choice.delta) continue;
+
+            if (choice.delta.reasoning_content) {
+              reasoningChunks++;
+            }
 
             if (choice.delta.content) {
               accumulatedContent += choice.delta.content;
@@ -338,6 +385,7 @@ export class NvidiaProvider implements LLMProvider {
                 toolCalls,
                 finishReason,
                 usage: chunk.usage ? this.mapUsage(chunk.usage) : undefined,
+                reasoningChunks,
                 index: index++,
               };
               return;
@@ -378,14 +426,27 @@ export class NvidiaProvider implements LLMProvider {
   }
 
   private buildRequest(request: ProviderRequest, stream: boolean): NvidiaRequest {
+    // ProviderRequest.systemPrompt is the ONLY carrier of the Webi system
+    // prompt (identity + rules) and of the RAG KNOWLEDGE block. It must
+    // become the first message of the NVIDIA payload — otherwise the model
+    // answers with no identity and no knowledge (regression: system dropped).
+    const system = request.systemPrompt?.trim() ? request.systemPrompt : undefined;
+    const messages = system
+      ? [{ role: "system" as const, content: system }, ...this.mapMessages(request.messages)]
+      : this.mapMessages(request.messages);
+    // Thinking flag ONLY where official NVIDIA samples prove the parameter
+    // exists (reasoning models). The fallback sample sends no such key —
+    // emitting it blindly risks a 400 on non-reasoning models.
+    const thinking = this.getModel(request.model)?.capabilities.thinking === true;
     return {
       model: request.model,
-      messages: this.mapMessages(request.messages),
+      messages,
       temperature: request.temperature ?? 0.7,
       max_tokens: request.maxTokens,
       stream,
       tools: this.mapTools(request.tools),
       tool_choice: request.tools?.length ? "auto" : undefined,
+      ...(thinking ? { chat_template_kwargs: { enable_thinking: false } } : {}),
     };
   }
 

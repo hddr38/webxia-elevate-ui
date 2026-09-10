@@ -47,4 +47,3 @@ export async function getAdminAuthorId(request: Request): Promise<string | null>
   const user = await getSessionUser(request);
   return user?.id ?? null;
 }
-

@@ -9,30 +9,26 @@ import type {
   ProviderConfig,
   ProviderRequest,
   ProviderResponse,
+  LLMProvider,
+  EmbeddingProvider,
+  StreamChunk,
 } from "../contracts";
 
-export interface LLMProvider {
-  readonly id: string;
-  readonly name: string;
-  readonly models: AIModel[];
-
-  initialize(config: ProviderConfig): Promise<void>;
-  complete(request: ProviderRequest): Promise<ProviderResponse>;
-  stream(request: ProviderRequest): AsyncIterable<StreamChunk>;
-  abort(): void;
-  getModel(modelId: string): AIModel | undefined;
-  isAvailable(): boolean;
-}
-
-export interface StreamChunk {
-  type: "chunk" | "done" | "error" | "tool_calls";
-  content?: string;
-  toolCalls?: ToolCall[];
-  usage?: TokenUsage;
-  finishReason?: FinishReason;
-  error?: { code: string; message: string; recoverable: boolean };
-  index: number;
-}
+export type {
+  Message,
+  ToolDefinition,
+  ToolCall,
+  ProviderCapabilities,
+  AIModel,
+  TokenUsage,
+  FinishReason,
+  ProviderConfig,
+  ProviderRequest,
+  ProviderResponse,
+  LLMProvider,
+  EmbeddingProvider,
+  StreamChunk,
+};
 
 export interface ProviderRegistry {
   register(provider: LLMProvider): void;
@@ -50,15 +46,4 @@ export interface ModelRouterConfig {
   fallbackProvider?: string;
   fallbackModel?: string;
   enableFallback: boolean;
-}
-
-export interface EmbeddingProvider {
-  readonly id: string;
-  readonly name: string;
-  readonly dimensions: number;
-
-  initialize(config: ProviderConfig): Promise<void>;
-  embed(text: string): Promise<number[]>;
-  batchEmbed(texts: string[]): Promise<number[][]>;
-  isAvailable(): boolean;
 }

@@ -1,7 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -62,14 +61,23 @@ export interface PaginatedResult<T> {
   totalPages: number;
 }
 
-export function getPaginationParams(params: PaginationParams = {}): { page: number; limit: number; offset: number } {
+export function getPaginationParams(params: PaginationParams = {}): {
+  page: number;
+  limit: number;
+  offset: number;
+} {
   const page = Math.max(1, params.page ?? 1);
   const limit = Math.min(100, Math.max(1, params.limit ?? 20));
   const offset = (page - 1) * limit;
   return { page, limit, offset };
 }
 
-export function buildPaginatedResponse<T>(data: T[] | null, count: number | null, page: number, limit: number): PaginatedResult<T> {
+export function buildPaginatedResponse<T>(
+  data: T[] | null,
+  count: number | null,
+  page: number,
+  limit: number,
+): PaginatedResult<T> {
   return {
     data: data ?? [],
     total: count ?? 0,
@@ -79,11 +87,12 @@ export function buildPaginatedResponse<T>(data: T[] | null, count: number | null
   };
 }
 
-export function prepareSlugAndPublish(data: { slug?: string; title: string; status?: string }): { slug: string; publishedAt: string | null } {
+export function prepareSlugAndPublish(data: { slug?: string; title: string; status?: string }): {
+  slug: string;
+  publishedAt: string | null;
+} {
   const slug = data.slug || slugify(data.title);
   const now = new Date().toISOString();
   const publishedAt = data.status === "published" ? now : null;
   return { slug, publishedAt };
 }
-
-

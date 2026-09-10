@@ -10,42 +10,49 @@ const expertises = [
     titleKey: "home.expertises.1.title" as const,
     hookKey: "home.expertises.1.hook" as const,
     descKey: "home.expertises.1.desc" as const,
+    sectionId: "services",
   },
   {
     icon: "🎨",
     titleKey: "home.expertises.2.title" as const,
     hookKey: "home.expertises.2.hook" as const,
     descKey: "home.expertises.2.desc" as const,
+    sectionId: "section-2",
   },
   {
     icon: "📈",
     titleKey: "home.expertises.3.title" as const,
     hookKey: "home.expertises.3.hook" as const,
     descKey: "home.expertises.3.desc" as const,
+    sectionId: "section-3",
   },
   {
     icon: "🤖",
     titleKey: "home.expertises.4.title" as const,
     hookKey: "home.expertises.4.hook" as const,
     descKey: "home.expertises.4.desc" as const,
+    sectionId: "section-4",
   },
   {
     icon: "💻",
     titleKey: "home.expertises.5.title" as const,
     hookKey: "home.expertises.5.hook" as const,
     descKey: "home.expertises.5.desc" as const,
+    sectionId: "section-1",
   },
   {
     icon: "📊",
     titleKey: "home.expertises.6.title" as const,
     hookKey: "home.expertises.6.hook" as const,
     descKey: "home.expertises.6.desc" as const,
+    sectionId: "section-5",
   },
   {
     icon: "🛡️",
     titleKey: "home.expertises.7.title" as const,
     hookKey: "home.expertises.7.hook" as const,
     descKey: "home.expertises.7.desc" as const,
+    sectionId: "section-6",
   },
 ];
 
@@ -97,10 +104,14 @@ export function Expertises() {
                 {t(exp.descKey)}
               </p>
 
-              <div className="mt-6 flex items-center gap-1.5 text-sm font-medium text-foreground/80 transition-colors group-hover:text-brand">
-                <span>En savoir plus</span>
+              <Link
+                to="/services"
+                hash={exp.sectionId}
+                className="mt-6 flex items-center gap-1.5 text-sm font-medium text-foreground/80 transition-colors group-hover:text-brand"
+              >
+                <span>{t("services.learnMore")}</span>
                 <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </div>
+              </Link>
             </motion.article>
           ))}
         </div>

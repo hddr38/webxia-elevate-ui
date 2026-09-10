@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
 import { cn } from "@/lib/utils";
 
@@ -47,9 +49,7 @@ export function WhyChooseUs({ className }: { className?: string }) {
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-8 md:p-12"
         >
-          <p className="text-base text-muted-foreground sm:text-lg">
-            {t("home.whyChooseUs.body")}
-          </p>
+          <p className="text-base text-muted-foreground sm:text-lg">{t("home.whyChooseUs.body")}</p>
           <h3 className="mt-8 font-display text-xl font-semibold tracking-tight">
             {t("home.whyChooseUs.engagementsTitle")}
           </h3>
@@ -68,6 +68,13 @@ export function WhyChooseUs({ className }: { className?: string }) {
               </motion.li>
             ))}
           </ul>
+          <div className="mt-8 flex justify-center">
+            <Button variant="brand" size="lg" asChild>
+              <Link to="/contact">
+                {t("home.whyChooseUs.cta")} <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
         </motion.div>
       </div>
     </section>

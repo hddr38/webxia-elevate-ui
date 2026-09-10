@@ -424,8 +424,7 @@ export const servicesEn: ServiceSectionData[] = [
       {
         icon: "Mail",
         title: "Email Marketing",
-        description:
-          "Retain your clients with professional and automated email campaigns.",
+        description: "Retain your clients with professional and automated email campaigns.",
         bullets: [
           "Newsletter creation",
           "Responsive design",
@@ -441,8 +440,7 @@ export const servicesEn: ServiceSectionData[] = [
       {
         icon: "BarChart3",
         title: "Analytics & Reporting",
-        description:
-          "Make the right decisions with clear dashboards and precise indicators.",
+        description: "Make the right decisions with clear dashboards and precise indicators.",
         bullets: [
           "Google Analytics",
           "Google Search Console",
@@ -652,8 +650,7 @@ export const servicesEn: ServiceSectionData[] = [
   },
   {
     eyebrow: "06 . CONSULTING & GROWTH",
-    title:
-      "Build a solid digital strategy to grow your business sustainably.",
+    title: "Build a solid digital strategy to grow your business sustainably.",
     subtitle:
       "Every project starts with a clear vision. We guide your technology, marketing and strategic choices to build a high-performance and sustainable digital presence.",
     cards: [
@@ -677,8 +674,7 @@ export const servicesEn: ServiceSectionData[] = [
       {
         icon: "TrendingUp",
         title: "Digital Strategy",
-        description:
-          "Define a clear roadmap to effectively grow your business online.",
+        description: "Define a clear roadmap to effectively grow your business online.",
         bullets: [
           "Goal analysis",
           "Target definition",
@@ -694,8 +690,7 @@ export const servicesEn: ServiceSectionData[] = [
       {
         icon: "Zap",
         title: "Digital Transformation",
-        description:
-          "Modernize your business with digital tools adapted to your organization.",
+        description: "Modernize your business with digital tools adapted to your organization.",
         bullets: [
           "Process analysis",
           "Task digitization",
@@ -768,8 +763,7 @@ export const servicesEn: ServiceSectionData[] = [
       {
         icon: "Shield",
         title: "Security",
-        description:
-          "Protect your data, your clients' data and your business from cyber threats.",
+        description: "Protect your data, your clients' data and your business from cyber threats.",
         bullets: [
           "SSL certificate",
           "Automatic backups",

@@ -2,6 +2,12 @@ import { createStart, createMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
 
+// Track application start time for uptime
+declare global {
+  var __webi_start_time: number;
+}
+globalThis.__webi_start_time = Date.now();
+
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     return await next();

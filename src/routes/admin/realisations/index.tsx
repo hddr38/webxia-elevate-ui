@@ -205,13 +205,17 @@ function RealisationsListPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>{t("admin.realisations.deleteConfirm")}</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                {t("admin.realisations.deleteConfirm")}
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
                                 {t("admin.realisations.deleteDesc")}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>{t("admin.realisations.deleteCancel")}</AlertDialogCancel>
+                              <AlertDialogCancel>
+                                {t("admin.realisations.deleteCancel")}
+                              </AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDelete(r.id)}
                                 className="bg-red-600 hover:bg-red-700"

@@ -1,7 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
-import { slugify, sanitizeIlike, getPaginationParams, buildPaginatedResponse, prepareSlugAndPublish } from "@/lib/utils";
+import {
+  slugify,
+  sanitizeIlike,
+  getPaginationParams,
+  buildPaginatedResponse,
+  prepareSlugAndPublish,
+} from "@/lib/utils";
 import { getAdminAuthorId } from "@/lib/auth/session";
 import type { CreateArticleInput, UpdateArticleInput } from "@/types/database";
 
@@ -67,9 +73,9 @@ export const getArticleBySlug = createServerFn({ method: "GET" })
 // Create article
 export const createArticle = createServerFn({ method: "POST" })
   .validator((data: CreateArticleInput) => data)
-  .handler(async ({ data, context }: any) => {
+  .handler(async ({ data, context }) => {
     const { slug, publishedAt } = prepareSlugAndPublish(data);
-    const authorId = await getAdminAuthorId(context);
+    const authorId = await getAdminAuthorId(context.request as Request);
 
     const { data: article, error } = await getSupabaseAdmin()
       .from("articles")
@@ -95,7 +101,7 @@ export const createArticle = createServerFn({ method: "POST" })
 // Update article
 export const updateArticle = createServerFn({ method: "POST" })
   .validator((data: UpdateArticleInput) => data)
-  .handler(async ({ data }: any) => {
+  .handler(async ({ data }) => {
     const { id, ...updates } = data;
 
     if (updates.status === "published") {
@@ -150,7 +156,7 @@ export const getPublishedArticles = createServerFn({ method: "GET" })
 // Delete article
 export const deleteArticle = createServerFn({ method: "POST" })
   .validator((data: { id: string }) => data)
-  .handler(async ({ data }: any) => {
+  .handler(async ({ data }) => {
     const { error } = await getSupabaseAdmin().from("articles").delete().eq("id", data.id);
 
     if (error) throw new Error(error.message);

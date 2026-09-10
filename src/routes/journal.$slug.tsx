@@ -29,19 +29,21 @@ export const Route = createFileRoute("/journal/$slug")({
       links: [{ rel: "canonical", href: `https://your-domain.com/journal/${a.slug}` }],
     };
   },
-  notFoundComponent: () => {
-    const { t } = useLocale();
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 pt-28 text-center">
-        <h1 className="font-display text-3xl">{t("journal.article.notFound")}</h1>
-        <Link to="/journal" className="text-brand underline">
-          {t("journal.article.backToJournal")}
-        </Link>
-      </div>
-    );
-  },
+  notFoundComponent: ArticleNotFound,
   component: ArticlePage,
 });
+
+function ArticleNotFound() {
+  const { t } = useLocale();
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 pt-28 text-center">
+      <h1 className="font-display text-3xl">{t("journal.article.notFound")}</h1>
+      <Link to="/journal" className="text-brand underline">
+        {t("journal.article.backToJournal")}
+      </Link>
+    </div>
+  );
+}
 
 function ArticlePage() {
   const { article } = Route.useLoaderData();

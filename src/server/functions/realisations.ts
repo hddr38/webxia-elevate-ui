@@ -1,7 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
-import { slugify, sanitizeIlike, getPaginationParams, buildPaginatedResponse, prepareSlugAndPublish } from "@/lib/utils";
+import {
+  slugify,
+  sanitizeIlike,
+  getPaginationParams,
+  buildPaginatedResponse,
+  prepareSlugAndPublish,
+} from "@/lib/utils";
 import { getAdminAuthorId } from "@/lib/auth/session";
 import type { CreateRealisationInput, UpdateRealisationInput } from "@/types/database";
 
@@ -66,9 +72,9 @@ export const getRealisation = createServerFn({ method: "GET" })
 // Create realisation
 export const createRealisation = createServerFn({ method: "POST" })
   .validator((data: CreateRealisationInput) => data)
-  .handler(async ({ data, context }: any) => {
+  .handler(async ({ data, context }) => {
     const { slug, publishedAt } = prepareSlugAndPublish(data);
-    const authorId = await getAdminAuthorId(context);
+    const authorId = await getAdminAuthorId(context.request as Request);
 
     const { data: realisation, error } = await getSupabaseAdmin()
       .from("realisations")
@@ -100,7 +106,7 @@ export const createRealisation = createServerFn({ method: "POST" })
 // Update realisation
 export const updateRealisation = createServerFn({ method: "POST" })
   .validator((data: UpdateRealisationInput) => data)
-  .handler(async ({ data }: any) => {
+  .handler(async ({ data }) => {
     const { id, ...updates } = data;
 
     if (updates.status === "published") {
@@ -128,7 +134,9 @@ export const updateRealisation = createServerFn({ method: "POST" })
 
 // Get published realisations (public site)
 export const getPublishedRealisations = createServerFn({ method: "GET" })
-  .validator((data: { category?: string; featured?: boolean; page?: number; limit?: number }) => data)
+  .validator(
+    (data: { category?: string; featured?: boolean; page?: number; limit?: number }) => data,
+  )
   .handler(async ({ data }) => {
     const { page, limit, offset } = getPaginationParams(data);
 
@@ -160,7 +168,7 @@ export const getPublishedRealisations = createServerFn({ method: "GET" })
 // Delete realisation
 export const deleteRealisation = createServerFn({ method: "POST" })
   .validator((data: { id: string }) => data)
-  .handler(async ({ data }: any) => {
+  .handler(async ({ data }) => {
     const { error } = await getSupabaseAdmin().from("realisations").delete().eq("id", data.id);
 
     if (error) throw new Error(error.message);

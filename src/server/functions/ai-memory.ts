@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requestMiddleware } from "./conversations";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getAdminAuthorId } from "@/lib/auth/session";
 import { createMemoryService } from "@/lib/ai/memory/memory-service";
@@ -47,6 +48,7 @@ export const getMemory = createServerFn({ method: "GET" })
 
 // Create memory entry
 export const createMemory = createServerFn({ method: "POST" })
+  .middleware([requestMiddleware])
   .validator(
     (data: {
       session_id: string;
@@ -75,6 +77,7 @@ export const createMemory = createServerFn({ method: "POST" })
 
 // Update memory entry
 export const updateMemory = createServerFn({ method: "POST" })
+  .middleware([requestMiddleware])
   .validator(
     (data: {
       id: string;
@@ -100,6 +103,7 @@ export const updateMemory = createServerFn({ method: "POST" })
 
 // Delete memory entry
 export const deleteMemory = createServerFn({ method: "POST" })
+  .middleware([requestMiddleware])
   .validator((data: { id: string }) => data)
   .handler(async ({ data, context }) => {
     const userId = await getAdminAuthorId(context.request as Request);
@@ -112,6 +116,7 @@ export const deleteMemory = createServerFn({ method: "POST" })
 
 // Delete all memories for a session
 export const deleteSessionMemories = createServerFn({ method: "POST" })
+  .middleware([requestMiddleware])
   .validator((data: { session_id: string }) => data)
   .handler(async ({ data, context }) => {
     const userId = await getAdminAuthorId(context.request as Request);

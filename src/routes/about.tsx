@@ -45,6 +45,7 @@ const stack = [
   "TanStack Start",
   "TypeScript",
   "Tailwind v4",
+  "Edge runtimes",
   "Supabase",
   "OpenAI / Anthropic",
   "Figma",

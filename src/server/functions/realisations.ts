@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requestMiddleware } from "./conversations";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
 import {
@@ -71,6 +72,7 @@ export const getRealisation = createServerFn({ method: "GET" })
 
 // Create realisation
 export const createRealisation = createServerFn({ method: "POST" })
+  .middleware([requestMiddleware])
   .validator((data: CreateRealisationInput) => data)
   .handler(async ({ data, context }) => {
     const { slug, publishedAt } = prepareSlugAndPublish(data);

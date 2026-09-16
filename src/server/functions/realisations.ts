@@ -1,28 +1,28 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requestMiddleware } from "./conversations";
+import { adminMiddleware } from "@/lib/auth/middleware";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
 import {
-  slugify,
-  sanitizeIlike,
+  sanitizeOrSearchTerm,
   getPaginationParams,
   buildPaginatedResponse,
   prepareSlugAndPublish,
 } from "@/lib/utils";
 import { getAdminAuthorId } from "@/lib/auth/session";
-import type { CreateRealisationInput, UpdateRealisationInput } from "@/types/database";
+import { mapDatabaseError, throwNotFound } from "@/lib/admin/errors";
+import {
+  ListRealisationsSchema,
+  PublicRealisationsSchema,
+  CreateRealisationSchema,
+  UpdateRealisationSchema,
+  AdminIdSchema,
+  SlugSchema,
+} from "@/lib/admin/schemas";
 
-// List realisations with optional filters
+// List realisations (admin — drafts inclus, protégé)
 export const getRealisations = createServerFn({ method: "GET" })
-  .validator(
-    (data: {
-      status?: string;
-      search?: string;
-      featured?: boolean;
-      page?: number;
-      limit?: number;
-    }) => data,
-  )
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => ListRealisationsSchema.parse(data))
   .handler(async ({ data }) => {
     const { page, limit, offset } = getPaginationParams(data);
 
@@ -33,7 +33,7 @@ export const getRealisations = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
 
     if (data.status && data.status !== "all") {
-      query = query.eq("status", data.status as "draft" | "published" | "archived");
+      query = query.eq("status", data.status);
     }
 
     if (data.featured !== undefined) {
@@ -41,42 +41,64 @@ export const getRealisations = createServerFn({ method: "GET" })
     }
 
     if (data.search) {
-      const search = sanitizeIlike(data.search);
-      query = query.or(
-        `title.ilike.%${search}%,short_description.ilike.%${search}%,client_name.ilike.%${search}%`,
-      );
+      const search = sanitizeOrSearchTerm(data.search);
+      if (search) {
+        query = query.or(
+          `title.ilike.%${search}%,short_description.ilike.%${search}%,client_name.ilike.%${search}%`,
+        );
+      }
     }
 
     query = query.range(offset, offset + limit - 1);
 
     const { data: realisations, error, count } = await query;
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Réalisations");
 
     return buildPaginatedResponse(realisations, count, page, limit);
   });
 
-// Get single realisation by id
+// Get single realisation by id (admin — protégé)
 export const getRealisation = createServerFn({ method: "GET" })
-  .validator((data: { id: string }) => data)
-  .handler(async ({ data }) => {
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => AdminIdSchema.parse((data as { id: string })?.id))
+  .handler(async ({ data: id }) => {
     const { data: realisation, error } = await getSupabaseAdmin()
       .from("realisations")
       .select("*")
-      .eq("id", data.id)
+      .eq("id", id)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Réalisation");
+    if (!realisation) throwNotFound("Réalisation");
     return realisation!;
   });
 
-// Create realisation
+// Get single realisation by slug (public — RLS published-only)
+export const getRealisationBySlug = createServerFn({ method: "GET" })
+  .validator((data: unknown) => SlugSchema.parse((data as { slug: string })?.slug))
+  .handler(async ({ data: slug }) => {
+    const supabase = createPublicClient();
+    const { data: realisation, error } = await supabase
+      .from("realisations")
+      .select("*")
+      .eq("slug", slug)
+      .eq("status", "published")
+      .single();
+
+    if (error) mapDatabaseError(error, "Réalisation");
+    if (!realisation) throwNotFound("Réalisation");
+    return realisation!;
+  });
+
+// Create realisation (admin)
 export const createRealisation = createServerFn({ method: "POST" })
-  .middleware([requestMiddleware])
-  .validator((data: CreateRealisationInput) => data)
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => CreateRealisationSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { slug, publishedAt } = prepareSlugAndPublish(data);
     const authorId = await getAdminAuthorId(context.request as Request);
+    if (!authorId) throw new Response("Unauthorized", { status: 401 });
 
     const { data: realisation, error } = await getSupabaseAdmin()
       .from("realisations")
@@ -93,6 +115,7 @@ export const createRealisation = createServerFn({ method: "POST" })
         cover_image_url: data.cover_image_url ?? null,
         gallery_images: data.gallery_images ?? [],
         technologies: data.technologies ?? [],
+        category: data.category ?? [],
         meta_title: data.meta_title ?? null,
         meta_description: data.meta_description ?? null,
         featured: data.featured ?? false,
@@ -101,13 +124,14 @@ export const createRealisation = createServerFn({ method: "POST" })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Réalisation");
     return realisation!;
   });
 
-// Update realisation
+// Update realisation (admin — author_id non modifiable côté client)
 export const updateRealisation = createServerFn({ method: "POST" })
-  .validator((data: UpdateRealisationInput) => data)
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => UpdateRealisationSchema.parse(data))
   .handler(async ({ data }) => {
     const { id, ...updates } = data;
 
@@ -130,15 +154,14 @@ export const updateRealisation = createServerFn({ method: "POST" })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Réalisation");
+    if (!realisation) throwNotFound("Réalisation");
     return realisation!;
   });
 
-// Get published realisations (public site)
+// Get published realisations (public site — RLS)
 export const getPublishedRealisations = createServerFn({ method: "GET" })
-  .validator(
-    (data: { category?: string; featured?: boolean; page?: number; limit?: number }) => data,
-  )
+  .validator((data: unknown) => PublicRealisationsSchema.parse(data))
   .handler(async ({ data }) => {
     const { page, limit, offset } = getPaginationParams(data);
 
@@ -151,7 +174,7 @@ export const getPublishedRealisations = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
 
     if (data.category && data.category !== "all") {
-      query = query.contains("category", [data.category]);
+      query = query.contains("category", [data.category.trim().slice(0, 120)]);
     }
 
     if (data.featured !== undefined) {
@@ -162,17 +185,18 @@ export const getPublishedRealisations = createServerFn({ method: "GET" })
 
     const { data: realisations, error, count } = await query;
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Réalisations");
 
     return buildPaginatedResponse(realisations, count, page, limit);
   });
 
-// Delete realisation
+// Delete realisation (admin)
 export const deleteRealisation = createServerFn({ method: "POST" })
-  .validator((data: { id: string }) => data)
-  .handler(async ({ data }) => {
-    const { error } = await getSupabaseAdmin().from("realisations").delete().eq("id", data.id);
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => AdminIdSchema.parse((data as { id: string })?.id))
+  .handler(async ({ data: id }) => {
+    const { error } = await getSupabaseAdmin().from("realisations").delete().eq("id", id);
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Réalisation");
     return { success: true };
   });

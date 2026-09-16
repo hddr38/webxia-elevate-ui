@@ -6,9 +6,5 @@ export const Route = createFileRoute("/admin/articles/new")({
 });
 
 function NewArticlePage() {
-  return (
-    <div>
-      <ArticleForm mode="create" />
-    </div>
-  );
+  return <ArticleForm mode="create" />;
 }

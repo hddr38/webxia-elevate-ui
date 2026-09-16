@@ -7,6 +7,7 @@
 create extension if not exists "uuid-ossp";
 create extension if not exists "pgcrypto";
 create extension if not exists "vector";
+create extension if not exists "pg_trgm";
 
 -- ============================================
 -- ENUMS
@@ -59,6 +60,8 @@ create index idx_articles_published_at on public.articles(published_at desc);
 create index idx_articles_category on public.articles using gin (category);
 create index idx_articles_tags on public.articles using gin (tags);
 create index idx_articles_status_published on public.articles(status, published_at desc) where status = 'published';
+create index idx_articles_title_trgm on public.articles using gin (title gin_trgm_ops);
+create index idx_articles_excerpt_trgm on public.articles using gin (excerpt gin_trgm_ops);
 
 comment on table public.articles is 'Blog articles / Journal entries';
 
@@ -99,6 +102,10 @@ create index idx_realisations_category on public.realisations using gin (categor
 create index idx_realisations_technologies on public.realisations using gin (technologies);
 create index idx_realisations_status_published on public.realisations(status, published_at desc) where status = 'published';
 create index idx_realisations_status_sort on public.realisations(status, sort_order);
+create index idx_realisations_title_trgm on public.realisations using gin (title gin_trgm_ops);
+create index idx_realisations_search_trgm on public.realisations using gin (
+  (title || ' ' || coalesce(short_description, '') || ' ' || coalesce(client_name, '')) gin_trgm_ops
+);
 
 comment on table public.realisations is 'Portfolio projects / Realisations';
 
@@ -124,6 +131,9 @@ create index idx_ai_memory_user_session on public.ai_memory(user_id, session_id)
 create index idx_ai_memory_type on public.ai_memory(memory_type);
 create index idx_ai_memory_expires on public.ai_memory(expires_at) where expires_at is not null;
 create index idx_ai_memory_embedding on public.ai_memory using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+create index idx_ai_memory_key_trgm on public.ai_memory using gin (key gin_trgm_ops);
+create index idx_ai_memory_session on public.ai_memory (session_id);
+create index idx_ai_memory_type_created on public.ai_memory (memory_type, created_at desc);
 
 comment on table public.ai_memory is 'Persistent memory for AI agent (conversations, context, knowledge, preferences)';
 
@@ -285,9 +295,9 @@ create policy "ai_memory_delete_own" on public.ai_memory
 -- STATS FUNCTIONS
 -- ============================================
 
--- Articles stats
+-- Articles stats (réservé service_role — voir GRANTs ci-dessous)
 create or replace function public.get_articles_stats()
-returns json language sql stable as $$
+returns json language sql stable security definer set search_path = public as $$
   select json_build_object(
     'total', count(*),
     'published', count(*) filter (where status = 'published'),
@@ -296,9 +306,9 @@ returns json language sql stable as $$
   from public.articles;
 $$;
 
--- Réalisations stats
+-- Réalisations stats (réservé service_role — voir GRANTs ci-dessous)
 create or replace function public.get_realisations_stats()
-returns json language sql stable as $$
+returns json language sql stable security definer set search_path = public as $$
   select json_build_object(
     'total', count(*),
     'published', count(*) filter (where status = 'published'),
@@ -308,9 +318,9 @@ returns json language sql stable as $$
   from public.realisations;
 $$;
 
--- AI Memory stats
+-- AI Memory stats (réservé service_role — voir GRANTs ci-dessous)
 create or replace function public.get_memory_stats()
-returns json language sql stable as $$
+returns json language sql stable security definer set search_path = public as $$
   select json_build_object(
     'total', count(*),
     'sessions', count(distinct session_id),
@@ -326,13 +336,24 @@ returns json language sql stable as $$
   from public.ai_memory;
 $$;
 
+-- Les stats incluent les brouillons : exécution réservée au service_role
+-- (le serveur authentifie via adminMiddleware avant d'appeler).
+revoke all on function public.get_articles_stats() from public, anon, authenticated;
+revoke all on function public.get_realisations_stats() from public, anon, authenticated;
+revoke all on function public.get_memory_stats() from public, anon, authenticated;
+revoke all on function public.is_admin() from public, anon, authenticated;
+grant execute on function public.get_articles_stats() to service_role;
+grant execute on function public.get_realisations_stats() to service_role;
+grant execute on function public.get_memory_stats() to service_role;
+grant execute on function public.is_admin() to service_role;
+
 -- ============================================
 -- HELPER FUNCTIONS
 -- ============================================
 
 -- Check if current user is admin
 create or replace function public.is_admin()
-returns boolean language sql stable as $$
+returns boolean language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from public.admin_users where user_id = auth.uid()
   );

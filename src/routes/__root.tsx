@@ -8,15 +8,18 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { MotionConfig } from "framer-motion";
 import { ThemeProvider } from "@/lib/theme-context";
 import { LocaleProvider, useLocale } from "@/lib/locale-context";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
 import { ChatWidget } from "@/components/chat";
+import { AdminHeader } from "@/components/admin/admin-header";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { seo } from "@/lib/seo";
 
@@ -97,6 +100,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       ],
       links: [
         { rel: "stylesheet", href: appCss },
+        { rel: "icon", href: "/logo.svg", type: "image/svg+xml" },
         { rel: "manifest", href: "/manifest.json" },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -131,20 +135,70 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { t } = useLocale();
   const routerState = useRouterState();
   const isAdmin = routerState.location.pathname.startsWith("/admin");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    getSupabaseBrowserClient()
+      .auth.getSession()
+      .then(({ data }) => {
+        setIsAuthenticated(!!data.session);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Dev-only: purge stale service workers. This app ships no service
+  // worker, but a leftover registration on the same origin (e.g. from an
+  // older build) intercepts POST fetches like /api/chat and crashes on
+  // cache.put, which only supports GET. import.meta.env.DEV is replaced
+  // at compile time, so this is dead-code-eliminated in production.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((regs) => {
+        regs.forEach((reg) => {
+          reg
+            .unregister()
+            .then((ok) => {
+              if (ok) console.info("[dev] unregistered stale service worker:", reg.scope);
+            })
+            .catch(() => {});
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
-        {!isAdmin && <Header />}
-        <main>
-          <Outlet />
-        </main>
-        {!isAdmin && <Footer />}
-        {!isAdmin && <ChatWidget />}
-        <Toaster position="bottom-right" richColors />
-      </div>
+      <MotionConfig reducedMotion="user">
+        <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:text-background"
+          >
+            {t("a11y.skip")}
+          </a>
+          {isAdmin || isAuthenticated ? <AdminHeader /> : <Header />}
+          <main
+            id="main-content"
+            className={
+              isAdmin || isAuthenticated
+                ? "mx-auto w-full max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8"
+                : ""
+            }
+          >
+            <Outlet />
+          </main>
+          {!(isAdmin || isAuthenticated) && <Footer />}
+          {!(isAdmin || isAuthenticated) && <ChatWidget />}
+          <Toaster position="bottom-right" richColors />
+        </div>
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

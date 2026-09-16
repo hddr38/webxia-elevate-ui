@@ -1,20 +1,15 @@
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
-import {
-  Linkedin,
-  Instagram,
-  Github,
-  MapPin,
-  Mail,
-  Phone,
-  Globe,
-  Palette,
-  TrendingUp,
-  Bot,
-  Wrench,
-  Shield,
-} from "lucide-react";
+import { MapPin, Mail, Phone, Globe, Palette, TrendingUp, Bot, Wrench, Shield } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
+
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
 
 const navLinks = [
   { key: "home", titleKey: "footer.nav.home" as const, href: "/" },
@@ -39,13 +34,11 @@ const solutionLinks = [
 
 const socialLinks = [
   {
-    key: "linkedin",
-    icon: Linkedin,
-    href: "https://linkedin.com/company/webxia",
-    label: "LinkedIn",
+    key: "x",
+    icon: XIcon,
+    href: "https://x.com/Web_Xia",
+    label: "X",
   },
-  { key: "instagram", icon: Instagram, href: "https://instagram.com/webxia", label: "Instagram" },
-  { key: "github", icon: Github, href: "https://github.com/webxia", label: "GitHub" },
 ] as const;
 
 const legalLinks = [
@@ -75,10 +68,10 @@ export function Footer() {
           className="grid gap-10 md:gap-12 lg:grid-cols-4"
         >
           {/* Column 1 — Brand */}
-          <nav aria-label={t("footer.brand.description")}>
+          <div>
             <div className="space-y-4">
               <Link to="/" className="group inline-flex items-end gap-2">
-                <img src="/logo.svg" alt="WebXIA" className="h-12 w-auto" />
+                <img src="/logo.svg" alt="WebXIA" width={58} height={48} className="h-12 w-auto" />
                 <span className="font-display text-xl font-semibold tracking-tight text-foreground leading-none pb-px">
                   WebXIA<span className="text-brand">.</span>
                 </span>
@@ -103,50 +96,38 @@ export function Footer() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.4, delay: 0.2 }}
                     whileHover={{ y: -2 }}
-                    className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground/70 transition-all duration-300 hover:border-brand/50 hover:text-brand hover:bg-brand/5"
+                    className="inline-flex size-11 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground/70 transition-all duration-300 hover:border-brand/50 hover:text-brand hover:bg-brand/5"
                   >
                     <social.icon className="size-4" aria-hidden="true" />
                   </motion.a>
                 ))}
               </div>
             </div>
-          </nav>
+          </div>
 
           {/* Column 2 — Navigation */}
           <nav aria-label={t("footer.nav.title")}>
             <h3 className="font-medium text-foreground mb-4">{t("footer.nav.title")}</h3>
             <ul className="space-y-3" role="list">
-              {navLinks.map((link, i) => (
-                <motion.li
-                  key={link.key}
-                  initial={{ opacity: 0, x: -10 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: 0.15 + i * 0.04 }}
-                >
+              {navLinks.map((link) => (
+                <li key={link.key}>
                   <Link
                     to={link.href}
-                    className="text-sm text-muted-foreground/80 transition-colors hover:text-brand hover:underline underline-offset-2"
+                    className="text-sm text-muted-foreground/80 transition-colors hover:text-brand hover:underline underline-offset-2 focus-visible:text-brand focus-visible:underline focus-visible:outline-none"
                   >
                     {t(link.titleKey)}
                   </Link>
-                </motion.li>
+                </li>
               ))}
-              {anchorLinks.map((link, i) => (
-                <motion.li
-                  key={link.key}
-                  initial={{ opacity: 0, x: -10 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: 0.15 + (navLinks.length + i) * 0.04 }}
-                >
+              {anchorLinks.map((link) => (
+                <li key={link.key}>
                   <a
                     href={link.href}
-                    className="text-sm text-muted-foreground/80 transition-colors hover:text-brand hover:underline underline-offset-2"
+                    className="text-sm text-muted-foreground/80 transition-colors hover:text-brand hover:underline underline-offset-2 focus-visible:text-brand focus-visible:underline focus-visible:outline-none"
                   >
                     {t(link.titleKey)}
                   </a>
-                </motion.li>
+                </li>
               ))}
             </ul>
           </nav>
@@ -155,54 +136,50 @@ export function Footer() {
           <nav aria-label={t("footer.solutions.title")}>
             <h3 className="font-medium text-foreground mb-4">{t("footer.solutions.title")}</h3>
             <ul className="space-y-3" role="list">
-              {solutionLinks.map((sol, i) => (
-                <motion.li
-                  key={sol.key}
-                  initial={{ opacity: 0, x: -10 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: 0.15 + i * 0.04 }}
-                >
+              {solutionLinks.map((sol) => (
+                <li key={sol.key}>
                   <Link
                     to="/services"
-                    className="inline-flex items-center gap-2 text-sm text-muted-foreground/80 transition-colors hover:text-brand"
+                    className="inline-flex items-center gap-2 text-sm text-muted-foreground/80 transition-colors hover:text-brand focus-visible:text-brand focus-visible:underline focus-visible:outline-none"
                   >
                     <sol.icon className="size-4" aria-hidden="true" />
                     <span>{t(sol.titleKey)}</span>
                   </Link>
-                </motion.li>
+                </li>
               ))}
             </ul>
           </nav>
 
           {/* Column 4 — Contact */}
-          <nav aria-label={t("footer.contact.title")}>
+          <div>
             <h3 className="font-medium text-foreground mb-4">{t("footer.contact.title")}</h3>
-            <ul className="space-y-3 text-sm text-muted-foreground/80" role="list">
-              <li className="flex items-start gap-2">
-                <MapPin className="size-4 mt-0.5 shrink-0 text-brand/70" aria-hidden="true" />
-                <span>{t("footer.contact.address")}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Mail className="size-4 mt-0.5 shrink-0 text-brand/70" aria-hidden="true" />
-                <a
-                  href={`mailto:${t("footer.contact.email")}`}
-                  className="transition-colors hover:text-brand hover:underline underline-offset-2"
-                >
-                  {t("footer.contact.email")}
-                </a>
-              </li>
-              <li className="flex items-start gap-2">
-                <Phone className="size-4 mt-0.5 shrink-0 text-brand/70" aria-hidden="true" />
-                <a
-                  href={`tel:${t("footer.contact.phone").replace(/\s/g, "")}`}
-                  className="transition-colors hover:text-brand hover:underline underline-offset-2"
-                >
-                  {t("footer.contact.phone")}
-                </a>
-              </li>
-            </ul>
-          </nav>
+            <address className="not-italic">
+              <ul className="space-y-3 text-sm text-muted-foreground/80" role="list">
+                <li className="flex items-start gap-2">
+                  <MapPin className="size-4 mt-0.5 shrink-0 text-brand/70" aria-hidden="true" />
+                  <span>{t("footer.contact.address")}</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Mail className="size-4 mt-0.5 shrink-0 text-brand/70" aria-hidden="true" />
+                  <a
+                    href={`mailto:${t("footer.contact.email")}`}
+                    className="transition-colors hover:text-brand hover:underline underline-offset-2 focus-visible:text-brand focus-visible:underline focus-visible:outline-none"
+                  >
+                    {t("footer.contact.email")}
+                  </a>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Phone className="size-4 mt-0.5 shrink-0 text-brand/70" aria-hidden="true" />
+                  <a
+                    href={`tel:${t("footer.contact.phone").replace(/\s/g, "")}`}
+                    className="transition-colors hover:text-brand hover:underline underline-offset-2 focus-visible:text-brand focus-visible:underline focus-visible:outline-none"
+                  >
+                    {t("footer.contact.phone")}
+                  </a>
+                </li>
+              </ul>
+            </address>
+          </div>
         </motion.div>
 
         {/* Footer Bottom */}
@@ -222,17 +199,17 @@ export function Footer() {
             className="flex flex-wrap items-center justify-center md:justify-end gap-4 md:gap-6"
           >
             {legalLinks.map((legal) => (
-              <a
+              <Link
                 key={legal.key}
-                href={legal.href}
-                className="text-sm text-muted-foreground/80 transition-colors hover:text-brand hover:underline underline-offset-2"
+                to={legal.href}
+                className="text-sm text-muted-foreground/80 transition-colors hover:text-brand hover:underline underline-offset-2 focus-visible:text-brand focus-visible:underline focus-visible:outline-none"
               >
                 {t(legal.titleKey)}
-              </a>
+              </Link>
             ))}
           </nav>
 
-          <p className="text-xs text-muted-foreground/60 md:hidden order-last mt-4 w-full text-center">
+          <p className="text-xs text-muted-foreground/80 md:hidden order-last mt-4 w-full text-center">
             {t("footer.madeby")}
           </p>
         </motion.div>
@@ -243,7 +220,7 @@ export function Footer() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, margin: "-50px" }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="hidden md:block mt-8 text-center text-xs text-muted-foreground/60"
+          className="hidden md:block mt-8 text-center text-xs text-muted-foreground/80"
         >
           {t("footer.madeby")}
         </motion.p>

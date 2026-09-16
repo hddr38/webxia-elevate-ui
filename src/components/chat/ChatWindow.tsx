@@ -174,7 +174,7 @@ export function ChatWindow() {
             variant="ghost"
             size="icon"
             onClick={resetConversation}
-            className="text-muted-foreground hover:text-foreground"
+            className="size-11 text-muted-foreground hover:text-foreground"
             aria-label={t("chat.reset")}
             disabled={isStreaming}
           >
@@ -184,7 +184,7 @@ export function ChatWindow() {
             variant="ghost"
             size="icon"
             onClick={close}
-            className="text-muted-foreground hover:text-foreground"
+            className="size-11 text-muted-foreground hover:text-foreground"
             aria-label={t("chat.close")}
             disabled={isStreaming}
           >
@@ -224,13 +224,14 @@ export function ChatWindow() {
 
       {/* Tool Status */}
       <AnimatePresence mode="popLayout">
-        {currentTool && <ToolStatus toolName={currentTool} />}
+        {currentTool && <ToolStatus key={`tool-${currentTool}`} toolName={currentTool} />}
       </AnimatePresence>
 
       {/* Temporary Error */}
       <AnimatePresence mode="popLayout">
         {temporaryError && (
           <motion.div
+            key="chat-temporary-error"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -249,6 +250,7 @@ export function ChatWindow() {
       <AnimatePresence mode="popLayout">
         {messageCount >= MAX_MESSAGES_PER_SESSION && (
           <motion.div
+            key="chat-limit-reached"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -283,6 +285,7 @@ export function ChatWindow() {
       <AnimatePresence mode="popLayout">
         {isNearLimit && messageCount < MAX_MESSAGES_PER_SESSION && messageCount > 0 && (
           <motion.div
+            key="chat-near-limit"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}

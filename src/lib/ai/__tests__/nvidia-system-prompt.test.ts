@@ -198,18 +198,18 @@ describe("NvidiaProvider system prompt transmission", () => {
     expect(body.chat_template_kwargs).toEqual({ enable_thinking: false });
   });
 
-  it("registers lightning (primary) and super (fallback) with thinking gated per model", async () => {
+  it("registers lightning (primary) and nano-omni (fallback) with thinking gated per model", async () => {
     const provider = await initProvider();
 
     expect(provider.getModel("nvidia/nemotron-3.5-lightning-30b-a3b")?.capabilities.thinking).toBe(
       true,
     );
     expect(
-      provider.getModel("nvidia/nemotron-3-super-120b-a12b")?.capabilities.thinking,
-    ).toBeUndefined();
+      provider.getModel("nvidia/nemotron-3-nano-omni-30b-a3b-reasoning")?.capabilities.thinking,
+    ).toBe(true);
   });
 
-  it.each(["nvidia/nemotron-3-super-120b-a12b", "llama-3.1-8b-instruct", "some-unknown-model"])(
+  it.each(["some-unknown-model"])(
     "omits chat_template_kwargs for non-reasoning model %s",
     async (model) => {
       const provider = await initProvider();

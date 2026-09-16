@@ -10,6 +10,8 @@ export type Project = {
   /** CSS gradient used as cover placeholder */
   cover: string;
   summary: string;
+  /** True for showcase concepts (not signed client work) */
+  concept: boolean;
 };
 
 export const projects: Project[] = [
@@ -22,6 +24,7 @@ export const projects: Project[] = [
     tags: ["React", "TanStack", "Edge"],
     cover: "linear-gradient(135deg, #0b1220 0%, #1e293b 40%, #3b82f6 100%)",
     summary: "Sub-second navigation across 12k pages with edge rendering.",
+    concept: true,
   },
   {
     slug: "halo-ai-copilot",
@@ -32,6 +35,7 @@ export const projects: Project[] = [
     tags: ["RAG", "OpenAI", "Vector"],
     cover: "linear-gradient(135deg, #1a103d 0%, #4c1d95 50%, #a855f7 100%)",
     summary: "Custom retrieval pipeline over 1.2M legal documents.",
+    concept: true,
   },
   {
     slug: "atelier-marais",
@@ -42,6 +46,7 @@ export const projects: Project[] = [
     tags: ["Identity", "Shopify", "Motion"],
     cover: "linear-gradient(135deg, #1a1a1a 0%, #3a2a1a 50%, #d4a574 100%)",
     summary: "A Parisian atelier redefined for a global audience.",
+    concept: true,
   },
   {
     slug: "fieldkit-mobile",
@@ -52,6 +57,7 @@ export const projects: Project[] = [
     tags: ["React Native", "Offline", "Maps"],
     cover: "linear-gradient(135deg, #052e2b 0%, #064e3b 50%, #10b981 100%)",
     summary: "Offline-first tooling for 4,000 field operators.",
+    concept: true,
   },
   {
     slug: "lumen-saas",
@@ -62,6 +68,7 @@ export const projects: Project[] = [
     tags: ["Marketing", "SEO", "CMS"],
     cover: "linear-gradient(135deg, #0c0a09 0%, #1c1917 50%, #f59e0b 100%)",
     summary: "Marketing site shipped in 6 weeks, +180% sign-ups.",
+    concept: true,
   },
   {
     slug: "pulse-agent",
@@ -72,6 +79,7 @@ export const projects: Project[] = [
     tags: ["Agents", "Tools", "Eval"],
     cover: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #6366f1 100%)",
     summary: "Resolves 62% of tier-1 support tickets autonomously.",
+    concept: true,
   },
   {
     slug: "ovida-clinic",
@@ -82,6 +90,7 @@ export const projects: Project[] = [
     tags: ["Next.js", "Supabase", "Stripe"],
     cover: "linear-gradient(135deg, #0a0a23 0%, #1e3a8a 50%, #38bdf8 100%)",
     summary: "Booking + patient portal serving 28 clinics.",
+    concept: true,
   },
   {
     slug: "rivier-identity",
@@ -92,6 +101,7 @@ export const projects: Project[] = [
     tags: ["Identity", "Design system", "Web"],
     cover: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #c084fc 100%)",
     summary: "Identity, design system and marketing site in 8 weeks.",
+    concept: true,
   },
   {
     slug: "kairos-search",
@@ -102,5 +112,6 @@ export const projects: Project[] = [
     tags: ["Embeddings", "Hybrid search"],
     cover: "linear-gradient(135deg, #18181b 0%, #27272a 50%, #ec4899 100%)",
     summary: "Hybrid semantic + keyword search across 9M assets.",
+    concept: true,
   },
 ];

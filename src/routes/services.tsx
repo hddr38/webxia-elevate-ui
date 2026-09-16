@@ -15,9 +15,9 @@ export const Route = createFileRoute("/services")({
         { name: "description", content: s.description },
         { property: "og:title", content: s.title },
         { property: "og:description", content: s.ogDescription },
-        { property: "og:url", content: "https://your-domain.com/services" },
+        { property: "og:url", content: "https://webxia.fr/services" },
       ],
-      links: [{ rel: "canonical", href: "https://your-domain.com/services" }],
+      links: [{ rel: "canonical", href: "https://webxia.fr/services" }],
     };
   },
   component: ServicesPage,

@@ -1,64 +1,70 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requestMiddleware } from "./conversations";
+import { adminMiddleware } from "@/lib/auth/middleware";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getAdminAuthorId } from "@/lib/auth/session";
 import { createMemoryService } from "@/lib/ai/memory/memory-service";
-import type { AIMemoryType } from "@/types/database";
+import { sanitizeOrSearchTerm } from "@/lib/utils";
+import { mapDatabaseError, throwNotFound } from "@/lib/admin/errors";
+import {
+  ListMemoriesSchema,
+  CreateMemorySchema,
+  UpdateMemorySchema,
+  AdminIdSchema,
+  MemoryTypeSchema,
+} from "@/lib/admin/schemas";
 
-// Admin context: service-role is retained deliberately (see report).
-// These endpoints serve /admin/ai-memory, whose legitimate reads span
-// sessions; the anon+RLS path (owner-only) would deny them. Authorization
-// stays explicit via the admin session (user_id scoping on every
-// write/delete) without weakening any RLS policy.
-
-// List AI memory entries
+// List AI memory entries (admin — protégé, cross-session légitime)
 export const getMemories = createServerFn({ method: "GET" })
-  .validator(
-    (data: {
-      session_id?: string;
-      memory_type?: string;
-      search?: string;
-      page?: number;
-      limit?: number;
-    }) => data,
-  )
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => ListMemoriesSchema.parse(data))
   .handler(async ({ data }) => {
     const service = createMemoryService(getSupabaseAdmin());
-    return service.listMemoryRows(
-      {
-        sessionId: data.session_id,
-        memoryType:
-          data.memory_type && data.memory_type !== "all"
-            ? (data.memory_type as "conversation" | "context" | "knowledge" | "preference")
-            : undefined,
-        search: data.search,
-      },
-      data.page ?? 1,
-      data.limit ?? 50,
-    );
+    try {
+      const memoryType =
+        data.memory_type && data.memory_type !== "all"
+          ? MemoryTypeSchema.parse(data.memory_type)
+          : undefined;
+      const search = data.search ? sanitizeOrSearchTerm(data.search) : "";
+      return await service.listMemoryRows(
+        {
+          sessionId: data.session_id,
+          memoryType,
+          search: search || undefined,
+        },
+        data.page ?? 1,
+        data.limit ?? 50,
+      );
+    } catch (error) {
+      if (error instanceof Response) throw error;
+      mapDatabaseError(
+        { message: error instanceof Error ? error.message : "Database error" },
+        "Mémoire IA",
+      );
+    }
   });
 
-// Get single memory entry
+// Get single memory entry (admin — protégé)
 export const getMemory = createServerFn({ method: "GET" })
-  .validator((data: { id: string }) => data)
-  .handler(async ({ data }) => {
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => AdminIdSchema.parse((data as { id: string })?.id))
+  .handler(async ({ data: id }) => {
     const service = createMemoryService(getSupabaseAdmin());
-    return service.getMemoryRow(data.id);
+    try {
+      return await service.getMemoryRow(id);
+    } catch (error) {
+      if (error instanceof Response) throw error;
+      mapDatabaseError(
+        { message: error instanceof Error ? error.message : "Database error" },
+        "Mémoire IA",
+      );
+    }
+    throwNotFound("Mémoire IA");
   });
 
-// Create memory entry
+// Create memory entry (admin)
 export const createMemory = createServerFn({ method: "POST" })
-  .middleware([requestMiddleware])
-  .validator(
-    (data: {
-      session_id: string;
-      memory_type: AIMemoryType;
-      key: string;
-      value: Record<string, string>;
-      metadata?: Record<string, string>;
-      expires_at?: string;
-    }) => data,
-  )
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => CreateMemorySchema.parse(data))
   .handler(async ({ data, context }) => {
     const userId = await getAdminAuthorId(context.request as Request);
     if (!userId) throw new Response("Unauthorized", { status: 401 });
@@ -75,18 +81,10 @@ export const createMemory = createServerFn({ method: "POST" })
     });
   });
 
-// Update memory entry
+// Update memory entry (admin)
 export const updateMemory = createServerFn({ method: "POST" })
-  .middleware([requestMiddleware])
-  .validator(
-    (data: {
-      id: string;
-      key?: string;
-      value?: Record<string, string>;
-      metadata?: Record<string, string>;
-      expires_at?: string;
-    }) => data,
-  )
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => UpdateMemorySchema.parse(data))
   .handler(async ({ data, context }) => {
     const userId = await getAdminAuthorId(context.request as Request);
     if (!userId) throw new Response("Unauthorized", { status: 401 });
@@ -101,34 +99,36 @@ export const updateMemory = createServerFn({ method: "POST" })
     });
   });
 
-// Delete memory entry
+// Delete memory entry (admin)
 export const deleteMemory = createServerFn({ method: "POST" })
-  .middleware([requestMiddleware])
-  .validator((data: { id: string }) => data)
-  .handler(async ({ data, context }) => {
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => AdminIdSchema.parse((data as { id: string })?.id))
+  .handler(async ({ data: id, context }) => {
     const userId = await getAdminAuthorId(context.request as Request);
     if (!userId) throw new Response("Unauthorized", { status: 401 });
 
     const service = createMemoryService(getSupabaseAdmin());
-    await service.deleteMemoryRow(data.id, userId);
+    await service.deleteMemoryRow(id, userId);
     return { success: true };
   });
 
-// Delete all memories for a session
+// Delete all memories for a session (admin)
 export const deleteSessionMemories = createServerFn({ method: "POST" })
-  .middleware([requestMiddleware])
-  .validator((data: { session_id: string }) => data)
-  .handler(async ({ data, context }) => {
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => AdminIdSchema.parse((data as { session_id: string })?.session_id))
+  .handler(async ({ data: sessionId, context }) => {
     const userId = await getAdminAuthorId(context.request as Request);
     if (!userId) throw new Response("Unauthorized", { status: 401 });
 
     const service = createMemoryService(getSupabaseAdmin());
-    await service.deleteSessionMemoryRows(data.session_id, userId);
+    await service.deleteSessionMemoryRows(sessionId, userId);
     return { success: true };
   });
 
-// Get stats
-export const getMemoryStats = createServerFn({ method: "GET" }).handler(async () => {
-  const service = createMemoryService(getSupabaseAdmin());
-  return service.getMemoryStats();
-});
+// Get stats (admin — protégé)
+export const getMemoryStats = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
+  .handler(async () => {
+    const service = createMemoryService(getSupabaseAdmin());
+    return service.getMemoryStats();
+  });

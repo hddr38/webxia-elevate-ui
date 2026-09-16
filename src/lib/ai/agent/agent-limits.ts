@@ -11,7 +11,7 @@ export function createAgentConfig(overrides: Partial<AgentConfig> = {}): AgentCo
   return {
     limits: { ...DEFAULT_AGENT_LIMITS, ...overrides.limits },
     systemPrompt: overrides.systemPrompt ?? "",
-    defaultModel: overrides.defaultModel ?? "nemotron-3-ultra",
+    defaultModel: overrides.defaultModel ?? "nvidia/nemotron-3.5-lightning-30b-a3b",
     enableStreaming: overrides.enableStreaming ?? true,
   };
 }

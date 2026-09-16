@@ -1,149 +1,98 @@
-import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, redirect, useRouter } from "@tanstack/react-router";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-  LayoutDashboard,
-  PenTool,
-  FolderKanban,
-  Brain,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-} from "lucide-react";
-import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { useEffect } from "react";
 import { adminMiddleware } from "@/lib/auth/middleware";
 import { useLocale } from "@/lib/locale-context";
+import { AdminHeader } from "@/components/admin/admin-header";
 
 export const Route = createFileRoute("/admin/_layout")({
   server: {
     middleware: [adminMiddleware],
   },
+  // Garde côté client : pas de session locale → login (avec retour).
+  // Lecture du stockage local uniquement, aucun appel réseau.
+  beforeLoad: async ({ location }) => {
+    if (typeof window === "undefined") return;
+    const { data } = await getSupabaseBrowserClient().auth.getSession();
+    if (!data.session) {
+      throw redirect({
+        to: "/auth/login",
+        search: { redirect: location.href },
+        replace: true,
+      });
+    }
+  },
+  errorComponent: AdminLayoutError,
   component: AdminLayout,
 });
 
-function AdminLayout() {
+function AdminLayoutError({ error, reset }: { error: unknown; reset: () => void }) {
   const { t } = useLocale();
-  const navigate = useNavigate();
-  const routerState = useRouterState();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-
-  const navigation = [
-    { name: t("admin.nav.dashboard"), href: "/admin", icon: LayoutDashboard },
-    { name: t("admin.nav.articles"), href: "/admin/articles", icon: PenTool },
-    { name: t("admin.nav.realisations"), href: "/admin/realisations", icon: FolderKanban },
-    { name: t("admin.nav.aiMemory"), href: "/admin/ai-memory", icon: Brain },
-    { name: "Paramètres", href: "/admin/settings", icon: Settings },
-  ];
+  const router = useRouter();
+  const isUnauthorized = error instanceof Response && error.status === 401;
 
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUserEmail(data.user.email ?? null);
-      } else {
-        navigate({ to: "/auth/login", replace: true });
-      }
-    });
-  }, [navigate]);
-
-  const handleSignOut = async () => {
-    try {
-      const supabase = getSupabaseBrowserClient();
-      await supabase.auth.signOut();
-      navigate({ to: "/auth/login", replace: true });
-    } catch (error) {
-      console.error("Sign out error:", error);
+    if (isUnauthorized) {
+      void router.navigate({ to: "/auth/login", search: { redirect: "/admin" }, replace: true });
     }
-  };
+  }, [isUnauthorized, router]);
 
-  const currentPath = routerState.location.pathname;
+  // Session expirée ou absente (SSR / hard refresh) → on bascule vers le
+  // login au lieu d'afficher une page 500.
+  if (isUnauthorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <p className="text-sm text-muted-foreground">{t("admin.login.redirecting")}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-xl font-semibold tracking-tight">{t("admin.common.loadError")}</h1>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Button
+            onClick={() => {
+              void router.invalidate();
+              reset();
+            }}
+          >
+            {t("admin.common.retry")}
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/auth/login" search={{ redirect: "/admin" }}>
+              {t("admin.login.title")}
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminLayout() {
+  const { t } = useLocale();
 
   return (
     <div className="min-h-screen bg-background">
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <aside
-        className={cn(
-          "fixed top-0 left-0 z-50 h-screen w-64 transform bg-card border-r transition-transform duration-200 lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full",
-        )}
+      <a
+        href="#admin-content"
+        className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:left-4 focus-visible:top-4 focus-visible:z-[60] focus-visible:rounded-md focus-visible:bg-primary focus-visible:px-4 focus-visible:py-2 focus-visible:text-sm focus-visible:text-primary-foreground"
       >
-        <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center justify-between border-b px-4">
-            <Link to="/admin" className="font-bold text-xl">
-              WebXIA Admin
-            </Link>
-            <button className="lg:hidden p-2" onClick={() => setSidebarOpen(false)}>
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+        {t("a11y.skip")}
+      </a>
 
-          <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-            {navigation.map((item) => {
-              const isActive =
-                item.href === "/admin"
-                  ? currentPath === "/admin"
-                  : currentPath.startsWith(item.href);
+      <AdminHeader />
 
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  )}
-                >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  <span>{item.name}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="border-t p-4">
-            {userEmail && (
-              <div className="flex items-center gap-3 mb-4 px-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{userEmail}</p>
-                  <p className="text-xs text-muted-foreground">{t("admin.nav.administration")}</p>
-                </div>
-              </div>
-            )}
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 text-red-600 hover:text-red-700"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-5 w-5" />
-              <span>{t("admin.nav.logout")}</span>
-            </Button>
-          </div>
-        </div>
-      </aside>
-
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
-          <button className="lg:hidden p-2" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </button>
-          <h1 className="text-lg font-semibold">{t("admin.nav.administration")}</h1>
-        </header>
-
-        <main className="p-4 lg:p-6">
-          <Outlet />
-        </main>
-      </div>
+      <main
+        id="admin-content"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-7xl flex-1 px-4 pb-16 pt-28 sm:px-6 lg:px-8 focus-visible:outline-none"
+      >
+        <Outlet />
+      </main>
     </div>
   );
 }

@@ -1,22 +1,24 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { createRealisation, updateRealisation } from "@/server/functions/realisations";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { useSaveRealisation } from "@/features/admin/queries";
+import { CreateRealisationSchema, UpdateRealisationSchema } from "@/lib/admin/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, ArrowLeft, Save, Plus, X, Image, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Plus, Trash2, Star } from "lucide-react";
 import { slugify } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { UnsavedChangesDialog } from "@/components/admin/unsaved-changes-dialog";
+import { CoverHero } from "@/components/admin/cover-hero";
+import { FormSection } from "@/components/admin/form-section";
+import { useLocale } from "@/lib/locale-context";
 import type { Realisation, RealisationStatus } from "@/types/database";
 
 interface RealisationFormProps {
@@ -24,349 +26,587 @@ interface RealisationFormProps {
   mode: "create" | "edit";
 }
 
+const OptionalUrlInput = z
+  .string()
+  .trim()
+  .max(2048)
+  .refine((v) => !v || /^https?:\/\/.+/i.test(v), {
+    message: "URL invalide (doit commencer par http:// ou https://)",
+  });
+
+const RealisationFormUiSchema = z.object({
+  title: z.string().trim().min(1, "Titre requis").max(200, "Titre trop long (200 max)"),
+  slug: z
+    .string()
+    .trim()
+    .max(220)
+    .refine((v) => !v || /^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(v), {
+      message: "Slug invalide (lettres, chiffres et tirets uniquement)",
+    }),
+  shortDescription: z.string().trim().max(5000).optional().default(""),
+  descriptionMd: z
+    .string()
+    .trim()
+    .min(1, "Description requise")
+    .max(200_000, "Description trop longue"),
+  clientName: z.string().trim().max(200).optional().default(""),
+  projectUrl: OptionalUrlInput.optional().default(""),
+  githubUrl: OptionalUrlInput.optional().default(""),
+  coverImageUrl: OptionalUrlInput.optional().default(""),
+  status: z.enum(["draft", "published", "archived"]),
+  featured: z.boolean().default(false),
+  sortOrder: z.coerce.number().int().min(0).max(1_000_000),
+  technologiesText: z.string().max(1000).optional().default(""),
+  categoryText: z.string().max(1000).optional().default(""),
+  metaTitle: z.string().trim().max(160).optional().default(""),
+  metaDescription: z.string().trim().max(320).optional().default(""),
+  galleryImages: z.array(z.string().trim().min(1).max(2048)).max(30).default([]),
+});
+
+type RealisationFormInput = z.input<typeof RealisationFormUiSchema>;
+type RealisationFormValues = z.output<typeof RealisationFormUiSchema>;
+
+const STATUS_OPTIONS: RealisationStatus[] = ["draft", "published", "archived"];
+
+function splitList(value: string | undefined): string[] {
+  if (!value) return [];
+  return [
+    ...new Set(
+      value
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    ),
+  ].slice(0, 50);
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p role="alert" className="text-sm text-destructive">
+      {message}
+    </p>
+  );
+}
+
+function formatHeroDate(value: string | null | undefined, locale: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function RealisationForm({ realisation, mode }: RealisationFormProps) {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const [title, setTitle] = useState(realisation?.title ?? "");
-  const [slug, setSlug] = useState(realisation?.slug ?? "");
-  const [shortDescription, setShortDescription] = useState(realisation?.short_description ?? "");
-  const [descriptionMd, setDescriptionMd] = useState(realisation?.description_md ?? "");
-  const [clientName, setClientName] = useState(realisation?.client_name ?? "");
-  const [projectUrl, setProjectUrl] = useState(realisation?.project_url ?? "");
-  const [githubUrl, setGithubUrl] = useState(realisation?.github_url ?? "");
-  const [coverImageUrl, setCoverImageUrl] = useState(realisation?.cover_image_url ?? "");
-  const [status, setStatus] = useState<RealisationStatus>(realisation?.status ?? "draft");
-  const [featured, setFeatured] = useState(realisation?.featured ?? false);
-  const [sortOrder, setSortOrder] = useState(realisation?.sort_order ?? 0);
-  const [technologies, setTechnologies] = useState(realisation?.technologies?.join(", ") ?? "");
-  const [metaTitle, setMetaTitle] = useState(realisation?.meta_title ?? "");
-  const [metaDescription, setMetaDescription] = useState(realisation?.meta_description ?? "");
-  const [category, setCategory] = useState(realisation?.category?.join(", ") ?? "");
-  const [galleryImages, setGalleryImages] = useState<string[]>(realisation?.gallery_images ?? []);
+  const { t, locale } = useLocale();
+  const [serverError, setServerError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
   const [newGalleryImage, setNewGalleryImage] = useState("");
+  const [galleryError, setGalleryError] = useState("");
+  const saveMutation = useSaveRealisation(mode);
+  const prevTitle = useRef(realisation?.title ?? "");
+
+  const form = useForm<RealisationFormInput, unknown, RealisationFormValues>({
+    resolver: zodResolver(RealisationFormUiSchema),
+    defaultValues: {
+      title: realisation?.title ?? "",
+      slug: realisation?.slug ?? "",
+      shortDescription: realisation?.short_description ?? "",
+      descriptionMd: realisation?.description_md ?? "",
+      clientName: realisation?.client_name ?? "",
+      projectUrl: realisation?.project_url ?? "",
+      githubUrl: realisation?.github_url ?? "",
+      coverImageUrl: realisation?.cover_image_url ?? "",
+      status: realisation?.status ?? "draft",
+      featured: realisation?.featured ?? false,
+      sortOrder: realisation?.sort_order ?? 0,
+      technologiesText: realisation?.technologies?.join(", ") ?? "",
+      categoryText: realisation?.category?.join(", ") ?? "",
+      metaTitle: realisation?.meta_title ?? "",
+      metaDescription: realisation?.meta_description ?? "",
+      galleryImages: realisation?.gallery_images ?? [],
+    },
+  });
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isDirty },
+  } = form;
+  const isSaving = saveMutation.isPending;
+  const titleValue = watch("title");
+  const slugValue = watch("slug");
+  const statusValue = watch("status");
+  const coverValue = watch("coverImageUrl") ?? "";
+  const shortValue = watch("shortDescription") ?? "";
+  const descValue = watch("descriptionMd") ?? "";
+  const clientValue = watch("clientName") ?? "";
+  const metaTitleValue = watch("metaTitle") ?? "";
+  const metaDescValue = watch("metaDescription") ?? "";
+  const galleryImages = watch("galleryImages") ?? [];
+  const featured = watch("featured") ?? false;
+
+  const handleTitleChange = (value: string) => {
+    setValue("title", value, { shouldDirty: true, shouldValidate: true });
+    if (mode === "create" || slugValue === slugify(prevTitle.current)) {
+      setValue("slug", slugify(value), { shouldDirty: true, shouldValidate: true });
+    }
+    prevTitle.current = value;
+  };
 
   const addGalleryImage = () => {
-    if (newGalleryImage.trim()) {
-      setGalleryImages([...galleryImages, newGalleryImage.trim()]);
-      setNewGalleryImage("");
+    const url = newGalleryImage.trim();
+    setGalleryError("");
+    if (!url) return;
+    if (!/^https?:\/\/.+/i.test(url)) {
+      setGalleryError("URL invalide (doit commencer par http:// ou https://)");
+      return;
     }
+    if (galleryImages.includes(url)) {
+      setGalleryError("Cette image est déjà dans la galerie");
+      return;
+    }
+    if (galleryImages.length >= 30) {
+      setGalleryError("Galerie limitée à 30 images");
+      return;
+    }
+    setValue("galleryImages", [...galleryImages, url], { shouldDirty: true, shouldValidate: true });
+    setNewGalleryImage("");
   };
 
   const removeGalleryImage = (index: number) => {
-    setGalleryImages(galleryImages.filter((_, i) => i !== index));
+    setValue(
+      "galleryImages",
+      galleryImages.filter((_, i) => i !== index),
+      { shouldDirty: true },
+    );
   };
 
-  const handleTitleChange = (value: string) => {
-    setTitle(value);
-    if (mode === "create" || slug === slugify(title)) {
-      setSlug(slugify(value));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+  const onSubmit = (values: RealisationFormValues) => {
+    setServerError("");
+    const payload = {
+      title: values.title,
+      slug: values.slug || undefined,
+      short_description: values.shortDescription || undefined,
+      description_md: values.descriptionMd,
+      client_name: values.clientName || undefined,
+      project_url: values.projectUrl || undefined,
+      github_url: values.githubUrl || undefined,
+      cover_image_url: values.coverImageUrl || undefined,
+      gallery_images: values.galleryImages,
+      status: values.status as RealisationStatus,
+      featured: values.featured,
+      sort_order: values.sortOrder,
+      technologies: splitList(values.technologiesText),
+      category: splitList(values.categoryText),
+      meta_title: values.metaTitle || undefined,
+      meta_description: values.metaDescription || undefined,
+    };
 
     try {
-      const technologiesArray = technologies
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
-
-      const categoryArray = category
-        .split(",")
-        .map((c) => c.trim())
-        .filter(Boolean);
-
-      const payload = {
-        title,
-        slug,
-        short_description: shortDescription || undefined,
-        description_md: descriptionMd,
-        client_name: clientName || undefined,
-        project_url: projectUrl || undefined,
-        github_url: githubUrl || undefined,
-        cover_image_url: coverImageUrl || undefined,
-        gallery_images: galleryImages,
-        status,
-        featured,
-        sort_order: sortOrder,
-        technologies: technologiesArray,
-        category: categoryArray,
-        meta_title: metaTitle || undefined,
-        meta_description: metaDescription || undefined,
-      };
-
-      if (mode === "create") {
-        await createRealisation({ data: payload });
-      } else if (realisation) {
-        await updateRealisation({ data: { id: realisation.id, ...payload } });
-      }
-
-      navigate({ to: "/admin/realisations", replace: true });
+      const parsed =
+        mode === "create"
+          ? CreateRealisationSchema.parse(payload)
+          : UpdateRealisationSchema.parse(
+              realisation ? { id: realisation.id, ...payload } : payload,
+            );
+      saveMutation.mutate(parsed as never, {
+        onSuccess: () => {
+          setSubmitted(true);
+          toast.success(t("admin.common.saved"));
+          navigate({
+            to: "/admin/realisations",
+            search: { status: "all", q: "", page: 1 },
+            replace: true,
+          });
+        },
+        onError: (err) => {
+          setServerError(err instanceof Error ? err.message : t("admin.common.saveError"));
+          toast.error(t("admin.common.saveError"));
+        },
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de la sauvegarde");
-    } finally {
-      setIsLoading(false);
+      setServerError(err instanceof Error ? err.message : t("admin.common.saveError"));
     }
+  };
+
+  const heroDate = formatHeroDate(realisation?.updated_at ?? realisation?.created_at, locale);
+  const heroMeta = [clientValue || realisation?.client_name, heroDate].filter(Boolean).join(" · ");
+  const statusLabelKey: Record<RealisationStatus, string> = {
+    draft: "admin.form.draft",
+    published: "admin.form.published",
+    archived: "admin.form.archived",
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-24 lg:pb-0">
+      <UnsavedChangesDialog when={isDirty && !submitted} />
+      {serverError && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{serverError}</AlertDescription>
         </Alert>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      {/* Barre supérieure : retour + titre live + sauvegarde */}
+      <div className="sticky top-24 z-20 -mx-4 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="flex items-center gap-3">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => navigate({ to: "/admin/realisations" })}
+            aria-label={t("admin.common.back")}
+            onClick={() =>
+              navigate({ to: "/admin/realisations", search: { status: "all", q: "", page: 1 } })
+            }
+            className="min-h-[44px] min-w-[44px] shrink-0 rounded-full"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </Button>
-          <h1 className="text-2xl font-bold">
-            {mode === "create" ? "Nouvelle réalisation" : "Modifier la réalisation"}
-          </h1>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand">
+              {t("admin.nav.realisations")}
+              {featured && <Star className="size-3 fill-current" aria-hidden="true" />}
+            </p>
+            <h1 className="truncate font-display text-lg font-semibold tracking-tight sm:text-xl">
+              {titleValue ||
+                (mode === "create"
+                  ? t("admin.form.newRealisation")
+                  : t("admin.form.editRealisation"))}
+            </h1>
+          </div>
+          <Button
+            type="submit"
+            variant="brand"
+            disabled={isSaving}
+            className="hidden shrink-0 sm:inline-flex"
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Save className="h-4 w-4" aria-hidden="true" />
+            )}
+            {mode === "create" ? t("admin.form.create") : t("admin.form.save")}
+          </Button>
         </div>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {mode === "create" ? "Créer" : "Enregistrer"}
-        </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contenu</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Titre *</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  placeholder="Nom du projet"
-                  required
-                />
-              </div>
+      {/* Aperçu cover live, niveau vitrine */}
+      <CoverHero
+        eyebrow={
+          mode === "create" ? t("admin.form.newRealisation") : t("admin.form.editRealisation")
+        }
+        title={titleValue}
+        coverUrl={coverValue}
+        status={statusValue}
+        slug={slugValue || realisation?.slug}
+        meta={heroMeta || null}
+        fallbackSeed={realisation?.id ?? titleValue ?? "new"}
+      />
 
-              <div className="space-y-2">
-                <Label htmlFor="slug">Slug</Label>
-                <Input
-                  id="slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="slug-du-projet"
-                />
-              </div>
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <FormSection
+            index="01"
+            title={t("admin.form.content")}
+            description={t("admin.realisations.description")}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="title">{t("admin.form.title")}</Label>
+              <Input
+                id="title"
+                value={titleValue}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder="Nom du projet"
+                className="rounded-xl"
+              />
+              <FieldError message={errors.title?.message} />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="shortDescription">Description courte</Label>
-                <Textarea
-                  id="shortDescription"
-                  value={shortDescription}
-                  onChange={(e) => setShortDescription(e.target.value)}
-                  placeholder="Courte description pour les cartes"
-                  rows={2}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="slug">{t("admin.form.slug")}</Label>
+              <Input
+                id="slug"
+                value={slugValue}
+                onChange={(e) => setValue("slug", e.target.value, { shouldDirty: true })}
+                placeholder="slug-du-projet"
+                className="rounded-xl font-mono text-sm"
+              />
+              <FieldError message={errors.slug?.message} />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Markdown) *</Label>
-                <Textarea
-                  id="description"
-                  value={descriptionMd}
-                  onChange={(e) => setDescriptionMd(e.target.value)}
-                  placeholder="Description complète du projet en Markdown..."
-                  rows={15}
-                  className="font-mono text-sm"
-                  required
-                />
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor="shortDescription">{t("admin.form.shortDescription")}</Label>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {shortValue.length}/5000
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Textarea
+                id="shortDescription"
+                placeholder="Courte description pour les cartes"
+                rows={2}
+                className="rounded-xl"
+                {...register("shortDescription")}
+              />
+              <FieldError message={errors.shortDescription?.message} />
+            </div>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Paramètres</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Statut</Label>
-                <Select value={status} onValueChange={(v) => setStatus(v as RealisationStatus)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Brouillon</SelectItem>
-                    <SelectItem value="published">Publié</SelectItem>
-                    <SelectItem value="archived">Archivé</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor="description">{t("admin.form.descriptionMd")}</Label>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {descValue.length} / 200 000
+                </span>
               </div>
+              <Textarea
+                id="description"
+                placeholder="Description complète du projet en Markdown..."
+                rows={15}
+                className="rounded-xl font-mono text-sm leading-relaxed"
+                {...register("descriptionMd")}
+              />
+              <FieldError message={errors.descriptionMd?.message} />
+            </div>
+          </FormSection>
 
-              <div className="flex items-center justify-between">
-                <Label htmlFor="featured">À la une</Label>
-                <Switch id="featured" checked={featured} onCheckedChange={setFeatured} />
-              </div>
-
+          <FormSection index="02" title={t("admin.form.links")}>
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="sortOrder">Ordre d'affichage</Label>
-                <Input
-                  id="sortOrder"
-                  type="number"
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(Number(e.target.value))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category">Catégories (séparées par virgules)</Label>
-                <Input
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="web, app, ai, brand"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="technologies">Technologies (séparées par virgules)</Label>
-                <Input
-                  id="technologies"
-                  value={technologies}
-                  onChange={(e) => setTechnologies(e.target.value)}
-                  placeholder="React, TypeScript, Tailwind"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Liens</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="client">Client</Label>
+                <Label htmlFor="client">{t("admin.form.client")}</Label>
                 <Input
                   id="client"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
                   placeholder="Nom du client"
+                  className="rounded-xl"
+                  {...register("clientName")}
                 />
+                <FieldError message={errors.clientName?.message} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="projectUrl">URL du projet</Label>
+                <Label htmlFor="cover">{t("admin.form.cover")}</Label>
+                <Input
+                  id="cover"
+                  placeholder="https://..."
+                  className="rounded-xl font-mono text-xs"
+                  {...register("coverImageUrl")}
+                />
+                <FieldError message={errors.coverImageUrl?.message} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="projectUrl">{t("admin.form.projectUrl")}</Label>
                 <Input
                   id="projectUrl"
-                  value={projectUrl}
-                  onChange={(e) => setProjectUrl(e.target.value)}
                   placeholder="https://..."
+                  className="rounded-xl font-mono text-xs"
+                  {...register("projectUrl")}
                 />
+                <FieldError message={errors.projectUrl?.message} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="githubUrl">GitHub</Label>
                 <Input
                   id="githubUrl"
-                  value={githubUrl}
-                  onChange={(e) => setGithubUrl(e.target.value)}
                   placeholder="https://github.com/..."
+                  className="rounded-xl font-mono text-xs"
+                  {...register("githubUrl")}
                 />
+                <FieldError message={errors.githubUrl?.message} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="cover">Image de couverture (URL)</Label>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor="gallery">{t("admin.form.gallery")}</Label>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {galleryImages.length}/30
+                </span>
+              </div>
+              <div className="flex gap-2">
                 <Input
-                  id="cover"
-                  value={coverImageUrl}
-                  onChange={(e) => setCoverImageUrl(e.target.value)}
+                  id="gallery"
+                  value={newGalleryImage}
+                  onChange={(e) => setNewGalleryImage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addGalleryImage();
+                    }
+                  }}
                   placeholder="https://..."
+                  className="flex-1 rounded-xl font-mono text-xs"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addGalleryImage}
+                  aria-label={t("admin.form.gallery")}
+                  className="min-h-[44px] min-w-[44px] shrink-0 rounded-full"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="gallery">Galerie d'images</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="gallery"
-                    value={newGalleryImage}
-                    onChange={(e) => setNewGalleryImage(e.target.value)}
-                    placeholder="https://..."
-                    className="flex-1"
-                  />
-                  <Button type="button" variant="outline" onClick={addGalleryImage}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {galleryImages.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {galleryImages.map((img, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 bg-muted px-3 py-1 rounded"
+              <FieldError message={galleryError || errors.galleryImages?.message} />
+              {galleryImages.length > 0 && (
+                <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {galleryImages.map((img, i) => (
+                    <li
+                      key={img}
+                      className="group relative overflow-hidden rounded-xl border border-border bg-muted"
+                    >
+                      <img
+                        src={img}
+                        alt=""
+                        aria-hidden="true"
+                        loading="lazy"
+                        decoding="async"
+                        className="aspect-[4/3] w-full object-cover"
+                      />
+                      <span className="block truncate px-2 py-1 font-mono text-[10px] text-muted-foreground">
+                        {img}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => removeGalleryImage(i)}
+                        className="absolute right-1.5 top-1.5 min-h-[44px] min-w-[44px] rounded-full shadow sm:min-h-0 sm:min-w-0 sm:size-8"
+                        aria-label={`Retirer ${img}`}
                       >
-                        <Image className="h-4 w-4" />
-                        <span className="text-sm truncate max-w-[200px]">{img}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeGalleryImage(index)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>SEO</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="metaTitle">Meta titre</Label>
-                <Input
-                  id="metaTitle"
-                  value={metaTitle}
-                  onChange={(e) => setMetaTitle(e.target.value)}
-                  placeholder="Titre pour les moteurs de recherche"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="metaDesc">Meta description</Label>
-                <Textarea
-                  id="metaDesc"
-                  value={metaDescription}
-                  onChange={(e) => setMetaDescription(e.target.value)}
-                  placeholder="Description pour les moteurs de recherche"
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </FormSection>
         </div>
+
+        <aside className="space-y-6 lg:sticky lg:top-32">
+          <FormSection index="03" title={t("admin.form.settings")}>
+            <div className="space-y-2">
+              <span id="status-label" className="text-sm font-medium">
+                {t("admin.form.status")}
+              </span>
+              <div
+                role="group"
+                aria-labelledby="status-label"
+                className="inline-flex max-w-full flex-wrap gap-1 rounded-full border border-border bg-background/40 p-1"
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={statusValue === option}
+                    onClick={() => setValue("status", option, { shouldDirty: true })}
+                    className={cn(
+                      "min-h-[44px] rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-0",
+                      statusValue === option
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {t(statusLabelKey[option] as "admin.form.draft")}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2.5">
+              <Label htmlFor="featured">{t("admin.form.featured")}</Label>
+              <Switch
+                id="featured"
+                checked={featured}
+                onCheckedChange={(v) => setValue("featured", v, { shouldDirty: true })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sortOrder">{t("admin.form.sortOrder")}</Label>
+              <Input
+                id="sortOrder"
+                type="number"
+                min={0}
+                className="rounded-xl tabular-nums"
+                {...register("sortOrder")}
+              />
+              <FieldError message={errors.sortOrder?.message} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">{t("admin.form.categories")}</Label>
+              <Input
+                id="category"
+                placeholder="web, app, ai, brand"
+                className="rounded-xl"
+                {...register("categoryText")}
+              />
+              <FieldError message={errors.categoryText?.message} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="technologies">{t("admin.form.technologies")}</Label>
+              <Input
+                id="technologies"
+                placeholder="React, TypeScript, Tailwind"
+                className="rounded-xl"
+                {...register("technologiesText")}
+              />
+              <FieldError message={errors.technologiesText?.message} />
+            </div>
+          </FormSection>
+
+          <FormSection index="04" title={t("admin.form.seo")}>
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor="metaTitle">{t("admin.form.metaTitle")}</Label>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {metaTitleValue.length}/160
+                </span>
+              </div>
+              <Input
+                id="metaTitle"
+                placeholder="Titre pour les moteurs de recherche"
+                className="rounded-xl"
+                {...register("metaTitle")}
+              />
+              <FieldError message={errors.metaTitle?.message} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor="metaDesc">{t("admin.form.metaDescription")}</Label>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {metaDescValue.length}/320
+                </span>
+              </div>
+              <Textarea
+                id="metaDesc"
+                placeholder="Description pour les moteurs de recherche"
+                rows={3}
+                className="rounded-xl"
+                {...register("metaDescription")}
+              />
+              <FieldError message={errors.metaDescription?.message} />
+            </div>
+          </FormSection>
+        </aside>
+      </div>
+
+      {/* Barre d'enregistrement mobile */}
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 p-4 backdrop-blur-xl lg:hidden">
+        <Button type="submit" variant="brand" disabled={isSaving} className="min-h-[44px] w-full">
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Save className="h-4 w-4" aria-hidden="true" />
+          )}
+          {mode === "create" ? t("admin.form.create") : t("admin.form.save")}
+        </Button>
       </div>
     </form>
   );

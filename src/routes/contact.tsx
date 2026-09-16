@@ -12,9 +12,9 @@ export const Route = createFileRoute("/contact")({
         { name: "description", content: s.description },
         { property: "og:title", content: s.title },
         { property: "og:description", content: s.ogDescription },
-        { property: "og:url", content: "https://your-domain.com/contact" },
+        { property: "og:url", content: "https://webxia.fr/contact" },
       ],
-      links: [{ rel: "canonical", href: "https://your-domain.com/contact" }],
+      links: [{ rel: "canonical", href: "https://webxia.fr/contact" }],
     };
   },
   component: ContactPage,

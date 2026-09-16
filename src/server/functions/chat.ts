@@ -130,11 +130,11 @@ export async function handleChatRequest(ctx: ChatHandlerContext): Promise<Respon
   await embeddingProvider.initialize(nvidiaConfig);
 
   // Model id must exist on the NIM account (verified via /v1/models).
-  // Primary is fast (Lightning 30B); fallback is the larger Super 120B,
+  // Primary is fast (Lightning 30B); fallback is Nano Omni 30B Reasoning,
   // used automatically on TIMEOUT / 5xx / 429 (never on 4xx logic errors).
-  const chatModel = process.env.NVIDIA_NIM_DEFAULT_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
+  const chatModel = process.env.NVIDIA_NIM_DEFAULT_MODEL || "nvidia/nemotron-3.5-lightning-30b-a3b";
   const fallbackModel =
-    process.env.NVIDIA_NIM_FALLBACK_MODEL || "nvidia/nemotron-3-super-120b-a12b";
+    process.env.NVIDIA_NIM_FALLBACK_MODEL || "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning";
 
   const modelRouter = new ModelRouter({
     primaryProvider: "nvidia",

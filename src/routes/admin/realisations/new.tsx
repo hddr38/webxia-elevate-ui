@@ -6,9 +6,5 @@ export const Route = createFileRoute("/admin/realisations/new")({
 });
 
 function NewRealisationPage() {
-  return (
-    <div>
-      <RealisationForm mode="create" />
-    </div>
-  );
+  return <RealisationForm mode="create" />;
 }

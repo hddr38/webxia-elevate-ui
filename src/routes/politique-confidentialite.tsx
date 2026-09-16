@@ -56,8 +56,8 @@ function PolitiqueConfidentialitePage() {
                 Le responsable du traitement des données est WebXIA, représentée par Mehdi E., ayant
                 son adresse à 30 allée Robert Boulin, 33500 Libourne, France, joignable à l'adresse
                 suivante :{" "}
-                <a href="mailto:contact@webxia.fr" className="text-brand hover:underline">
-                  contact@webxia.fr
+                <a href="mailto:webxia@protonmail.com" className="text-brand hover:underline">
+                  webxia@protonmail.com
                 </a>
                 .
               </p>
@@ -167,8 +167,8 @@ function PolitiqueConfidentialitePage() {
               </ul>
               <p className="mt-4">
                 Pour exercer ces droits, vous pouvez nous contacter à :{" "}
-                <a href="mailto:contact@webxia.fr" className="text-brand hover:underline">
-                  contact@webxia.fr
+                <a href="mailto:webxia@protonmail.com" className="text-brand hover:underline">
+                  webxia@protonmail.com
                 </a>
                 . Vous avez également le droit d'introduire une réclamation auprès de la{" "}
                 <a

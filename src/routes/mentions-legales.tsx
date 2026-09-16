@@ -61,8 +61,8 @@ function MentionsLegalesPage() {
                 <li>Adresse : 30 allée Robert Boulin, 33500 Libourne, France</li>
                 <li>
                   Email :{" "}
-                  <a href="mailto:contact@webxia.fr" className="text-brand hover:underline">
-                    contact@webxia.fr
+                  <a href="mailto:webxia@protonmail.com" className="text-brand hover:underline">
+                    webxia@protonmail.com
                   </a>
                 </li>
                 <li>Numéro SIRET : 87179907200018</li>

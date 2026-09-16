@@ -1,14 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { MapPin, Code, Palette, Bot, TrendingUp } from "lucide-react";
-import { CTAStrip, ProjectCard } from "@/components/site/project-card";
+import { CTAStrip, DbRealisationCard } from "@/components/site/project-card";
 import { useLocale } from "@/lib/locale-context";
 import { founder, expertisePoles } from "@/data/team";
-import { projects, type ProjectCategory } from "@/data/projects";
+import { getPublishedRealisations } from "@/server/functions/realisations";
+import { realisationToDisplay, type DisplayRealisation } from "@/lib/mappers";
 import { useState } from "react";
 import { seo } from "@/lib/seo";
 
+interface AboutWorkItem {
+  item: DisplayRealisation;
+  technologies: string[];
+  categories: string[];
+}
+
 export const Route = createFileRoute("/about")({
+  loader: async (): Promise<{ work: AboutWorkItem[] }> => {
+    try {
+      const result = await getPublishedRealisations({ data: { limit: 12 } });
+      return {
+        work: result.data.map((r) => ({
+          item: realisationToDisplay(r),
+          technologies: r.technologies ?? [],
+          categories: r.category ?? [],
+        })),
+      };
+    } catch (error) {
+      console.error("[about] Failed to load realisations:", error);
+      return { work: [] };
+    }
+  },
   head: () => {
     const locale = (typeof window !== "undefined" && localStorage.getItem("webxia-locale")) || "fr";
     const s = locale === "en" ? seo.en.about : seo.fr.about;
@@ -18,9 +40,9 @@ export const Route = createFileRoute("/about")({
         { name: "description", content: s.description },
         { property: "og:title", content: s.title },
         { property: "og:description", content: s.ogDescription },
-        { property: "og:url", content: "https://your-domain.com/about" },
+        { property: "og:url", content: "https://webxia.fr/about" },
       ],
-      links: [{ rel: "canonical", href: "https://your-domain.com/about" }],
+      links: [{ rel: "canonical", href: "https://webxia.fr/about" }],
     };
   },
   component: AboutPage,
@@ -52,13 +74,24 @@ const stack = [
   "Framer Motion",
 ];
 
-type Filter = "all" | ProjectCategory;
-const filters: Filter[] = ["all", "web", "app", "ai", "brand"];
+const KNOWN_FILTERS = ["web", "app", "ai", "brand"] as const;
 
 function AboutPage() {
   const { t } = useLocale();
-  const [filter, setFilter] = useState<Filter>("all");
-  const list = filter === "all" ? projects : projects.filter((p) => p.category === filter);
+  const { work } = Route.useLoaderData();
+  const [filter, setFilter] = useState<string>("all");
+
+  // Filtres construits depuis les catégories réellement présentes en DB.
+  const categories = [...new Set(work.flatMap((r) => r.categories))].sort();
+  const filters = ["all", ...categories];
+  const list = filter === "all" ? work : work.filter((r) => r.categories.includes(filter));
+
+  const filterLabel = (f: string) =>
+    f === "all"
+      ? t("work.filter.all")
+      : (KNOWN_FILTERS as readonly string[]).includes(f)
+        ? t(`work.filter.${f}` as "work.filter.all")
+        : f;
 
   return (
     <>
@@ -224,42 +257,52 @@ function AboutPage() {
         </div>
       </section>
 
-      {/* Réalisations */}
-      <section id="realisations" className="py-10 md:py-14">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
-            {t("work.eyebrow")}
-          </span>
-          <h2 className="mt-4 font-display text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
-            {t("work.title")}
-          </h2>
-          <p className="mt-5 max-w-2xl text-balance text-base text-muted-foreground sm:text-lg">
-            {t("work.subtitle")}
-          </p>
+      {/* Réalisations (DB) */}
+      {work.length > 0 && (
+        <section id="realisations" className="py-10 md:py-14">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
+              {t("work.eyebrow")}
+            </span>
+            <h2 className="mt-4 font-display text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+              {t("work.title")}
+            </h2>
+            <p className="mt-5 max-w-2xl text-balance text-base text-muted-foreground sm:text-lg">
+              {t("work.subtitle")}
+            </p>
 
-          <div className="mt-12 inline-flex flex-wrap gap-1.5 rounded-full border border-border bg-background/40 p-1 backdrop-blur-md">
-            {filters.map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                  filter === f
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t(`work.filter.${f}` as "work.filter.all")}
-              </button>
-            ))}
-          </div>
+            {filters.length > 1 && (
+              <div className="mt-12 inline-flex max-w-full flex-wrap gap-1.5 rounded-full border border-border bg-background/40 p-1 backdrop-blur-md">
+                {filters.map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    aria-pressed={filter === f}
+                    className={`min-h-[44px] rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-0 ${
+                      filter === f
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {filterLabel(f)}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {list.map((p, i) => (
-              <ProjectCard key={p.slug} project={p} index={i} />
-            ))}
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {list.map((r, i) => (
+                <DbRealisationCard
+                  key={r.item.slug || `${r.item.title}-${i}`}
+                  item={r.item}
+                  technologies={r.technologies}
+                  index={i}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <CTAStrip
         eyebrow={t("contact.eyebrow")}

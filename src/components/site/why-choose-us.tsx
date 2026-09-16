@@ -49,14 +49,16 @@ export function WhyChooseUs({ className }: { className?: string }) {
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-8 md:p-12"
         >
-          <p className="text-base text-muted-foreground sm:text-lg">{t("home.whyChooseUs.body")}</p>
+          <p className="text-base text-muted-foreground sm:text-lg text-pretty">
+            {t("home.whyChooseUs.body")}
+          </p>
           <h3 className="mt-8 font-display text-xl font-semibold tracking-tight">
             {t("home.whyChooseUs.engagementsTitle")}
           </h3>
           <ul className="mt-6 space-y-4" role="list">
             {engagements.map((item, i) => (
               <motion.li
-                key={i}
+                key={`why-choose-${i}`}
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}

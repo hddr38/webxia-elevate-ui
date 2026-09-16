@@ -38,12 +38,12 @@ export function getAIConfig(): AIConfig {
     nvidia: {
       apiKey,
       baseUrl,
-      defaultModel: getEnv("NVIDIA_NIM_DEFAULT_MODEL") ?? "nemotron-3-ultra",
+      defaultModel: getEnv("NVIDIA_NIM_DEFAULT_MODEL") ?? "nvidia/nemotron-3.5-lightning-30b-a3b",
     },
     fallback: {
       enabled: getEnv("AI_FALLBACK_ENABLED") === "true",
       provider: getEnv("AI_FALLBACK_PROVIDER") ?? "nvidia",
-      model: getEnv("AI_FALLBACK_MODEL") ?? "llama-3.1-70b-instruct",
+      model: getEnv("AI_FALLBACK_MODEL") ?? "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
     },
     limits: {
       timeoutMs: parseInt(getEnv("AI_TIMEOUT_MS") ?? "120000", 10),

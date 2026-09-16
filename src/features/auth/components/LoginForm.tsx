@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +18,7 @@ import { useLocale } from "@/lib/locale-context";
 
 export function LoginForm() {
   const navigate = useNavigate();
+  const { redirect } = useSearch({ from: "/auth/login" });
   const { t } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,11 +39,17 @@ export function LoginForm() {
       });
 
       if (authError) {
-        setError(authError.message);
+        // Message générique volontaire : ne jamais exposer le message brut
+        // (anglais + permet l'énumération de comptes).
+        setError(t("admin.login.error"));
         return;
       }
 
-      navigate({ to: "/admin", replace: true });
+      // Retour interne uniquement (anti open-redirect : même origine,
+      // chemin absolu, pas de "//").
+      const target =
+        redirect && redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/admin";
+      navigate({ href: target, replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.login.error"));
     } finally {
@@ -53,11 +58,18 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-12">
+    <div className="min-h-dvh flex items-center justify-center bg-muted/30 px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">{t("admin.login.title")}</CardTitle>
-          <CardDescription>{t("admin.login.title")}</CardDescription>
+          <img
+            src="/logo.svg"
+            alt="WebXIA"
+            width={48}
+            height={40}
+            className="mx-auto h-10 w-auto"
+          />
+          <CardTitle className="mt-4 text-2xl font-bold">{t("admin.login.title")}</CardTitle>
+          <CardDescription>{t("admin.login.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -70,7 +82,10 @@ export function LoginForm() {
             <div className="space-y-2">
               <Label htmlFor="email">{t("admin.login.email")}</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Mail
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4"
+                  aria-hidden="true"
+                />
                 <Input
                   id="email"
                   type="email"
@@ -88,7 +103,10 @@ export function LoginForm() {
             <div className="space-y-2">
               <Label htmlFor="password">{t("admin.login.password")}</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Lock
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4"
+                  aria-hidden="true"
+                />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -103,10 +121,18 @@ export function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-1 top-1/2 inline-flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
+                  aria-label={
+                    showPassword ? t("admin.login.hidePassword") : t("admin.login.showPassword")
+                  }
+                  aria-pressed={showPassword}
                   disabled={isLoading}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
                 </button>
               </div>
             </div>

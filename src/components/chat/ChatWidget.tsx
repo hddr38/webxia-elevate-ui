@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot } from "lucide-react";
+import { useEffect } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { useChat } from "@/hooks/use-chat";
 import { ChatWindow } from "./ChatWindow";
@@ -7,12 +8,22 @@ import { cn } from "@/lib/utils";
 
 export function ChatWidget() {
   const { t } = useLocale();
-  const { isOpen, toggle } = useChat();
+  const { isOpen, close, toggle } = useChat();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, close]);
 
   return (
     <AnimatePresence>
       {!isOpen && (
         <motion.button
+          key="chat-launcher"
           initial={{ opacity: 0, y: 30, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 30, scale: 0.9 }}
@@ -28,7 +39,7 @@ export function ChatWidget() {
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           )}
           aria-label={t("chat.widget.title")}
-          aria-expanded={false}
+          aria-expanded={isOpen}
         >
           <span className="relative inline-flex size-8 items-center justify-center rounded-full bg-brand text-brand-foreground">
             <span className="absolute inset-0 animate-ping rounded-full bg-brand opacity-40" />
@@ -38,7 +49,7 @@ export function ChatWidget() {
         </motion.button>
       )}
 
-      <AnimatePresence>{isOpen && <ChatWindow />}</AnimatePresence>
+      {isOpen && <ChatWindow key="chat-window" />}
     </AnimatePresence>
   );
 }

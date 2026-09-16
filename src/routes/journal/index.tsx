@@ -7,7 +7,7 @@ import { getPublishedArticles } from "@/server/functions/articles";
 import { articleToDisplay, type DisplayArticle } from "@/lib/mappers";
 import { seo } from "@/lib/seo";
 
-export const Route = createFileRoute("/journal")({
+export const Route = createFileRoute("/journal/")({
   loader: async () => {
     try {
       const result = await getPublishedArticles({ data: {} });
@@ -26,9 +26,9 @@ export const Route = createFileRoute("/journal")({
         { name: "description", content: s.description },
         { property: "og:title", content: s.title },
         { property: "og:description", content: s.ogDescription },
-        { property: "og:url", content: "https://your-domain.com/journal" },
+        { property: "og:url", content: "https://webxia.fr/journal" },
       ],
-      links: [{ rel: "canonical", href: "https://your-domain.com/journal" }],
+      links: [{ rel: "canonical", href: "https://webxia.fr/journal" }],
     };
   },
   component: JournalPage,
@@ -91,16 +91,15 @@ function JournalPage() {
           </div>
 
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {list.map((a, i) => (
-              <motion.article
-                key={a.slug}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.6, delay: i * 0.06 }}
-                className="group overflow-hidden rounded-2xl border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40"
-              >
-                <Link to="/journal/$slug" params={{ slug: a.slug }} className="block">
+            {list.map((a, i) => {
+              // Garde anti-lien-mort : un slug vide pointerait vers /journal lui-même
+              // (clic silencieux + remontée en haut). La carte reste visible mais non cliquable.
+              const hasSlug = a.slug.trim().length > 0;
+              if (!hasSlug) {
+                console.warn(`[journal] Article sans slug ignoré du lien détail : "${a.title}"`);
+              }
+              const body = (
+                <>
                   <div
                     className="relative aspect-[16/10] overflow-hidden"
                     style={{ backgroundImage: a.cover }}
@@ -132,9 +131,27 @@ function JournalPage() {
                       </span>
                     </div>
                   </div>
-                </Link>
-              </motion.article>
-            ))}
+                </>
+              );
+              return (
+                <motion.article
+                  key={a.slug || `${a.title}-${i}`}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-80px" }}
+                  transition={{ duration: 0.6, delay: i * 0.06 }}
+                  className="group overflow-hidden rounded-2xl border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40"
+                >
+                  {hasSlug ? (
+                    <Link to="/journal/$slug" params={{ slug: a.slug }} className="block">
+                      {body}
+                    </Link>
+                  ) : (
+                    <div className="block">{body}</div>
+                  )}
+                </motion.article>
+              );
+            })}
           </div>
         </div>
       </section>

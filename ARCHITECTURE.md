@@ -452,7 +452,7 @@ npm run preview
 
 ```env
 VITE_SITE_URL=https://webxia.fr
-VITE_CONTACT_EMAIL=contact@webxia.fr
+VITE_CONTACT_EMAIL=webxia@protonmail.com
 VITE_ANALYTICS_ID=G-XXXXXXXXXX
 ```
 

@@ -1,20 +1,28 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requestMiddleware } from "./conversations";
+import { adminMiddleware } from "@/lib/auth/middleware";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
 import {
-  slugify,
-  sanitizeIlike,
+  sanitizeOrSearchTerm,
   getPaginationParams,
   buildPaginatedResponse,
   prepareSlugAndPublish,
 } from "@/lib/utils";
 import { getAdminAuthorId } from "@/lib/auth/session";
-import type { CreateArticleInput, UpdateArticleInput } from "@/types/database";
+import { mapDatabaseError, throwNotFound } from "@/lib/admin/errors";
+import {
+  ListArticlesSchema,
+  PublicArticlesSchema,
+  CreateArticleSchema,
+  UpdateArticleSchema,
+  AdminIdSchema,
+  SlugSchema,
+} from "@/lib/admin/schemas";
 
-// List articles with optional filters
+// List articles (admin — drafts inclus, protégé)
 export const getArticles = createServerFn({ method: "GET" })
-  .validator((data: { status?: string; search?: string; page?: number; limit?: number }) => data)
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => ListArticlesSchema.parse(data))
   .handler(async ({ data }) => {
     const { page, limit, offset } = getPaginationParams(data);
 
@@ -24,60 +32,66 @@ export const getArticles = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
 
     if (data.status && data.status !== "all") {
-      query = query.eq("status", data.status as "draft" | "published" | "archived");
+      query = query.eq("status", data.status);
     }
 
     if (data.search) {
-      const search = sanitizeIlike(data.search);
-      query = query.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%`);
+      const search = sanitizeOrSearchTerm(data.search);
+      if (search) {
+        query = query.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%`);
+      }
     }
 
     query = query.range(offset, offset + limit - 1);
 
     const { data: articles, error, count } = await query;
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Articles");
 
     return buildPaginatedResponse(articles, count, page, limit);
   });
 
-// Get single article by id
+// Get single article by id (admin — protégé)
 export const getArticle = createServerFn({ method: "GET" })
-  .validator((data: { id: string }) => data)
-  .handler(async ({ data }) => {
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => AdminIdSchema.parse((data as { id: string })?.id))
+  .handler(async ({ data: id }) => {
     const { data: article, error } = await getSupabaseAdmin()
       .from("articles")
       .select("*")
-      .eq("id", data.id)
+      .eq("id", id)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Article");
+    if (!article) throwNotFound("Article");
     return article!;
   });
 
-// Get single article by slug (public)
+// Get single article by slug (public — RLS published-only)
 export const getArticleBySlug = createServerFn({ method: "GET" })
-  .validator((data: { slug: string }) => data)
-  .handler(async ({ data }) => {
+  .validator((data: unknown) => SlugSchema.parse((data as { slug: string })?.slug))
+  .handler(async ({ data: slug }) => {
     const supabase = createPublicClient();
     const { data: article, error } = await supabase
       .from("articles")
       .select("*")
-      .eq("slug", data.slug)
+      .eq("slug", slug)
       .eq("status", "published")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Article");
+    if (!article) throwNotFound("Article");
     return article!;
   });
 
-// Create article
+// Create article (admin)
 export const createArticle = createServerFn({ method: "POST" })
-  .middleware([requestMiddleware])
-  .validator((data: CreateArticleInput) => data)
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => CreateArticleSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { slug, publishedAt } = prepareSlugAndPublish(data);
     const authorId = await getAdminAuthorId(context.request as Request);
+    if (!authorId) throw new Response("Unauthorized", { status: 401 });
 
     const { data: article, error } = await getSupabaseAdmin()
       .from("articles")
@@ -92,17 +106,19 @@ export const createArticle = createServerFn({ method: "POST" })
         meta_description: data.meta_description ?? null,
         cover_image_url: data.cover_image_url ?? null,
         tags: data.tags ?? [],
+        category: data.category ?? [],
       })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Article");
     return article!;
   });
 
-// Update article
+// Update article (admin — author_id non modifiable côté client)
 export const updateArticle = createServerFn({ method: "POST" })
-  .validator((data: UpdateArticleInput) => data)
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => UpdateArticleSchema.parse(data))
   .handler(async ({ data }) => {
     const { id, ...updates } = data;
 
@@ -125,13 +141,14 @@ export const updateArticle = createServerFn({ method: "POST" })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Article");
+    if (!article) throwNotFound("Article");
     return article!;
   });
 
-// Get published articles (public site)
+// Get published articles (public site — RLS)
 export const getPublishedArticles = createServerFn({ method: "GET" })
-  .validator((data: { category?: string; page?: number; limit?: number }) => data)
+  .validator((data: unknown) => PublicArticlesSchema.parse(data))
   .handler(async ({ data }) => {
     const { page, limit, offset } = getPaginationParams(data);
 
@@ -143,24 +160,25 @@ export const getPublishedArticles = createServerFn({ method: "GET" })
       .order("published_at", { ascending: false });
 
     if (data.category && data.category !== "all") {
-      query = query.contains("category", [data.category]);
+      query = query.contains("category", [data.category.trim().slice(0, 120)]);
     }
 
     query = query.range(offset, offset + limit - 1);
 
     const { data: articles, error, count } = await query;
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Articles");
 
     return buildPaginatedResponse(articles, count, page, limit);
   });
 
-// Delete article
+// Delete article (admin)
 export const deleteArticle = createServerFn({ method: "POST" })
-  .validator((data: { id: string }) => data)
-  .handler(async ({ data }) => {
-    const { error } = await getSupabaseAdmin().from("articles").delete().eq("id", data.id);
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => AdminIdSchema.parse((data as { id: string })?.id))
+  .handler(async ({ data: id }) => {
+    const { error } = await getSupabaseAdmin().from("articles").delete().eq("id", id);
 
-    if (error) throw new Error(error.message);
+    if (error) mapDatabaseError(error, "Article");
     return { success: true };
   });

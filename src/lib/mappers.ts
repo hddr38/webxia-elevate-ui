@@ -1,4 +1,4 @@
-import type { Article } from "@/types/database";
+import type { Article, Realisation } from "@/types/database";
 
 const DEFAULT_GRADIENTS = [
   "linear-gradient(135deg, #0b1220 0%, #1e293b 50%, #3b82f6 100%)",
@@ -46,5 +46,36 @@ export function articleToDisplay(db: Article): DisplayArticle {
       .split(/\n\s*\n/)
       .map((p) => p.trim())
       .filter(Boolean),
+  };
+}
+
+export interface DisplayRealisation {
+  slug: string;
+  title: string;
+  shortDescription: string;
+  client: string | null;
+  category: string;
+  date: string;
+  year: string;
+  featured: boolean;
+  cover: string;
+  coverUrl: string | null;
+}
+
+export function realisationToDisplay(db: Realisation): DisplayRealisation {
+  const date = db.published_at ?? db.created_at;
+  return {
+    slug: db.slug,
+    title: db.title,
+    shortDescription: db.short_description ?? "",
+    client: db.client_name,
+    category: db.category?.[0] ?? "web",
+    date,
+    year: new Date(date).getFullYear().toString(),
+    featured: db.featured ?? false,
+    coverUrl: db.cover_image_url,
+    cover: db.cover_image_url
+      ? `url(${db.cover_image_url})`
+      : DEFAULT_GRADIENTS[hashToIndex(db.id, DEFAULT_GRADIENTS.length)],
   };
 }

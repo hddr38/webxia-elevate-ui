@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { useLocale } from "@/lib/locale-context";
 import { useTheme } from "@/lib/theme-context";
 
-function LocaleSwitcher() {
+export function LocaleSwitcher() {
   const { locale, setLocale } = useLocale();
   return (
     <div className="inline-flex items-center rounded-full border border-border bg-background/40 p-0.5 text-xs font-medium backdrop-blur-md">
@@ -14,12 +14,13 @@ function LocaleSwitcher() {
         <button
           key={l}
           onClick={() => setLocale(l)}
-          className={`px-2.5 py-1 rounded-full transition-colors ${
+          className={`min-h-8 min-w-8 px-2.5 py-1.5 rounded-full transition-colors ${
             locale === l
               ? "bg-foreground text-background"
               : "text-muted-foreground hover:text-foreground"
           }`}
           aria-label={`Switch to ${l.toUpperCase()}`}
+          aria-pressed={locale === l}
         >
           {l.toUpperCase()}
         </button>
@@ -28,14 +29,16 @@ function LocaleSwitcher() {
   );
 }
 
-function ThemeToggle() {
+export function ThemeToggle() {
   const { theme, toggle } = useTheme();
+  const { locale } = useLocale();
   return (
     <Button
       variant="ghost"
       size="icon"
       onClick={toggle}
-      aria-label="Toggle theme"
+      aria-label={locale === "fr" ? "Basculer le thème" : "Toggle theme"}
+      aria-pressed={theme === "dark"}
       className="rounded-full"
     >
       {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
@@ -46,7 +49,7 @@ function ThemeToggle() {
 function Logo() {
   return (
     <Link to="/" className="group flex items-center gap-2">
-      <img src="/logo.svg" alt="WebXIA" className="h-8 w-auto" />
+      <img src="/logo.svg" alt="WebXIA" width={39} height={32} className="h-8 w-auto" />
       <span className="font-display text-base font-semibold tracking-tight">
         WebXIA<span className="text-brand">.</span>
       </span>
@@ -54,17 +57,10 @@ function Logo() {
   );
 }
 
-const navItems = [
-  { key: "nav.home", to: "/" },
-  { key: "nav.services", to: "/services" },
-  { key: "nav.work", to: "/work" },
-  { key: "nav.about", to: "/about" },
-  { key: "nav.journal", to: "/journal" },
-  { key: "nav.contact", to: "/contact" },
-] as const;
+import { navItems } from "./nav-items";
 
 export function Header() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [open, setOpen] = useState(false);
 
   return (
@@ -103,12 +99,19 @@ export function Header() {
             <ThemeToggle />
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full" aria-label="Open menu">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  aria-label={locale === "fr" ? "Ouvrir le menu" : "Open menu"}
+                >
                   <Menu className="size-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[88vw] sm:w-96">
-                <SheetTitle className="sr-only">Menu</SheetTitle>
+                <SheetTitle className="sr-only">
+                  {locale === "fr" ? "Menu de navigation" : "Navigation menu"}
+                </SheetTitle>
                 <div className="mt-10 flex flex-col gap-1">
                   {navItems.map((item) => (
                     <Link

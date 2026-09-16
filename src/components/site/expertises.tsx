@@ -1,54 +1,63 @@
 import { motion } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
+import {
+  ArrowUpRight,
+  Bot,
+  Compass,
+  Globe,
+  Palette,
+  Shield,
+  TrendingUp,
+  Wrench,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
 
 const expertises = [
   {
-    icon: "🌐",
+    icon: Globe,
     titleKey: "home.expertises.1.title" as const,
     hookKey: "home.expertises.1.hook" as const,
     descKey: "home.expertises.1.desc" as const,
     sectionId: "services",
   },
   {
-    icon: "🎨",
+    icon: Palette,
     titleKey: "home.expertises.2.title" as const,
     hookKey: "home.expertises.2.hook" as const,
     descKey: "home.expertises.2.desc" as const,
     sectionId: "section-2",
   },
   {
-    icon: "📈",
+    icon: TrendingUp,
     titleKey: "home.expertises.3.title" as const,
     hookKey: "home.expertises.3.hook" as const,
     descKey: "home.expertises.3.desc" as const,
     sectionId: "section-3",
   },
   {
-    icon: "🤖",
+    icon: Bot,
     titleKey: "home.expertises.4.title" as const,
     hookKey: "home.expertises.4.hook" as const,
     descKey: "home.expertises.4.desc" as const,
     sectionId: "section-4",
   },
   {
-    icon: "💻",
+    icon: Wrench,
     titleKey: "home.expertises.5.title" as const,
     hookKey: "home.expertises.5.hook" as const,
     descKey: "home.expertises.5.desc" as const,
     sectionId: "section-1",
   },
   {
-    icon: "📊",
+    icon: Compass,
     titleKey: "home.expertises.6.title" as const,
     hookKey: "home.expertises.6.hook" as const,
     descKey: "home.expertises.6.desc" as const,
     sectionId: "section-5",
   },
   {
-    icon: "🛡️",
+    icon: Shield,
     titleKey: "home.expertises.7.title" as const,
     hookKey: "home.expertises.7.hook" as const,
     descKey: "home.expertises.7.desc" as const,
@@ -82,10 +91,10 @@ export function Expertises() {
         </motion.div>
 
         {/* Cards grid */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr">
           {expertises.map((exp, i) => (
             <motion.article
-              key={i}
+              key={`expertise-${exp.sectionId}-${i}`}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-80px" }}
@@ -94,20 +103,22 @@ export function Expertises() {
             >
               <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-brand/0 via-transparent to-brand/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-hover:from-brand/10 group-hover:to-accent/5" />
 
-              <span className="text-3xl">{exp.icon}</span>
+              <div className="flex size-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                <exp.icon className="size-5" aria-hidden="true" />
+              </div>
 
               <h3 className="mt-5 font-display text-lg font-semibold tracking-tight">
                 {t(exp.titleKey)}
               </h3>
               <p className="mt-2 text-sm font-medium text-foreground/80">{t(exp.hookKey)}</p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground flex-1">
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground flex-1 text-pretty">
                 {t(exp.descKey)}
               </p>
 
               <Link
                 to="/services"
                 hash={exp.sectionId}
-                className="mt-6 flex items-center gap-1.5 text-sm font-medium text-foreground/80 transition-colors group-hover:text-brand"
+                className="mt-6 flex items-center gap-1.5 rounded-sm text-sm font-medium text-foreground/80 transition-colors group-hover:text-brand focus-visible:text-brand focus-visible:underline focus-visible:outline-none"
               >
                 <span>{t("services.learnMore")}</span>
                 <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />

@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { Check, Loader2, Send, ShieldCheck, Sparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
+import * as React from "react";
 import { useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -31,9 +32,18 @@ export function Contact() {
     reset,
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  const onSubmit = async (data: FormData) => {
-    await new Promise((r) => setTimeout(r, 900));
-    console.log("Contact submission", data);
+  const onSubmit = (data: FormData) => {
+    const to = t("footer.contact.email");
+    const subject = `Brief — ${data.name}${data.company ? ` (${data.company})` : ""}`;
+    const lines = [
+      `${t("form.name")}: ${data.name}`,
+      `${t("form.email")}: ${data.email}`,
+      data.company ? `${t("form.company")}: ${data.company}` : null,
+      data.budget ? `${t("form.budget")}: ${data.budget}` : null,
+      "",
+      data.message,
+    ].filter((l): l is string => l !== null);
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
     setSubmitted(true);
     reset();
     setTimeout(() => setSubmitted(false), 4000);
@@ -91,16 +101,26 @@ export function Contact() {
                 <p className="text-sm text-muted-foreground">{t("contact.form.hint")}</p>
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label={t("form.name")} error={errors.name?.message}>
-                  <Input {...register("name")} placeholder="Jane Doe" />
+                <Field
+                  id="contact-name"
+                  label={t("form.name")}
+                  error={errors.name?.message}
+                  required
+                >
+                  <Input {...register("name")} placeholder={t("form.namePh")} />
                 </Field>
-                <Field label={t("form.email")} error={errors.email?.message}>
-                  <Input type="email" {...register("email")} placeholder="jane@brand.com" />
+                <Field
+                  id="contact-email"
+                  label={t("form.email")}
+                  error={errors.email?.message}
+                  required
+                >
+                  <Input type="email" {...register("email")} placeholder={t("form.emailPh")} />
                 </Field>
-                <Field label={t("form.company")}>
-                  <Input {...register("company")} placeholder="Acme Inc." />
+                <Field id="contact-company" label={t("form.company")}>
+                  <Input {...register("company")} placeholder={t("form.companyPh")} />
                 </Field>
-                <Field label={t("form.budget")}>
+                <Field id="contact-budget" label={t("form.budget")}>
                   <select
                     {...register("budget")}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -118,8 +138,13 @@ export function Contact() {
               </div>
 
               <div className="mt-5">
-                <Field label={t("form.message")} error={errors.message?.message}>
-                  <Textarea rows={5} {...register("message")} placeholder="..." />
+                <Field
+                  id="contact-message"
+                  label={t("form.message")}
+                  error={errors.message?.message}
+                  required
+                >
+                  <Textarea rows={5} {...register("message")} placeholder={t("form.messagePh")} />
                 </Field>
               </div>
 
@@ -157,19 +182,43 @@ export function Contact() {
 }
 
 function Field({
+  id,
   label,
   error,
+  required = false,
   children,
 }: {
+  id: string;
   label: string;
   error?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
+  const errorId = `${id}-error`;
+  const child = React.isValidElement(children)
+    ? React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+        id,
+        required,
+        "aria-invalid": error ? true : undefined,
+        "aria-describedby": error ? errorId : undefined,
+      })
+    : children;
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
-      {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      <Label htmlFor={id} className="text-xs uppercase tracking-wider text-muted-foreground">
+        {label}
+        {required && (
+          <span aria-hidden="true" className="text-brand">
+            {" *"}
+          </span>
+        )}
+      </Label>
+      {child}
+      {error && (
+        <p id={errorId} role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

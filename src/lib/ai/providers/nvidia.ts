@@ -100,21 +100,6 @@ export class NvidiaProvider implements LLMProvider {
 
   readonly models: AIModel[] = [
     {
-      id: "nemotron-3-ultra",
-      name: "Nemotron 3 Ultra",
-      provider: "nvidia",
-      capabilities: {
-        streaming: true,
-        toolCalling: true,
-        structuredOutput: false,
-        embeddings: false,
-        vision: false,
-        thinking: true,
-      },
-      maxTokens: 128_000,
-      costPerToken: { input: 0, output: 0 },
-    },
-    {
       id: "nvidia/nemotron-3.5-lightning-30b-a3b",
       name: "Nemotron 3.5 Lightning 30B",
       provider: "nvidia",
@@ -130,45 +115,18 @@ export class NvidiaProvider implements LLMProvider {
       costPerToken: { input: 0, output: 0 },
     },
     {
-      id: "nvidia/nemotron-3-super-120b-a12b",
-      name: "Nemotron 3 Super 120B",
+      id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+      name: "Nemotron 3 Nano Omni 30B Reasoning",
       provider: "nvidia",
       capabilities: {
         streaming: true,
         toolCalling: true,
         structuredOutput: false,
         embeddings: false,
-        vision: false,
+        vision: true,
+        thinking: true,
       },
-      maxTokens: 128_000,
-      costPerToken: { input: 0, output: 0 },
-    },
-    {
-      id: "llama-3.1-70b-instruct",
-      name: "Llama 3.1 70B Instruct",
-      provider: "nvidia",
-      capabilities: {
-        streaming: true,
-        toolCalling: true,
-        structuredOutput: false,
-        embeddings: false,
-        vision: false,
-      },
-      maxTokens: 128_000,
-      costPerToken: { input: 0, output: 0 },
-    },
-    {
-      id: "llama-3.1-8b-instruct",
-      name: "Llama 3.1 8B Instruct",
-      provider: "nvidia",
-      capabilities: {
-        streaming: true,
-        toolCalling: true,
-        structuredOutput: false,
-        embeddings: false,
-        vision: false,
-      },
-      maxTokens: 128_000,
+      maxTokens: 65_536,
       costPerToken: { input: 0, output: 0 },
     },
   ];

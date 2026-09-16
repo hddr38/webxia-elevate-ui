@@ -19,17 +19,17 @@ export async function getSessionUser(request: Request): Promise<SessionUser | nu
 
   if (error || !user) return null;
 
-  const { data: adminUser } = await getSupabaseAdmin()
+  const { data: adminUser, error: adminError } = await getSupabaseAdmin()
     .from("admin_users")
     .select("id, user_id, email, role")
     .eq("user_id", user.id)
     .single();
 
-  if (!adminUser) return null;
+  if (adminError || !adminUser) return null;
 
   return {
     id: user.id,
-    email: user.email!,
+    email: user.email ?? adminUser.email ?? "",
     role: adminUser.role,
     adminId: adminUser.id,
   };

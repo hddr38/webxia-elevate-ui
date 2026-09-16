@@ -257,8 +257,8 @@ Eyebrow: text-xs font-medium uppercase tracking-[0.2em] text-brand
 [Prénom] [Nom]
 WebXIA — Agence Web
 
-Site : https://webxia.dev
-Mail : contact@webxia.dev
+Site : https://webxia.fr
+Mail : webxia@protonmail.com
 
 Logo en pièce jointe (format SVG, fond transparent).
 Couleurs brand : #1D4ED8 (bleu) / #9333EA (violet)

@@ -59,15 +59,19 @@ describe("NvidiaProvider", () => {
   });
 
   it("has models defined", () => {
-    expect(provider.models.length).toBeGreaterThan(0);
-    expect(provider.models.some((m) => m.id === "nemotron-3-ultra")).toBe(true);
-    expect(provider.models.some((m) => m.id === "llama-3.1-70b-instruct")).toBe(true);
+    expect(provider.models.length).toBe(2);
+    expect(provider.models.some((m) => m.id === "nvidia/nemotron-3.5-lightning-30b-a3b")).toBe(
+      true,
+    );
+    expect(
+      provider.models.some((m) => m.id === "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"),
+    ).toBe(true);
   });
 
   it("returns model by id", () => {
-    const model = provider.getModel("nemotron-3-ultra");
+    const model = provider.getModel("nvidia/nemotron-3.5-lightning-30b-a3b");
     expect(model).toBeDefined();
-    expect(model?.id).toBe("nemotron-3-ultra");
+    expect(model?.id).toBe("nvidia/nemotron-3.5-lightning-30b-a3b");
   });
 
   it("returns undefined for unknown model", () => {

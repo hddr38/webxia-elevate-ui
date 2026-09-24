@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { PenTool, FolderKanban, Brain, LogOut, Menu, ExternalLink } from "lucide-react";
+import { PenTool, FolderKanban, Brain, LogOut, Menu, ExternalLink, Inbox } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/locale-context";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,19 @@ function AdminLinks({
       >
         <Brain className={iconClass} aria-hidden="true" />
         {t("admin.nav.aiMemory")}
+      </Link>
+      <Link
+        to="/admin/messages"
+        search={{ status: "all", q: "", page: 1 }}
+        onClick={onNavigate}
+        activeProps={{ className: "bg-secondary text-foreground" }}
+        inactiveProps={{
+          className: "text-muted-foreground hover:bg-secondary hover:text-foreground",
+        }}
+        className={linkClass}
+      >
+        <Inbox className={iconClass} aria-hidden="true" />
+        {t("admin.nav.messages")}
       </Link>
     </>
   );

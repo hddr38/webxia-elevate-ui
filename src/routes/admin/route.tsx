@@ -6,7 +6,7 @@ import { adminMiddleware } from "@/lib/auth/middleware";
 import { useLocale } from "@/lib/locale-context";
 import { AdminHeader } from "@/components/admin/admin-header";
 
-export const Route = createFileRoute("/admin/_layout")({
+export const Route = createFileRoute("/admin")({
   server: {
     middleware: [adminMiddleware],
   },

@@ -173,29 +173,36 @@ function RootComponent() {
       .catch(() => {});
   }, []);
 
+  // On /admin, AdminLayout (routes/admin/route.tsx) owns the chrome: AdminHeader,
+  // skip-link and <main id="admin-content">. Root renders only providers + Outlet
+  // there — otherwise AdminHeader would be duplicated and <main> nested in <main>.
   return (
     <QueryClientProvider client={queryClient}>
       <MotionConfig reducedMotion="user">
         <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
-          <a
-            href="#main-content"
-            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:text-background"
-          >
-            {t("a11y.skip")}
-          </a>
-          {isAdmin || isAuthenticated ? <AdminHeader /> : <Header />}
-          <main
-            id="main-content"
-            className={
-              isAdmin || isAuthenticated
-                ? "mx-auto w-full max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8"
-                : ""
-            }
-          >
+          {isAdmin ? (
             <Outlet />
-          </main>
-          {!(isAdmin || isAuthenticated) && <Footer />}
-          {!(isAdmin || isAuthenticated) && <ChatWidget />}
+          ) : (
+            <>
+              <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-foreground focus:px-4 focus:py-2 text-sm focus:text-background"
+              >
+                {t("a11y.skip")}
+              </a>
+              {isAuthenticated ? <AdminHeader /> : <Header />}
+              <main
+                id="main-content"
+                className={
+                  isAuthenticated ? "mx-auto w-full max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8" : ""
+                }
+              >
+                <Outlet />
+              </main>
+              {!isAuthenticated && <Footer />}
+              {!isAuthenticated && <ChatWidget />}
+            </>
+          )}
           <Toaster position="bottom-right" richColors />
         </div>
       </MotionConfig>

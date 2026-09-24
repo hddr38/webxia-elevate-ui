@@ -3,6 +3,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import MatrixRain from "@/components/ui/matrix-code";
+import ParticleField from "@/components/ui/particle-field";
 import { useLocale } from "@/lib/locale-context";
 import { useTheme } from "@/lib/theme-context";
 import { ExpertiseMarquee } from "@/components/site/expertise-marquee";
@@ -28,7 +29,13 @@ export function Hero() {
           <div className="absolute inset-0 -z-10 bg-background/70 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_45%,black,transparent)]" />
         </>
       ) : (
-        <div className="absolute inset-0 -z-10 bg-grid opacity-50 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-grid opacity-30 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
+          <ParticleField
+            className="absolute inset-0 opacity-70 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_35%,black,transparent)]"
+            particleCount={13}
+          />
+        </div>
       )}
       <div className="absolute inset-0 -z-10 bg-radial-fade" />
       <div className="pointer-events-none absolute left-1/2 top-0 -z-10 size-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/20 blur-[120px]" />

@@ -94,7 +94,7 @@ export function ProblemSolution() {
               initial={{ opacity: 0, scale: 0.8 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true, margin: "-100px" }}
-              animate={{ x: [0, -8, 0] }}
+              animate={{ x: [0, 10, 5] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
               className="text-brand/30"
             >

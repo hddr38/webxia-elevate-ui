@@ -177,6 +177,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      contact_messages: {
+        Row: {
+          budget: string | null;
+          company: string | null;
+          created_at: string;
+          email: string;
+          id: string;
+          locale: string;
+          message: string;
+          name: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          budget?: string | null;
+          company?: string | null;
+          created_at?: string;
+          email: string;
+          id?: string;
+          locale?: string;
+          message: string;
+          name: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          budget?: string | null;
+          company?: string | null;
+          created_at?: string;
+          email?: string;
+          id?: string;
+          locale?: string;
+          message?: string;
+          name?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       conversations: {
         Row: {
           created_at: string;

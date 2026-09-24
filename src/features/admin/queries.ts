@@ -24,6 +24,11 @@ import {
   getMemories,
   getMemoryStats,
 } from "@/server/functions/ai-memory";
+import {
+  deleteContactMessage,
+  getContactMessages,
+  updateContactMessageStatus,
+} from "@/server/functions/contact";
 import { AdminStatsSchema } from "@/lib/admin/schemas";
 
 export const adminKeys = {
@@ -37,6 +42,8 @@ export const adminKeys = {
   memoriesList: (params: { type?: string; search?: string; page: number }) =>
     ["admin", "ai-memory", "list", params] as const,
   memoryStats: ["admin", "ai-memory", "stats"] as const,
+  messagesList: (params: { status?: string; search?: string; page: number }) =>
+    ["admin", "messages", "list", params] as const,
 };
 
 export function adminStatsOptions() {
@@ -114,6 +121,36 @@ export function useMemoriesList(params: { type?: string; search?: string; page: 
 
 export function useMemoryStats() {
   return useQuery(memoryStatsOptions());
+}
+
+export function messagesListOptions(params: { status?: string; search?: string; page: number }) {
+  return queryOptions({
+    queryKey: adminKeys.messagesList(params),
+    queryFn: () => getContactMessages({ data: params }),
+    staleTime: 15_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useMessagesList(params: { status?: string; search?: string; page: number }) {
+  return useQuery(messagesListOptions(params));
+}
+
+export function useUpdateMessageStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "new" | "read" }) =>
+      updateContactMessageStatus({ data: { id, status } }),
+    onSuccess: () => invalidateAdminLists(queryClient, "messages"),
+  });
+}
+
+export function useDeleteMessage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteContactMessage({ data: { id } }),
+    onSuccess: () => invalidateAdminLists(queryClient, "messages"),
+  });
 }
 
 function invalidateAdminLists(queryClient: ReturnType<typeof useQueryClient>, key: string) {

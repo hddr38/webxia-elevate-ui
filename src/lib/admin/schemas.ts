@@ -77,6 +77,34 @@ export const PublicRealisationsSchema = z.object({
   limit: AdminLimitSchema.optional(),
 });
 
+// --- Contact : dépôt public (honeypot `website` inclus, jamais persisté) ---
+
+export const ContactMessageStatusSchema = z.enum(["new", "read"]);
+
+export const ContactMessageStatusFilterSchema = z.enum(["all", "new", "read"]).default("all");
+
+export const SubmitContactMessageSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  email: z.string().trim().email().max(254),
+  company: z.string().trim().max(160).optional().or(z.literal("")),
+  budget: z.string().trim().max(200).optional().or(z.literal("")),
+  message: z.string().trim().min(10).max(5000),
+  locale: z.enum(["fr", "en"]).optional().default("fr"),
+  website: z.string().max(500).optional().default(""),
+});
+
+export const ListContactMessagesSchema = z.object({
+  status: ContactMessageStatusFilterSchema.optional(),
+  search: AdminSearchSchema,
+  page: AdminPageSchema.optional(),
+  limit: AdminLimitSchema.optional(),
+});
+
+export const UpdateContactMessageStatusSchema = z.object({
+  id: AdminIdSchema,
+  status: ContactMessageStatusSchema,
+});
+
 export const SlugSchema = z
   .string()
   .trim()

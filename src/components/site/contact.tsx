@@ -11,47 +11,64 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useLocale } from "@/lib/locale-context";
 import { BookingCalendar } from "@/components/ui/booking-calendar";
+import { CAL_EVENT_TYPE, CAL_USERNAME } from "@/lib/constants";
+import { submitContactMessage } from "@/server/functions/contact";
 
-const schema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  company: z.string().optional(),
-  budget: z.string().optional(),
-  message: z.string().min(10),
-});
+type TFn = ReturnType<typeof useLocale>["t"];
 
-type FormData = z.infer<typeof schema>;
+// Messages d'erreur localisés : reconstruit à chaque rendu pour suivre la locale.
+const createContactSchema = (t: TFn) =>
+  z.object({
+    name: z.string({ required_error: t("form.error.required") }).min(2, t("form.error.nameMin")),
+    email: z.string({ required_error: t("form.error.required") }).email(t("form.error.email")),
+    company: z.string().optional(),
+    budget: z.string().optional(),
+    message: z
+      .string({ required_error: t("form.error.required") })
+      .min(10, t("form.error.messageMin")),
+    // Honeypot anti-spam (champ invisible, jamais affiché ni persisté).
+    website: z.string().max(500).optional(),
+  });
+
+type FormData = z.infer<ReturnType<typeof createContactSchema>>;
 
 export function Contact() {
-  const { t } = useLocale();
-  const [submitted, setSubmitted] = useState(false);
+  const { t, locale } = useLocale();
+  const [sendState, setSendState] = useState<"idle" | "sent" | "error">("idle");
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+  } = useForm<FormData>({ resolver: zodResolver(createContactSchema(t)) });
 
-  const onSubmit = (data: FormData) => {
-    const to = t("footer.contact.email");
-    const subject = `Brief — ${data.name}${data.company ? ` (${data.company})` : ""}`;
-    const lines = [
-      `${t("form.name")}: ${data.name}`,
-      `${t("form.email")}: ${data.email}`,
-      data.company ? `${t("form.company")}: ${data.company}` : null,
-      data.budget ? `${t("form.budget")}: ${data.budget}` : null,
-      "",
-      data.message,
-    ].filter((l): l is string => l !== null);
-    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
-    setSubmitted(true);
-    reset();
-    setTimeout(() => setSubmitted(false), 4000);
+  const onSubmit = async (data: FormData) => {
+    setSendState("idle");
+    try {
+      await submitContactMessage({
+        data: {
+          name: data.name,
+          email: data.email,
+          company: data.company || "",
+          budget: data.budget || "",
+          message: data.message,
+          locale,
+          website: data.website ?? "",
+        },
+      });
+      setSendState("sent");
+      reset();
+    } catch {
+      setSendState("error");
+    }
   };
 
   return (
     <section id="contact" className="relative py-24 md:py-32">
-      <div className="absolute inset-0 -z-10 bg-radial-fade opacity-60 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_100%,black,transparent)]" />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-10 bg-radial-fade opacity-60 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_100%,black,transparent)]"
+      />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
@@ -64,9 +81,9 @@ export function Contact() {
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
             {t("contact.eyebrow")}
           </span>
-          <h2 className="mt-4 font-display text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl md:text-6xl">
+          <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl md:text-6xl">
             {t("contact.title")}
-          </h2>
+          </h1>
           <p className="mt-5 text-balance text-base text-muted-foreground sm:text-lg">
             {t("contact.subtitle")}
           </p>
@@ -81,7 +98,7 @@ export function Contact() {
             transition={{ duration: 0.7 }}
           >
             <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_30px_80px_-30px_color-mix(in_oklab,var(--foreground)_25%,transparent)] sm:p-10">
-              <BookingCalendar />
+              <BookingCalendar username={CAL_USERNAME} eventType={CAL_EVENT_TYPE} />
             </div>
           </motion.div>
 
@@ -157,22 +174,53 @@ export function Contact() {
                     <Sparkles className="size-3.5 text-brand" /> {t("trust.badge1")}
                   </span>
                 </div>
-                <Button type="submit" variant="brand" size="lg" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" /> {t("form.submitting")}
-                    </>
-                  ) : submitted ? (
-                    <>
-                      <Check className="size-4" /> {t("form.success")}
-                    </>
-                  ) : (
-                    <>
-                      {t("form.submit")} <Send className="size-4" />
-                    </>
+                <div className="flex flex-col items-end gap-2">
+                  {sendState === "sent" && (
+                    <p
+                      role="status"
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-green-800 dark:text-green-300"
+                    >
+                      <Check className="size-4" aria-hidden="true" />
+                      {t("form.success")}
+                    </p>
                   )}
-                </Button>
+                  {sendState === "error" && (
+                    <p role="alert" className="max-w-xs text-right text-sm text-destructive">
+                      {t("form.error.send")}{" "}
+                      <a
+                        href={`mailto:${t("footer.contact.email")}`}
+                        className="font-medium underline underline-offset-2"
+                      >
+                        {t("form.directEmail")}
+                      </a>
+                    </p>
+                  )}
+                  <Button type="submit" variant="brand" size="lg" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" /> {t("form.submitting")}
+                      </>
+                    ) : sendState === "sent" ? (
+                      <>
+                        <Check className="size-4" /> {t("form.sent")}
+                      </>
+                    ) : (
+                      <>
+                        {t("form.submit")} <Send className="size-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
+              {/* Honeypot anti-spam : invisible aux humains comme aux lecteurs d'écran. */}
+              <input
+                {...register("website")}
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="sr-only"
+              />
             </form>
           </motion.div>
         </div>

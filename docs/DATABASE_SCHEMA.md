@@ -1,22 +1,19 @@
 # WebXIA — Database Schema
 
-> Source of truth for DDL: `supabase/migrations/001–014`.
-> 011 (`uq_conversations_one_active_per_session`, partial unique index) is
-> committed but NOT yet applied remotely — apply via SQL Editor before relying
-> on getOrCreateConversation idempotence under concurrency.
-> 012/013/014 (RAG: `vector(2048)` + HNSW halfvec, `match_knowledge_chunks` RPC,
-> `content_hash`) were APPLIED manually on 2026-09-10 and verified read-only
-> (columns, HNSW indexes, RPC `SECURITY DEFINER`/`STABLE`, UNIQUE hash).
-> Remote is aligned with 3B code. See `015_rag_match_lockdown.sql`
-> (CREATED — NOT APPLIED): restricts RPC `EXECUTE` to `service_role`
-> (`anon`/`authenticated` still hold it via default privileges).
-> Remote state verified read-only on 2026-09-09 (PostgREST `limit=0` + OpenAPI):
-> all tables below **EXIST** with the columns and types listed, EXCEPT the
-> 012–014 changes (columns still `vector(1536)`, no RPC, no `content_hash`
-> until applied).
-> Indexes and RLS policies are **per migrations** (not directly introspectable
-> via PostgREST); RLS enforcement on `conversations` was proven behaviorally
-> (anon INSERT rejected before the service-role fix).
+> Source of truth for DDL history: `supabase/migrations/001–019`.
+> `supabase/schema.sql` is a **verified snapshot of production** (introspection
+> 2026-09-24) — bootstrap/reference only, not executed automatically.
+> Remote state verified read-only on 2026-09-24 (pg_catalog introspection):
+> all tables below **EXIST**; 011 (`uq_conversations_one_active_per_session`),
+> 012/013/014 (RAG: `vector(2048)` + HNSW halfvec, `match_knowledge_chunks`
+> RPC `service_role`-only, `content_hash` UNIQUE), 015, 016, 017, 018 and 019
+> (admin `INSERT` + knowledge public-read revoked) are all **APPLIED**.
+> Migration 002 (`author_id` → nullable + `ON DELETE SET NULL`) **was applied
+> on 2026-09-24 (LOT 8)**: both FKs now `SET NULL`, `author_id` nullable ✅
+> `idx_realisations_status_published` (005) **created on 2026-09-24 (LOT 8)**;
+> `supabase_migrations` history now holds **24 entries** — 5 originals
+> + 10 LOT 8 baseline (`created_by='lot8-baseline'`) + 9 registered by the
+> first `db push`; `migration list` local = remote.
 
 Conventions: PK `id uuid default uuid_generate_v4()` (extension `uuid-ossp`),
 `t created_at / updated_at timestamptz default now()`, RLS enabled on every table.

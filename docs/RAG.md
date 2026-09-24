@@ -1,7 +1,9 @@
 # Webi RAG — Retrieval-Augmented Generation
 
 > Single source of truth (code): `src/lib/ai/embeddings/config.ts` → `EMBEDDING_CONFIG`.
-> Migrations `012/013/014` are **created, not applied** — apply manually via Supabase SQL Editor.
+> Migrations `012/013/014` are **APPLIED** (verified read-only 2026-09-10 and
+> re-verified 2026-09-24: `vector(2048)`, HNSW `halfvec(2048)`, RPC
+> `match_knowledge_chunks` `service_role`-only, `content_hash` + UNIQUE index).
 
 ---
 

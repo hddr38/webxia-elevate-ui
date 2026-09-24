@@ -137,7 +137,6 @@ describe("Retriever", () => {
       strategy: "semantic",
       sessionId: undefined,
       userId: undefined,
-      metadataFilters: undefined,
     });
 
     expect(result.documents).toHaveLength(2);
@@ -455,15 +454,16 @@ describe("RAGEngine", () => {
     );
   });
 
-  it("passes metadata filters", async () => {
+  it("forwards locale and sourceType filters (the only RPC-supported filters)", async () => {
     mockVectorStore.search.mockResolvedValue([]);
 
-    await engine.query("test", { metadataFilters: { locale: "en", tag: "pricing" } });
+    await engine.query("test", { locale: "en", sourceType: "blog" });
 
     expect(mockVectorStore.search).toHaveBeenCalledWith(
       "test",
       expect.objectContaining({
-        metadataFilters: { locale: "en", tag: "pricing" },
+        locale: "en",
+        sourceType: "blog",
       }),
     );
   });

@@ -134,6 +134,10 @@ export async function buildAgentContext(options: ContextBuilderOptions): Promise
       userId,
       topK: 5,
       similarityThreshold: 0.7,
+      // LOT 2 (P4): the chat locale is forwarded as the retrieval locale
+      // filter (SearchOptions.locale -> RPC filter_locale). No second
+      // locale system: this is the same locale validated by ChatMessageSchema.
+      locale,
       requestId,
     })
     .catch(() => null);

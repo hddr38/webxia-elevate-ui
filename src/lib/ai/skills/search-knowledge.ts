@@ -10,13 +10,23 @@ import {
 } from "./types";
 import { RAGEngine } from "../rag";
 import type { DocumentMetadata } from "../contracts";
+import { KNOWLEDGE_SOURCE_TYPES, type KnowledgeDocType } from "../rag/types";
 import { createSkillSchema } from "./validator";
 
 export interface SearchKnowledgeInput extends SkillInput {
   query: string;
   topK?: number;
   similarityThreshold?: number;
-  filters?: Record<string, unknown>;
+  /**
+   * Restrict retrieval to one locale. Applied as filter_locale by the
+   * match_knowledge_chunks RPC — never ignored.
+   */
+  locale?: string;
+  /**
+   * Restrict retrieval to one document type. Applied as filter_source_type
+   * by the RPC — never ignored.
+   */
+  sourceType?: KnowledgeDocType;
 }
 
 export interface SearchKnowledgeOutput extends SkillOutput {
@@ -70,10 +80,14 @@ export class SearchKnowledgeSkill implements Skill<SearchKnowledgeInput, SearchK
         maximum: 1,
         default: 0.7,
       },
-      filters: {
-        type: "object",
-        description: "Optional metadata filters (e.g., locale, tags)",
-        additionalProperties: true,
+      locale: {
+        type: "string",
+        description: "Restrict results to one locale (e.g. fr, en)",
+      },
+      sourceType: {
+        type: "string",
+        description: "Restrict results to one document type",
+        enum: [...KNOWLEDGE_SOURCE_TYPES],
       },
     },
     required: ["query"],
@@ -104,12 +118,17 @@ export class SearchKnowledgeSkill implements Skill<SearchKnowledgeInput, SearchK
   }
 
   validate(input: unknown): SearchKnowledgeInput {
-    const schema = z.object({
-      query: z.string().min(1).max(500),
-      topK: z.number().int().min(1).max(20).optional().default(5),
-      similarityThreshold: z.number().min(0).max(1).optional().default(0.7),
-      filters: z.record(z.unknown()).optional(),
-    });
+    // Strict: any undeclared key (e.g. a legacy `filters` object) is
+    // rejected instead of being silently stripped and ignored.
+    const schema = z
+      .object({
+        query: z.string().min(1).max(500),
+        topK: z.number().int().min(1).max(20).optional().default(5),
+        similarityThreshold: z.number().min(0).max(1).optional().default(0.7),
+        locale: z.string().min(2).max(10).optional(),
+        sourceType: z.enum(KNOWLEDGE_SOURCE_TYPES).optional(),
+      })
+      .strict();
     return schema.parse(input);
   }
 
@@ -121,7 +140,8 @@ export class SearchKnowledgeSkill implements Skill<SearchKnowledgeInput, SearchK
       const ragResult = await this.ragEngine.query(options.query, {
         topK: options.topK ?? 5,
         similarityThreshold: options.similarityThreshold ?? 0.7,
-        metadataFilters: options.filters,
+        locale: options.locale,
+        sourceType: options.sourceType,
         sessionId: context.sessionId,
         userId: context.userId,
       });

@@ -61,7 +61,8 @@ import {
   getConversationHistory,
   getOrCreateConversation,
 } from "@/lib/ai/conversation/conversation-service";
-import { handleChatRequest } from "./chat";
+import { AgentOrchestrator } from "@/lib/ai/agent/orchestrator";
+import { handleChatRequest, resolveChatTimeoutMs } from "./chat";
 
 function ctx(overrides: Record<string, unknown> = {}) {
   return {
@@ -154,4 +155,114 @@ describe("handleChatRequest instrumentation", () => {
       handleChatRequest(ctx({ conversationId: "33333333-3333-3333-3333-333333333333" })),
     ).rejects.toMatchObject({ status: 403 });
   });
+});
+
+describe("resolveChatTimeoutMs", () => {
+  it("defaults to 60s for missing or invalid env values", () => {
+    expect(resolveChatTimeoutMs(undefined)).toBe(60000);
+    expect(resolveChatTimeoutMs("not-a-number")).toBe(60000);
+    expect(resolveChatTimeoutMs("")).toBe(60000);
+    expect(resolveChatTimeoutMs("   ")).toBe(60000);
+  });
+
+  it("clamps configured values to [5s, 300s]", () => {
+    expect(resolveChatTimeoutMs("1000")).toBe(5000);
+    expect(resolveChatTimeoutMs("15000")).toBe(15000);
+    expect(resolveChatTimeoutMs("999999")).toBe(300000);
+  });
+});
+
+describe("handleChatRequest generation failure", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventBus.clear();
+  });
+
+  it("emits SSE error GENERATION_FAILED, persists no assistant message, closes the stream", async () => {
+    const seen: string[] = [];
+    eventBus.onAny((event) => {
+      seen.push(event.type);
+    });
+
+    vi.mocked(AgentOrchestrator).mockImplementationOnce(
+      () =>
+        ({
+          run: () =>
+            Promise.reject(
+              Object.assign(new Error("LLM generation failed — no response produced"), {
+                code: "GENERATION_FAILED",
+                recoverable: true,
+                details: { cause: "PROVIDER_UNAVAILABLE" },
+              }),
+            ),
+        }) as unknown as InstanceType<typeof AgentOrchestrator>,
+    );
+
+    const response = await handleChatRequest(ctx());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toContain("text/event-stream");
+
+    // readSse resolves only once the stream is closed — no dangling stream.
+    const text = await readSse(response);
+    expect(text).toContain('"type":"message_start"');
+    expect(text).toContain('"type":"error"');
+    expect(text).toContain('"code":"GENERATION_FAILED"');
+    expect(text).toContain('"recoverable":true');
+    expect(text).not.toContain('"type":"message_complete"');
+
+    // Only the user message is persisted — a failed generation never writes
+    // an assistant reply (no history replay ends up in the conversation).
+    expect(addMessage).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(addMessage).mock.calls[0][2]).toMatchObject({ role: "user" });
+
+    expect(seen).toContain("agent.message.received");
+    expect(seen).not.toContain("agent.response.completed");
+  });
+});
+
+describe("handleChatRequest lifecycle", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventBus.clear();
+  });
+
+  it("fails fast with 499 when the client already disconnected", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const request = new Request("http://localhost/api/chat", {
+      method: "POST",
+      signal: controller.signal,
+    });
+
+    await expect(handleChatRequest({ ...ctx(), request })).rejects.toMatchObject({
+      status: 499,
+    });
+  });
+
+  it("emits GLOBAL_TIMEOUT and closes the stream when the deadline expires", async () => {
+    const previous = process.env.CHAT_REQUEST_TIMEOUT_MS;
+    process.env.CHAT_REQUEST_TIMEOUT_MS = "5000";
+    try {
+      vi.mocked(AgentOrchestrator).mockImplementationOnce(
+        () =>
+          ({
+            run: () => new Promise(() => undefined),
+          }) as unknown as InstanceType<typeof AgentOrchestrator>,
+      );
+
+      const response = await handleChatRequest(ctx());
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Content-Type")).toContain("text/event-stream");
+
+      const text = await readSse(response);
+      expect(text).toContain('"type":"message_start"');
+      expect(text).toContain('"type":"error"');
+      expect(text).toContain('"code":"GLOBAL_TIMEOUT"');
+      expect(text).toContain('"recoverable":true');
+      expect(text).not.toContain('"type":"message_complete"');
+    } finally {
+      if (previous === undefined) delete process.env.CHAT_REQUEST_TIMEOUT_MS;
+      else process.env.CHAT_REQUEST_TIMEOUT_MS = previous;
+    }
+  }, 15000);
 });

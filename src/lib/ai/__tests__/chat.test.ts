@@ -385,17 +385,20 @@ describe("Agent Loop", () => {
       },
     });
 
-    const result = await limitedOrchestrator.run({
-      conversationId: "conv-1",
-      sessionId: "session-1",
-      locale: "fr",
-      requestId: "req-1",
-      userMessage: "Test",
-      conversationHistory: [],
+    await expect(
+      limitedOrchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Test",
+        conversationHistory: [],
+      }),
+    ).rejects.toMatchObject({
+      code: "GENERATION_FAILED",
+      recoverable: true,
+      details: { cause: "MAX_STEPS_EXCEEDED", steps: 2 },
     });
-
-    expect(result.steps).toBe(2);
-    expect(result.errors.some((e) => e.code === "MAX_STEPS_EXCEEDED")).toBe(true);
   });
 
   it("respects max tool calls limit", async () => {
@@ -464,7 +467,7 @@ describe("Agent Loop", () => {
 });
 
 describe("Provider Errors", () => {
-  it("handles provider error", async () => {
+  it("rejects with GENERATION_FAILED when the provider fails", async () => {
     const mockProvider = createMockLLMProvider({
       complete: vi.fn().mockRejectedValue(new Error("Provider unavailable")),
     });
@@ -475,16 +478,19 @@ describe("Provider Errors", () => {
       config: { defaultModel: "test-model", systemPrompt: "Test" },
     });
 
-    const result = await orchestrator.run({
-      conversationId: "conv-1",
-      sessionId: "session-1",
-      locale: "fr",
-      requestId: "req-1",
-      userMessage: "Test",
-      conversationHistory: [],
+    await expect(
+      orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Test",
+        conversationHistory: [],
+      }),
+    ).rejects.toMatchObject({
+      code: "GENERATION_FAILED",
+      recoverable: true,
+      details: { cause: "PROVIDER_ERROR" },
     });
-
-    expect(result.finishReason).toBe("error");
-    expect(result.errors[0].code).toBe("PROVIDER_ERROR");
   });
 });

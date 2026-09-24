@@ -74,6 +74,13 @@ export interface AgentRunResult {
   errors: AgentError[];
 }
 
+/**
+ * Why no final response was produced. Server-side diagnostics only —
+ * carried in AgentError.details.cause, never exposed on the SSE wire
+ * (StreamErrorEvent.data only has code/message/recoverable).
+ */
+export type GenerationFailureCause = AgentErrorCode | "EMPTY_RESPONSE";
+
 export class AgentOrchestrator {
   private llmProvider: LLMProvider;
   private ragEngine: RAGEngine;
@@ -129,6 +136,22 @@ export class AgentOrchestrator {
       timestamp: Date.now(),
     };
     messages.push(userMsg);
+
+    // No final response was (or can be) produced: fail loudly with a typed
+    // error instead of replaying a previous assistant message as the answer.
+    // The fixed message never carries history or provider bodies.
+    const failGeneration: (cause: GenerationFailureCause) => never = (cause) => {
+      const error = this.createAgentError(
+        "GENERATION_FAILED",
+        "LLM generation failed: no response produced",
+        true,
+        { cause, steps, toolCallCount },
+      );
+      const concise = `GENERATION_FAILED (cause=${cause})`;
+      eventBus.emit("agent.error", requestId, { stage: "llm", message: concise });
+      console.error(`[Webi] ${concise} (request ${requestId})`);
+      throw error;
+    };
 
     // Emit event
     eventBus.emit("agent.message.received", requestId, {
@@ -355,7 +378,12 @@ export class AgentOrchestrator {
           // Continue loop for next LLM call with tool results
           continue;
         } else {
-          // Final response
+          // Final response — an empty one is not a response: fail instead of
+          // persisting/showing a blank bubble.
+          if (!response.content || response.content.trim().length === 0) {
+            failGeneration("EMPTY_RESPONSE");
+          }
+
           const assistantMsg: Message = {
             id: `msg-${requestId}-assistant-${steps}`,
             role: "assistant",
@@ -384,6 +412,11 @@ export class AgentOrchestrator {
           };
         }
       } catch (error) {
+        // Typed generation failure (empty response): already logged with its
+        // cause — never remap to a provider error, never fall through to the
+        // end-of-loop path.
+        if (isGenerationFailure(error)) throw error;
+
         const llmDuration = Date.now() - llmStartTime;
 
         let agentError: AgentError;
@@ -461,21 +494,10 @@ export class AgentOrchestrator {
       });
     }
 
-    // Return what we have
-    const lastAssistantMsg = messages.filter((m) => m.role === "assistant").pop();
-    return {
-      finalResponse:
-        lastAssistantMsg?.content ?? "Je n'ai pas pu générer de réponse. Veuillez réessayer.",
-      messages,
-      toolCalls,
-      toolResults,
-      usage: accumulatedUsage,
-      finishReason: "error",
-      steps,
-      toolCallCount,
-      durationMs: Date.now() - startTime,
-      errors,
-    };
+    // Loop ended without a final response (provider failure, in-loop
+    // timeout, step limit): never replay the last assistant message from
+    // history as the answer to this prompt — fail with a typed error.
+    return failGeneration(errors.at(-1)?.code ?? "UNKNOWN_ERROR");
   }
 
   private async streamLLM(
@@ -585,6 +607,15 @@ export class AgentOrchestrator {
 }
 
 // Helper functions (re-exported from context-builder)
+
+/**
+ * A typed generation failure thrown by failGeneration inside run() — it must
+ * propagate untouched (never remapped to a provider error).
+ */
+function isGenerationFailure(error: unknown): error is AgentError {
+  return error instanceof Error && "code" in error && error.code === "GENERATION_FAILED";
+}
+
 /**
  * First string found under common provider-error body keys, truncated.
  * Only provider error bodies flow here — never prompt or user content.

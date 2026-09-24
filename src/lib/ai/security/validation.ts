@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "../contracts";
+import { KNOWLEDGE_SOURCE_TYPES } from "../rag/types";
 
 export const ChatMessageSchema = z.object({
   message: z.string().min(1).max(10000),
@@ -42,12 +43,17 @@ export const ToolResultSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
-export const SearchKnowledgeInputSchema = z.object({
-  query: z.string().min(1).max(500),
-  topK: z.number().int().min(1).max(20).default(5),
-  similarityThreshold: z.number().min(0).max(1).default(0.7),
-  filters: z.record(z.unknown()).optional(),
-});
+export const SearchKnowledgeInputSchema = z
+  .object({
+    query: z.string().min(1).max(500),
+    topK: z.number().int().min(1).max(20).default(5),
+    similarityThreshold: z.number().min(0).max(1).default(0.7),
+    // Only filters the RPC actually applies (filter_locale /
+    // filter_source_type). Strict: anything else is rejected, never dropped.
+    locale: z.string().min(2).max(10).optional(),
+    sourceType: z.enum(KNOWLEDGE_SOURCE_TYPES).optional(),
+  })
+  .strict();
 
 export const SummarizeInputSchema = z.object({
   text: z.string().min(1).max(50000),
@@ -81,14 +87,19 @@ export const UpdateMemoryInputSchema = z.object({
   expiresAt: z.string().datetime().optional(),
 });
 
-export const RAGQueryOptionsSchema = z.object({
-  topK: z.number().int().min(1).max(20).default(5),
-  similarityThreshold: z.number().min(0).max(1).default(0.7),
-  strategy: z.enum(["semantic", "keyword", "hybrid", "rerank"]).default("semantic"),
-  sessionId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(),
-  metadataFilters: z.record(z.unknown()).optional(),
-});
+export const RAGQueryOptionsSchema = z
+  .object({
+    topK: z.number().int().min(1).max(20).default(5),
+    similarityThreshold: z.number().min(0).max(1).default(0.7),
+    strategy: z.enum(["semantic", "keyword", "hybrid", "rerank"]).default("semantic"),
+    sessionId: z.string().uuid().optional(),
+    userId: z.string().uuid().optional(),
+    // Only filters the RPC actually applies. Strict: anything else is
+    // rejected, never silently dropped.
+    locale: z.string().min(2).max(10).optional(),
+    sourceType: z.enum(KNOWLEDGE_SOURCE_TYPES).optional(),
+  })
+  .strict();
 
 export function createToolCallValidator(tools: ToolDefinition[]) {
   const toolNames = tools.map((t) => t.function.name);

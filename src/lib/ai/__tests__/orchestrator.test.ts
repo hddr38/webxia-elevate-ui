@@ -380,51 +380,123 @@ describe("AgentOrchestrator", () => {
     expect(result.errors.length).toBe(0);
   });
 
-  it("handles provider error and returns error response", async () => {
+  it("rejects with GENERATION_FAILED on provider failure and never replays history", async () => {
     const { ProviderError } = await import("../providers/errors");
     mockLLMProvider.complete.mockRejectedValue(
       new ProviderError("Provider unavailable", "UNAVAILABLE", "test", true),
     );
 
-    const result = await orchestrator.run({
-      conversationId: "conv-1",
-      sessionId: "session-1",
-      locale: "fr",
-      requestId: "req-1",
-      userMessage: "Test",
-      conversationHistory: [],
-      onToolStart: vi.fn(),
-      onToolResult: vi.fn(),
-      onCitation: vi.fn(),
-    });
+    const error = await orchestrator
+      .run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Test",
+        conversationHistory: [
+          { id: "m1", role: "user" as const, content: "Question?", timestamp: Date.now() - 1000 },
+          {
+            id: "m2",
+            role: "assistant" as const,
+            content: "OLD ANSWER FROM HISTORY",
+            timestamp: Date.now() - 500,
+          },
+        ],
+      })
+      .catch((e: unknown) => e);
 
-    expect(result.finishReason).toBe("error");
-    expect(result.errors.length).toBeGreaterThan(0);
-    expect(result.errors[0].code).toBe("PROVIDER_UNAVAILABLE");
-    expect(result.errors[0].recoverable).toBe(true);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toMatchObject({
+      code: "GENERATION_FAILED",
+      recoverable: true,
+      details: { cause: "PROVIDER_UNAVAILABLE", steps: 1 },
+    });
+    // The rejection must never carry the previous answer as its content.
+    expect((error as Error).message).not.toContain("OLD ANSWER FROM HISTORY");
+    expect((error as Error).message).not.toContain("Question?");
   });
 
-  it("handles provider authentication error as non-recoverable", async () => {
+  it("rejects with GENERATION_FAILED on authentication error", async () => {
     const { ProviderError } = await import("../providers/errors");
     mockLLMProvider.complete.mockRejectedValue(
       new ProviderError("Invalid API key", "AUTHENTICATION_ERROR", "test", false),
     );
 
+    await expect(
+      orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Test",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      }),
+    ).rejects.toMatchObject({
+      code: "GENERATION_FAILED",
+      recoverable: true,
+      details: { cause: "PROVIDER_AUTH_ERROR" },
+    });
+  });
+
+  it("returns the provider answer, never a previous history message", async () => {
     const result = await orchestrator.run({
       conversationId: "conv-1",
       sessionId: "session-1",
       locale: "fr",
       requestId: "req-1",
       userMessage: "Test",
-      conversationHistory: [],
+      conversationHistory: [
+        {
+          id: "m2",
+          role: "assistant" as const,
+          content: "OLD ANSWER FROM HISTORY",
+          timestamp: Date.now() - 500,
+        },
+      ],
       onToolStart: vi.fn(),
       onToolResult: vi.fn(),
       onCitation: vi.fn(),
     });
 
-    expect(result.finishReason).toBe("error");
-    expect(result.errors[0].code).toBe("PROVIDER_AUTH_ERROR");
-    expect(result.errors[0].recoverable).toBe(false);
+    expect(result.finalResponse).toBe("Test response");
+    expect(result.finalResponse).not.toContain("OLD ANSWER FROM HISTORY");
+    expect(result.finishReason).toBe("stop");
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("rejects with GENERATION_FAILED when the final response is empty", async () => {
+    mockLLMProvider.complete.mockResolvedValueOnce({
+      id: "c-empty",
+      content: "   ",
+      model: "test-model",
+      usage: { promptTokens: 1, completionTokens: 0, totalTokens: 1 },
+      finishReason: "stop",
+    });
+
+    await expect(
+      orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Test",
+        conversationHistory: [
+          {
+            id: "m2",
+            role: "assistant" as const,
+            content: "OLD ANSWER FROM HISTORY",
+            timestamp: Date.now() - 500,
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: "GENERATION_FAILED",
+      recoverable: true,
+      details: { cause: "EMPTY_RESPONSE" },
+    });
   });
 
   it("stops after max agent steps", async () => {
@@ -462,20 +534,23 @@ describe("AgentOrchestrator", () => {
       toolCalls: [toolCall],
     });
 
-    const result = await limitedOrchestrator.run({
-      conversationId: "conv-1",
-      sessionId: "session-1",
-      locale: "fr",
-      requestId: "req-1",
-      userMessage: "Test",
-      conversationHistory: [],
-      onToolStart: vi.fn(),
-      onToolResult: vi.fn(),
-      onCitation: vi.fn(),
+    await expect(
+      limitedOrchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Test",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      }),
+    ).rejects.toMatchObject({
+      code: "GENERATION_FAILED",
+      recoverable: true,
+      details: { cause: "MAX_STEPS_EXCEEDED", steps: 2 },
     });
-
-    expect(result.steps).toBe(2);
-    expect(result.errors.some((e) => e.code === "MAX_STEPS_EXCEEDED")).toBe(true);
   });
 
   it("includes conversation history in context", async () => {

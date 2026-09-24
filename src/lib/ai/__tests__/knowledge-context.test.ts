@@ -235,6 +235,36 @@ describe("knowledge context", () => {
 
     expect(built.agentContext.rag.query).toBe(userMessage);
   });
+
+  // LOT 2 (P4) — TEST 1: a FR request transmits locale = "fr" to retrieval.
+  it("transmits locale fr to retrieval", async () => {
+    const store = fakeStore(matchResult());
+    const engine = new RAGEngine(fakeEmbeddingProvider(), {}, store);
+
+    await buildAgentContext({ ...baseOptions(engine), locale: "fr" });
+
+    expect(store.search).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ locale: "fr" }),
+    );
+  });
+
+  // LOT 2 (P4) — TEST 2: an EN request transmits locale = "en" to retrieval.
+  it("transmits locale en to retrieval", async () => {
+    const store = fakeStore(matchResult());
+    const engine = new RAGEngine(fakeEmbeddingProvider(), {}, store);
+
+    await buildAgentContext({
+      ...baseOptions(engine),
+      locale: "en",
+      userMessage: "How much does a showcase website cost?",
+    });
+
+    expect(store.search).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ locale: "en" }),
+    );
+  });
 });
 
 describe("truncateContext priority", () => {

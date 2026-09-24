@@ -28,6 +28,72 @@ export const chatSecurityMiddleware = createSecurityMiddleware({
   enablePromptInjectionCheck: true,
 });
 
+const DEFAULT_CHAT_TIMEOUT_MS = 60_000;
+const MIN_CHAT_TIMEOUT_MS = 5_000;
+const MAX_CHAT_TIMEOUT_MS = 300_000;
+
+export function resolveChatTimeoutMs(
+  envValue: string | undefined = process.env.CHAT_REQUEST_TIMEOUT_MS,
+): number {
+  const parsed = Number(envValue);
+  if (envValue === undefined || envValue.trim() === "" || !Number.isFinite(parsed)) {
+    return DEFAULT_CHAT_TIMEOUT_MS;
+  }
+  return Math.min(MAX_CHAT_TIMEOUT_MS, Math.max(MIN_CHAT_TIMEOUT_MS, Math.floor(parsed)));
+}
+
+function chatAbortError(kind: "timeout" | "disconnect"): Error & {
+  code: AgentErrorCode;
+  recoverable: boolean;
+} {
+  const error = new Error(
+    kind === "timeout" ? "Chat request timed out" : "Chat request aborted",
+  ) as Error & { code: AgentErrorCode; recoverable: boolean };
+  error.code = kind === "timeout" ? "GLOBAL_TIMEOUT" : "INTERNAL_ERROR";
+  error.recoverable = kind === "timeout";
+  return error;
+}
+
+interface ChatLifecycle {
+  readonly signal: AbortSignal;
+  timedOut(): boolean;
+  abort(reason: Error): void;
+  cleanup(): void;
+}
+
+/**
+ * One controller for the whole chat request: a configurable deadline plus
+ * client-disconnect detection (request.signal). The orchestrator is raced
+ * against it so a hung run can never outlive the HTTP request.
+ */
+function createChatLifecycle(request: Request, timeoutMs: number): ChatLifecycle {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort(chatAbortError("timeout"));
+  }, timeoutMs);
+  const onClientAbort = () => {
+    controller.abort(chatAbortError("disconnect"));
+  };
+  if (request.signal.aborted) {
+    onClientAbort();
+  } else {
+    request.signal.addEventListener("abort", onClientAbort, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    timedOut: () => timedOut,
+    abort: (reason) => {
+      if (!controller.signal.aborted) controller.abort(reason);
+    },
+    cleanup: () => {
+      clearTimeout(timer);
+      request.signal.removeEventListener("abort", onClientAbort);
+    },
+  };
+}
+
 export interface ChatHandlerContext {
   request: Request;
   user: SessionUser | null;
@@ -36,6 +102,19 @@ export interface ChatHandlerContext {
 }
 
 export async function handleChatRequest(ctx: ChatHandlerContext): Promise<Response> {
+  const lifecycle = createChatLifecycle(ctx.request, resolveChatTimeoutMs());
+  try {
+    return await runChatRequest(ctx, lifecycle);
+  } catch (error) {
+    lifecycle.cleanup();
+    throw error;
+  }
+}
+
+async function runChatRequest(
+  ctx: ChatHandlerContext,
+  lifecycle: ChatLifecycle,
+): Promise<Response> {
   const { request, user, sanitizedBody, requestId } = ctx;
 
   const sessionId = sanitizedBody?.sessionId as string | undefined;
@@ -110,6 +189,15 @@ export async function handleChatRequest(ctx: ChatHandlerContext): Promise<Respon
     throw error;
   }
 
+  // Deadline or client disconnect already hit during conversation setup —
+  // fail before any provider call or stream starts.
+  if (lifecycle.signal.aborted) {
+    const timedOut = lifecycle.timedOut();
+    throw new Response(timedOut ? "Gateway Timeout" : "Client Closed Request", {
+      status: timedOut ? 504 : 499,
+    });
+  }
+
   const { NvidiaProvider } = await import("@/lib/ai/providers/nvidia");
   const { NvidiaEmbeddingProvider } = await import("@/lib/ai/embeddings/nvidia");
   const { ModelRouter } = await import("@/lib/ai/providers/model-router");
@@ -153,25 +241,46 @@ export async function handleChatRequest(ctx: ChatHandlerContext): Promise<Respon
     config: { defaultModel: chatModel },
   });
 
+  let streamCancelled = false;
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller: ReadableStreamDefaultController<Uint8Array>) {
+      let closed = false;
       const sendEvent = (event: TypedStreamEvent) => {
-        const eventData = JSON.stringify(event);
-        controller.enqueue(new TextEncoder().encode(`data: ${eventData}\n\n`));
+        if (streamCancelled) return;
+        try {
+          const eventData = JSON.stringify(event);
+          controller.enqueue(new TextEncoder().encode(`data: ${eventData}\n\n`));
+        } catch {
+          streamCancelled = true;
+        }
       };
-
-      sendEvent({
-        type: "message_start",
-        data: { messageId: `msg_${Date.now()}` },
-        timestamp: Date.now(),
-        conversationId: resolvedConversationId || "new",
-        requestId,
-      });
+      const closeStream = () => {
+        if (closed) return;
+        closed = true;
+        try {
+          controller.close();
+        } catch {
+          // Already closed or cancelled.
+        }
+      };
 
       const startTime = Date.now();
 
       try {
-        const result: AgentRunResult = await orchestrator.run({
+        if (lifecycle.signal.aborted) {
+          throw lifecycle.signal.reason ?? chatAbortError("timeout");
+        }
+
+        sendEvent({
+          type: "message_start",
+          data: { messageId: `msg_${Date.now()}` },
+          timestamp: Date.now(),
+          conversationId: resolvedConversationId || "new",
+          requestId,
+        });
+
+        const runPromise = orchestrator.run({
           conversationId: resolvedConversationId || "new",
           sessionId,
           userId,
@@ -192,6 +301,23 @@ export async function handleChatRequest(ctx: ChatHandlerContext): Promise<Respon
             isAdmin,
           },
         });
+        // The race below can settle on the lifecycle abort while the run is
+        // still in flight; once the run rejects late (e.g. after
+        // nvidiaProvider.abort()), that rejection must be swallowed here or
+        // Node sees an unhandledRejection. Does not affect the race result.
+        void runPromise.catch(() => undefined);
+
+        // A hung run must never outlive the HTTP request: the race settles on
+        // the deadline/client-disconnect abort and the run is left to be
+        // cancelled by nvidiaProvider.abort() in the catch below.
+        const result: AgentRunResult = await Promise.race([
+          runPromise,
+          new Promise<never>((_resolve, reject) => {
+            const rejectOnAbort = () => reject(lifecycle.signal.reason);
+            if (lifecycle.signal.aborted) rejectOnAbort();
+            else lifecycle.signal.addEventListener("abort", rejectOnAbort, { once: true });
+          }),
+        ]);
 
         try {
           await addMessage(convCtx, resolvedConversationId || "new", {
@@ -225,6 +351,11 @@ export async function handleChatRequest(ctx: ChatHandlerContext): Promise<Respon
           durationMs: Date.now() - startTime,
         });
       } catch (error) {
+        if (lifecycle.signal.aborted) {
+          // Deadline hit or client gone: abort the in-flight LLM call so the
+          // provider stops generating (and billing) for a dead request.
+          nvidiaProvider.abort();
+        }
         const errorCode: AgentErrorCode =
           error instanceof Error && "code" in error
             ? (error as { code: AgentErrorCode }).code
@@ -245,9 +376,15 @@ export async function handleChatRequest(ctx: ChatHandlerContext): Promise<Respon
           conversationId: resolvedConversationId || "new",
           requestId,
         });
+      } finally {
+        lifecycle.cleanup();
+        closeStream();
       }
-
-      controller.close();
+    },
+    cancel() {
+      streamCancelled = true;
+      lifecycle.abort(chatAbortError("disconnect"));
+      nvidiaProvider.abort();
     },
   });
 

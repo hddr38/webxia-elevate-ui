@@ -404,7 +404,8 @@ describe("SearchKnowledgeSkill", () => {
       query: "test",
       topK: 10,
       similarityThreshold: 0.9,
-      filters: { locale: "en" },
+      locale: "en",
+      sourceType: "faq",
     });
 
     expect(mockRAGEngine.query).toHaveBeenCalledWith(
@@ -412,7 +413,8 @@ describe("SearchKnowledgeSkill", () => {
       expect.objectContaining({
         topK: 10,
         similarityThreshold: 0.9,
-        metadataFilters: { locale: "en" },
+        locale: "en",
+        sourceType: "faq",
       }),
     );
   });
@@ -423,6 +425,32 @@ describe("SearchKnowledgeSkill", () => {
 
     expect(result.citations).toBeDefined();
     expect(result.citations?.length).toBeGreaterThan(0);
+  });
+
+  // LOT 2 (P5) — TEST 4 (skill level): declared supported filters reach the engine.
+  it("forwards declared locale and sourceType filters to the engine", async () => {
+    const context = createMockSkillContext();
+    await skill.execute(context, { query: "test", locale: "fr", sourceType: "faq" });
+
+    expect(mockRAGEngine.query).toHaveBeenCalledWith(
+      "test",
+      expect.objectContaining({ locale: "fr", sourceType: "faq" }),
+    );
+  });
+
+  // LOT 2 (P5) — TEST 5: unsupported filters are rejected, never silently ignored.
+  it("rejects undeclared filter keys instead of ignoring them", () => {
+    expect(() => skill.validate({ query: "test", filters: { tags: ["x"] } })).toThrow();
+    expect(() => skill.validate({ query: "test", metadataFilters: {} })).toThrow();
+    expect(() =>
+      skill.validate({ query: "test", locale: "en", sourceType: "not-a-type" }),
+    ).toThrow();
+  });
+
+  it("accepts the declared locale and sourceType filters", () => {
+    const validated = skill.validate({ query: "test", locale: "en", sourceType: "blog" });
+    expect(validated.locale).toBe("en");
+    expect(validated.sourceType).toBe("blog");
   });
 
   it("propagates distinct document/chunk identities to results and citations", async () => {

@@ -458,6 +458,7 @@ export type AgentErrorCode =
   | "TOOL_RESULT_TOO_LARGE"
   | "RAG_UNAVAILABLE"
   | "MEMORY_UNAVAILABLE"
+  | "GENERATION_FAILED"
   | "INTERNAL_ERROR";
 
 export interface AgentError extends Error {

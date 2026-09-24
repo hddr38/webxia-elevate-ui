@@ -8,6 +8,19 @@ import type { KnowledgeDocType } from "./repository";
 
 export type { KnowledgeDocType };
 
+/**
+ * Runtime mirror of the knowledge_doc_type DB enum. Single source of truth
+ * for Zod schemas that accept a document type (skill input, validation).
+ */
+export const KNOWLEDGE_SOURCE_TYPES = [
+  "website",
+  "pdf",
+  "manual",
+  "faq",
+  "blog",
+  "case_study",
+] as const;
+
 export interface VectorStore {
   initialize(): Promise<void>;
   store(documents: KnowledgeDocument[]): Promise<void>;
@@ -20,17 +33,34 @@ export interface VectorStore {
 export interface SearchOptions {
   topK?: number;
   similarityThreshold?: number;
-  metadataFilters?: Record<string, unknown>;
   strategy?: RetrievalStrategy;
   sessionId?: string;
   userId?: string;
-  /** Restrict retrieval to one locale (e.g. "fr"). */
+  /**
+   * Restrict retrieval to one locale (e.g. "fr"). Mirrors the
+   * match_knowledge_chunks filter_locale parameter — the ONLY locale
+   * mechanism (no per-document fallback, no second system).
+   */
   locale?: string;
-  /** Restrict retrieval to one document type. */
+  /**
+   * Restrict retrieval to one document type. Mirrors the
+   * match_knowledge_chunks filter_source_type parameter.
+   */
   sourceType?: KnowledgeDocType;
   /** Telemetry hook: receives the query-embedding duration (ms). */
   onEmbeddingMeasured?: (durationMs: number) => void;
 }
+
+/**
+ * NOTE (LOT 2): document `tags` / `priority` are EDITORIAL metadata
+ * (admin categorization, listing order — see idx_knowledge_documents_tags
+ * and idx_knowledge_documents_priority). They are intentionally NOT
+ * retrieval inputs: match_knowledge_chunks exposes only filter_locale +
+ * filter_source_type, and blending priority into cosine ranking would
+ * distort semantic relevance. No public contract may promise tag/priority
+ * filtering — a former generic `metadataFilters` field was removed for
+ * exactly this reason (it was accepted, then silently dropped).
+ */
 
 export interface KnowledgeDocument {
   id: string;

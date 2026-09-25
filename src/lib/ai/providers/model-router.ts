@@ -156,7 +156,7 @@ export class ModelRouter implements ProviderRegistry {
 export function createModelRouter(config?: Partial<ModelRouterConfig>): ModelRouter {
   const defaultConfig: ModelRouterConfig = {
     primaryProvider: "nvidia",
-    primaryModel: "nvidia/nemotron-3.5-lightning-30b-a3b",
+    primaryModel: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
     fallbackProvider: undefined,
     fallbackModel: undefined,
     enableFallback: false,

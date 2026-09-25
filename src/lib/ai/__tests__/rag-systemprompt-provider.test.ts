@@ -127,7 +127,7 @@ describe("RAG retrieval → system prompt → NVIDIA payload", () => {
           id: "chatcmpl-test",
           object: "chat.completion",
           created: 1,
-          model: "nvidia/nemotron-3-ultra-550b-a55b",
+          model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
           choices: [
             { index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" },
           ],
@@ -139,7 +139,7 @@ describe("RAG retrieval → system prompt → NVIDIA payload", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await provider.complete({
-      model: "nvidia/nemotron-3-ultra-550b-a55b",
+      model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
       messages: built.agentContext.messages,
       systemPrompt: built.systemPrompt,
     });

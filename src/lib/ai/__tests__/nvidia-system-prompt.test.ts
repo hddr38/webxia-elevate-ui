@@ -21,7 +21,7 @@ function completionResponse(content: string): Response {
       id: "chatcmpl-test",
       object: "chat.completion",
       created: 1,
-      model: "nvidia/nemotron-3-ultra-550b-a55b",
+      model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
       choices: [
         {
           index: 0,
@@ -40,14 +40,14 @@ function streamResponse(): Response {
     id: "chatcmpl-test",
     object: "chat.completion.chunk",
     created: 1,
-    model: "nvidia/nemotron-3-ultra-550b-a55b",
+    model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
     choices: [{ index: 0, delta: { role: "assistant", content: "ok" }, finish_reason: null }],
   });
   const last = JSON.stringify({
     id: "chatcmpl-test",
     object: "chat.completion.chunk",
     created: 1,
-    model: "nvidia/nemotron-3-ultra-550b-a55b",
+    model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
     choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
     usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
   });
@@ -92,7 +92,7 @@ describe("NvidiaProvider system prompt transmission", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const request: ProviderRequest = {
-      model: "nvidia/nemotron-3-ultra-550b-a55b",
+      model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
       messages: [userMessage("USER TEST")],
       systemPrompt: "SYSTEM TEST",
     };
@@ -109,7 +109,7 @@ describe("NvidiaProvider system prompt transmission", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const request: ProviderRequest = {
-      model: "nvidia/nemotron-3-ultra-550b-a55b",
+      model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
       messages: [userMessage("USER TEST")],
       systemPrompt: "SYSTEM TEST",
       stream: true,
@@ -198,7 +198,7 @@ describe("NvidiaProvider system prompt transmission", () => {
     expect(body.chat_template_kwargs).toEqual({ enable_thinking: false });
   });
 
-  it("registers lightning (primary) and nano-omni (fallback) with thinking gated per model", async () => {
+  it("registers nano-omni (primary) and lightning (fallback) with thinking gated per model", async () => {
     const provider = await initProvider();
 
     expect(provider.getModel("nvidia/nemotron-3.5-lightning-30b-a3b")?.capabilities.thinking).toBe(

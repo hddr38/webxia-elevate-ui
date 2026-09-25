@@ -8,6 +8,12 @@ export const ChatMessageSchema = z.object({
   sessionId: z.string().uuid().optional(),
   locale: z.enum(["fr", "en"]).default("fr"),
   metadata: z.record(z.unknown()).optional(),
+  /**
+   * LOT 23 — client retry of a message already persisted by a failed attempt.
+   * Server skips the duplicate user write only when a conversation id is also
+   * present (i.e. the message provably lives there already).
+   */
+  isRetry: z.boolean().optional(),
 });
 
 export const ChatResponseSchema = z.object({

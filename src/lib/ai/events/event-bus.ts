@@ -7,6 +7,10 @@ export type WebiEventMap = {
     durationMs: number;
     /** Thinking deltas observed on the stream (reasoning models). */
     reasoningChunks?: number;
+    /** Time to first content token (stream path only) — TTFT observability. */
+    ttftMs?: number | null;
+    /** Number of content chunks forwarded for this call. */
+    chunkCount?: number;
   };
   "agent.tool.started": { toolName: string };
   "agent.tool.completed": { toolName: string; durationMs: number; success: boolean };

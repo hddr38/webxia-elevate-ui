@@ -686,6 +686,123 @@ describe("AgentOrchestrator", () => {
     expect(seen[0]?.reasoningChunks).toBe(7);
   });
 
+  it("reports ttftMs and chunkCount in agent.llm.completed (stream path)", async () => {
+    mockLLMProvider.stream.mockImplementation(async function* (): AsyncIterable<StreamChunk> {
+      yield { type: "chunk", content: "a", index: 0 };
+      yield { type: "chunk", content: "b", index: 1 };
+      yield {
+        type: "done",
+        content: "ab",
+        usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
+        finishReason: "stop",
+        index: 2,
+      };
+    });
+    const seen: Array<{ ttftMs?: number | null; chunkCount?: number }> = [];
+    eventBus.on("agent.llm.completed", (event) => {
+      seen.push(event.payload);
+    });
+
+    await orchestrator.run({
+      conversationId: "conv-1",
+      sessionId: "session-1",
+      locale: "fr",
+      requestId: "req-ttft",
+      userMessage: "Hello world, this message is long enough",
+      conversationHistory: [],
+      stream: true,
+      onStream: () => undefined,
+    });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.chunkCount).toBe(2);
+    // TTFT is measured, never negative, and reported as null when nothing streamed.
+    expect(typeof seen[0]?.ttftMs).toBe("number");
+    expect(seen[0]?.ttftMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("reports ttftMs null and chunkCount 0 when the stream yields no text", async () => {
+    mockLLMProvider.stream.mockImplementation(async function* (): AsyncIterable<StreamChunk> {
+      yield {
+        type: "done",
+        content: "",
+        usage: { promptTokens: 1, completionTokens: 0, totalTokens: 1 },
+        finishReason: "stop",
+        index: 0,
+      };
+    });
+    const seen: Array<{ ttftMs?: number | null; chunkCount?: number }> = [];
+    eventBus.on("agent.llm.completed", (event) => {
+      seen.push(event.payload);
+    });
+
+    await expect(
+      orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-no-ttft",
+        userMessage: "Hello world, this message is long enough",
+        conversationHistory: [],
+        stream: true,
+        onStream: () => undefined,
+      }),
+    ).rejects.toMatchObject({ code: "GENERATION_FAILED" });
+
+    // Telemetry is emitted before the empty-response guard: no text means no
+    // measurable TTFT and zero chunks, not a fabricated 0ms.
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.ttftMs).toBeNull();
+    expect(seen[0]?.chunkCount).toBe(0);
+  });
+
+  it("awaits onStream before pulling the next chunk (backpressure)", async () => {
+    const order: string[] = [];
+    const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
+
+    mockLLMProvider.stream.mockImplementation(async function* (): AsyncIterable<StreamChunk> {
+      yield { type: "chunk", content: "one ", index: 0 };
+      order.push("provider:two");
+      yield { type: "chunk", content: "two", index: 1 };
+      order.push("provider:done");
+      yield {
+        type: "done",
+        content: "one two",
+        usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
+        finishReason: "stop",
+        index: 2,
+      };
+    });
+
+    await orchestrator.run({
+      conversationId: "conv-1",
+      sessionId: "session-1",
+      locale: "fr",
+      requestId: "req-backpressure",
+      userMessage: "Hello world, this message is long enough",
+      conversationHistory: [],
+      stream: true,
+      onStream: async (event) => {
+        if (event.type !== "text_delta") return;
+        order.push(`enter:${event.data.content}`);
+        await tick();
+        order.push(`leave:${event.data.content}`);
+      },
+    });
+
+    // The provider is not allowed to advance until the consumer finished with
+    // the previous delta — that is what turns HTTP backpressure into provider
+    // read-loop throttling instead of unbounded buffering.
+    expect(order).toEqual([
+      "enter:one ",
+      "leave:one ",
+      "provider:two",
+      "enter:two",
+      "leave:two",
+      "provider:done",
+    ]);
+  });
+
   it("respects max tool calls limit", async () => {
     const limitedOrchestrator = new AgentOrchestrator({
       llmProvider: mockLLMProvider,

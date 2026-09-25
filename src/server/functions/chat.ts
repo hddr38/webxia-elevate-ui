@@ -42,6 +42,26 @@ export function resolveChatTimeoutMs(
   return Math.min(MAX_CHAT_TIMEOUT_MS, Math.max(MIN_CHAT_TIMEOUT_MS, Math.floor(parsed)));
 }
 
+const DEFAULT_CHAT_HEARTBEAT_MS = 15_000;
+const MIN_CHAT_HEARTBEAT_MS = 250;
+const MAX_CHAT_HEARTBEAT_MS = 60_000;
+
+/**
+ * Idle gap between SSE keep-alive frames. Proxies/CDNs cut a connection that
+ * stays silent while the model thinks (setup + RAG + TTFB can reach tens of
+ * seconds). Emitted as an SSE comment (`: hb …`) so existing consumers that
+ * only read `data: ` lines are untouched.
+ */
+export function resolveChatHeartbeatMs(
+  envValue: string | undefined = process.env.CHAT_HEARTBEAT_MS,
+): number {
+  const parsed = Number(envValue);
+  if (envValue === undefined || envValue.trim() === "" || !Number.isFinite(parsed)) {
+    return DEFAULT_CHAT_HEARTBEAT_MS;
+  }
+  return Math.min(MAX_CHAT_HEARTBEAT_MS, Math.max(MIN_CHAT_HEARTBEAT_MS, Math.floor(parsed)));
+}
+
 function chatAbortError(kind: "timeout" | "disconnect"): Error & {
   code: AgentErrorCode;
   recoverable: boolean;
@@ -117,14 +137,14 @@ async function runChatRequest(
 ): Promise<Response> {
   const { request, user, sanitizedBody, requestId } = ctx;
 
-  const sessionId = sanitizedBody?.sessionId as string | undefined;
+  const sessionIdInput = sanitizedBody?.sessionId as string | undefined;
   const userId = user?.id;
   const isAuthenticated = !!user;
   const isAdmin = user?.role === "admin";
 
   // Strict anonymous Webi session check: present AND valid UUID.
   // sessionId is NOT an identity — ownership is verified explicitly below.
-  if (!sessionId || !UUID_RE.test(sessionId)) {
+  if (!sessionIdInput || !UUID_RE.test(sessionIdInput)) {
     await import("@/lib/ai/security/audit-log").then(({ auditLogger }) =>
       auditLogger.logAuthFailure("unknown", "Missing or invalid session ID", {
         requestId,
@@ -134,10 +154,14 @@ async function runChatRequest(
     );
     throw new Response("Unauthorized: No session", { status: 401 });
   }
+  // Narrowed to `string` here so nested functions (the stream) see a defined
+  // value too — control-flow narrowing does not survive into closures.
+  const sessionId: string = sessionIdInput;
 
   const conversationId = sanitizedBody?.conversationId as string | undefined;
   const message = sanitizedBody?.message as string;
   const locale = (sanitizedBody?.locale as string) ?? "fr";
+  const isRetry = sanitizedBody?.isRetry === true;
 
   eventBus.emit("agent.message.received", requestId, { sessionId, role: "user" });
 
@@ -176,7 +200,13 @@ async function runChatRequest(
       conversationHistory = await getConversationHistory(convCtx, resolvedConversationId, 50);
     }
 
-    await addMessage(convCtx, resolvedConversationId, { role: "user", content: message });
+    // A retry of a message the previous attempt already stored (the client
+    // only knows a conversation id after message_start, which is emitted
+    // after this write) must not duplicate the user turn. No known
+    // conversation ⇒ we cannot prove the write happened, so we write it.
+    if (!isRetry || !conversationId) {
+      await addMessage(convCtx, resolvedConversationId, { role: "user", content: message });
+    }
   } catch (error) {
     // Controlled HTTP flow (401/403 above) stays silent here — it is already
     // audit-logged. Unexpected failures are observable via the bus.
@@ -250,147 +280,288 @@ async function runChatRequest(
   });
 
   let streamCancelled = false;
+  /** Content forwarded to the client as `text_delta` — kept for LOT 23. */
+  let partialContent = "";
+  let assistantPersisted = false;
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller: ReadableStreamDefaultController<Uint8Array>) {
-      let closed = false;
-      const sendEvent = (event: TypedStreamEvent) => {
-        if (streamCancelled) return;
+  /**
+   * Producer-side backpressure: the agent loop parks here while written frames
+   * still wait for HTTP demand. Woken by a flush, by stream cancellation or by
+   * the lifecycle deadline — never left hanging.
+   */
+  let pendingDrain: (() => void) | null = null;
+  const wakeDrain = (): void => {
+    const resolve = pendingDrain;
+    pendingDrain = null;
+    resolve?.();
+  };
+
+  const heartbeatMs = resolveChatHeartbeatMs();
+  /** Installed by serveStream(); pull() and cancel() both drive it. */
+  let pumpQueue: () => void = () => {};
+
+  /**
+   * Drives the whole SSE lifetime. It must NOT be awaited from start(): the
+   * stream only calls pull() once start() has resolved, and pull() is what
+   * releases frames queued when the consumer was not ready.
+   */
+  async function serveStream(
+    controller: ReadableStreamDefaultController<Uint8Array>,
+  ): Promise<void> {
+    let closed = false;
+    /** Production is over but frames may still be waiting for HTTP demand. */
+    let closeRequested = false;
+    let seq = 0;
+    let lastFrameAt = Date.now();
+    const encoder = new TextEncoder();
+    /** Frames written but not yet handed to the HTTP layer. */
+    const queue: Uint8Array[] = [];
+
+    const doClose = (): void => {
+      if (closed) return;
+      closed = true;
+      clearInterval(heartbeat);
+      try {
+        controller.close();
+      } catch {
+        // Already closed or cancelled.
+      }
+      wakeDrain();
+    };
+
+    pumpQueue = (): void => {
+      if (streamCancelled) {
+        queue.length = 0;
+        closed = true;
+        wakeDrain();
+        return;
+      }
+      while (queue.length > 0) {
+        if (controller.desiredSize !== null && controller.desiredSize <= 0) return;
         try {
-          const eventData = JSON.stringify(event);
-          controller.enqueue(new TextEncoder().encode(`data: ${eventData}\n\n`));
+          controller.enqueue(queue.shift() as Uint8Array);
         } catch {
           streamCancelled = true;
+          queue.length = 0;
+          wakeDrain();
+          return;
         }
-      };
-      const closeStream = () => {
-        if (closed) return;
-        closed = true;
-        try {
-          controller.close();
-        } catch {
-          // Already closed or cancelled.
-        }
-      };
+      }
+      wakeDrain();
+      // Only close once every frame reached the HTTP layer: closing while our
+      // queue still holds a frame would drop it (pull() stops running as soon
+      // as close is requested).
+      if (closeRequested && queue.length === 0) doClose();
+    };
 
-      const startTime = Date.now();
+    const write = (frame: string): void => {
+      if (streamCancelled || closed) return;
+      queue.push(encoder.encode(frame));
+      lastFrameAt = Date.now();
+      pumpQueue();
+    };
+
+    const sendEvent = (event: TypedStreamEvent): void => {
+      if (streamCancelled) return;
+      if (event.type === "text_delta") partialContent += event.data.content;
+      // `id:` is an SSE sequence marker — additive, consumers read `data:`.
+      write(`id: ${++seq}\ndata: ${JSON.stringify(event)}\n\n`);
+    };
+
+    const awaitDrain = async (): Promise<void> => {
+      while (!streamCancelled && !closed && !lifecycle.signal.aborted && queue.length > 0) {
+        await new Promise<void>((resolve) => {
+          pendingDrain = resolve;
+        });
+      }
+    };
+
+    const onLifecycleAbort = () => wakeDrain();
+    lifecycle.signal.addEventListener("abort", onLifecycleAbort, { once: true });
+
+    // Keep-alive: proxies/CDN drop a silent connection while the model thinks
+    // (setup + RAG + TTFB). SSE comment — invisible to `data:` consumers.
+    const heartbeat = setInterval(() => {
+      if (streamCancelled || closed || closeRequested) return;
+      if (Date.now() - lastFrameAt >= heartbeatMs) {
+        write(`: hb ${Date.now()}\n\n`);
+      }
+    }, heartbeatMs);
+
+    const closeStream = () => {
+      if (closed || closeRequested) return;
+      closeRequested = true;
+      clearInterval(heartbeat);
+      wakeDrain();
+      // Flush first; if the consumer still owes us demand, doClose() runs from
+      // pull() as soon as the last queued frame has been delivered.
+      pumpQueue();
+      if (queue.length === 0) doClose();
+    };
+
+    const startTime = Date.now();
+
+    try {
+      if (lifecycle.signal.aborted) {
+        throw lifecycle.signal.reason ?? chatAbortError("timeout");
+      }
+
+      sendEvent({
+        type: "message_start",
+        data: { messageId: `msg_${Date.now()}` },
+        timestamp: Date.now(),
+        conversationId: resolvedConversationId || "new",
+        requestId,
+      });
+
+      const runPromise = orchestrator.run({
+        conversationId: resolvedConversationId || "new",
+        sessionId,
+        userId,
+        locale,
+        requestId,
+        userMessage: message,
+        conversationHistory,
+        stream: true,
+        // Returning the drain promise is what propagates backpressure from the
+        // HTTP consumer up to the provider read loop.
+        onStream: async (event: TypedStreamEvent) => {
+          sendEvent(event);
+          await awaitDrain();
+        },
+        onToolStart: (event) => sendEvent(event),
+        onToolResult: (event) => sendEvent(event),
+        onCitation: (event) => sendEvent(event),
+        authContext: {
+          userId,
+          isAuthenticated,
+          isAdmin,
+        },
+      });
+      // The race below can settle on the lifecycle abort while the run is
+      // still in flight; once the run rejects late (e.g. after
+      // nvidiaProvider.abort()), that rejection must be swallowed here or
+      // Node sees an unhandledRejection. Does not affect the race result.
+      void runPromise.catch(() => undefined);
+
+      // A hung run must never outlive the HTTP request: the race settles on
+      // the deadline/client-disconnect abort and the run is left to be
+      // cancelled by nvidiaProvider.abort() in the catch below.
+      const result: AgentRunResult = await Promise.race([
+        runPromise,
+        new Promise<never>((_resolve, reject) => {
+          const rejectOnAbort = () => reject(lifecycle.signal.reason);
+          if (lifecycle.signal.aborted) rejectOnAbort();
+          else lifecycle.signal.addEventListener("abort", rejectOnAbort, { once: true });
+        }),
+      ]);
 
       try {
-        if (lifecycle.signal.aborted) {
-          throw lifecycle.signal.reason ?? chatAbortError("timeout");
-        }
-
-        sendEvent({
-          type: "message_start",
-          data: { messageId: `msg_${Date.now()}` },
-          timestamp: Date.now(),
-          conversationId: resolvedConversationId || "new",
-          requestId,
+        await addMessage(convCtx, resolvedConversationId || "new", {
+          role: "assistant",
+          content: result.finalResponse,
         });
-
-        const runPromise = orchestrator.run({
-          conversationId: resolvedConversationId || "new",
-          sessionId,
-          userId,
-          locale,
-          requestId,
-          userMessage: message,
-          conversationHistory,
-          stream: true,
-          onStream: (event: TypedStreamEvent) => {
-            sendEvent(event);
-          },
-          onToolStart: (event) => sendEvent(event),
-          onToolResult: (event) => sendEvent(event),
-          onCitation: (event) => sendEvent(event),
-          authContext: {
-            userId,
-            isAuthenticated,
-            isAdmin,
-          },
+        assistantPersisted = true;
+      } catch (persistError) {
+        eventBus.emit("agent.error", requestId, {
+          stage: "chat",
+          message:
+            persistError instanceof Error ? persistError.message : "Assistant persist failed",
         });
-        // The race below can settle on the lifecycle abort while the run is
-        // still in flight; once the run rejects late (e.g. after
-        // nvidiaProvider.abort()), that rejection must be swallowed here or
-        // Node sees an unhandledRejection. Does not affect the race result.
-        void runPromise.catch(() => undefined);
+        throw persistError;
+      }
 
-        // A hung run must never outlive the HTTP request: the race settles on
-        // the deadline/client-disconnect abort and the run is left to be
-        // cancelled by nvidiaProvider.abort() in the catch below.
-        const result: AgentRunResult = await Promise.race([
-          runPromise,
-          new Promise<never>((_resolve, reject) => {
-            const rejectOnAbort = () => reject(lifecycle.signal.reason);
-            if (lifecycle.signal.aborted) rejectOnAbort();
-            else lifecycle.signal.addEventListener("abort", rejectOnAbort, { once: true });
-          }),
-        ]);
+      eventBus.emit("agent.response.completed", requestId, {
+        durationMs: Date.now() - startTime,
+      });
 
+      sendEvent({
+        type: "message_complete",
+        data: {
+          fullContent: result.finalResponse,
+          usage: result.usage,
+          toolCalls: result.toolCalls,
+          conversationId: resolvedConversationId || "new",
+        },
+        timestamp: Date.now(),
+        conversationId: resolvedConversationId || "new",
+        requestId,
+        durationMs: Date.now() - startTime,
+      });
+    } catch (error) {
+      if (lifecycle.signal.aborted) {
+        // Deadline hit or client gone: abort the in-flight LLM call so the
+        // provider stops generating (and billing) for a dead request.
+        nvidiaProvider.abort();
+      }
+      const errorCode: AgentErrorCode =
+        error instanceof Error && "code" in error
+          ? (error as { code: AgentErrorCode }).code
+          : "INTERNAL_ERROR";
+      const recoverable =
+        error instanceof Error && "recoverable" in error
+          ? (error as { recoverable: boolean }).recoverable
+          : false;
+
+      sendEvent({
+        type: "error",
+        data: {
+          code: errorCode,
+          message: error instanceof Error ? error.message : "Unknown error",
+          recoverable,
+        },
+        timestamp: Date.now(),
+        conversationId: resolvedConversationId || "new",
+        requestId,
+      });
+
+      // LOT 23 — a stream cut by the deadline or by a client disconnect must
+      // not lose what the user already read. Strictly gated on a lifecycle
+      // abort: a GENERATION_FAILED (LOT 10) still never writes an assistant row.
+      if (lifecycle.signal.aborted && !assistantPersisted && partialContent.trim().length > 0) {
+        assistantPersisted = true;
         try {
           await addMessage(convCtx, resolvedConversationId || "new", {
             role: "assistant",
-            content: result.finalResponse,
+            content: partialContent,
           });
         } catch (persistError) {
           eventBus.emit("agent.error", requestId, {
             stage: "chat",
             message:
-              persistError instanceof Error ? persistError.message : "Assistant persist failed",
+              persistError instanceof Error ? persistError.message : "Partial persist failed",
           });
-          throw persistError;
         }
-
-        eventBus.emit("agent.response.completed", requestId, {
-          durationMs: Date.now() - startTime,
-        });
-
-        sendEvent({
-          type: "message_complete",
-          data: {
-            fullContent: result.finalResponse,
-            usage: result.usage,
-            toolCalls: result.toolCalls,
-            conversationId: resolvedConversationId || "new",
-          },
-          timestamp: Date.now(),
-          conversationId: resolvedConversationId || "new",
-          requestId,
-          durationMs: Date.now() - startTime,
-        });
-      } catch (error) {
-        if (lifecycle.signal.aborted) {
-          // Deadline hit or client gone: abort the in-flight LLM call so the
-          // provider stops generating (and billing) for a dead request.
-          nvidiaProvider.abort();
-        }
-        const errorCode: AgentErrorCode =
-          error instanceof Error && "code" in error
-            ? (error as { code: AgentErrorCode }).code
-            : "INTERNAL_ERROR";
-        const recoverable =
-          error instanceof Error && "recoverable" in error
-            ? (error as { recoverable: boolean }).recoverable
-            : false;
-
-        sendEvent({
-          type: "error",
-          data: {
-            code: errorCode,
-            message: error instanceof Error ? error.message : "Unknown error",
-            recoverable,
-          },
-          timestamp: Date.now(),
-          conversationId: resolvedConversationId || "new",
-          requestId,
-        });
-      } finally {
-        lifecycle.cleanup();
-        closeStream();
       }
+    } finally {
+      clearInterval(heartbeat);
+      lifecycle.signal.removeEventListener("abort", onLifecycleAbort);
+      lifecycle.cleanup();
+      wakeDrain();
+      closeStream();
+    }
+  }
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller: ReadableStreamDefaultController<Uint8Array>) {
+      void serveStream(controller).catch(() => {
+        // Only reachable if the catch/finally above failed — never let the
+        // rejection escape into the stream machinery unobserved.
+        streamCancelled = true;
+        wakeDrain();
+        try {
+          controller.error();
+        } catch {
+          // Already closed or cancelled.
+        }
+      });
+    },
+    pull() {
+      pumpQueue();
     },
     cancel() {
       streamCancelled = true;
+      pumpQueue();
       lifecycle.abort(chatAbortError("disconnect"));
       nvidiaProvider.abort();
     },

@@ -25,6 +25,10 @@ export interface UseChatReturn {
   isStreaming: boolean;
   currentTool: string | null;
   temporaryError: string | null;
+  /** SSE error code of the last failed stream (null for client/network errors). */
+  errorCode: string | null;
+  /** Server says the failed attempt is worth retrying (error.recoverable). */
+  canRetry: boolean;
   messages: ChatMessage[];
   conversationId: string | null;
   messageCount: number;
@@ -35,6 +39,10 @@ export interface UseChatReturn {
   close: () => void;
   toggle: () => void;
   setDraft: (draft: string) => void;
-  sendMessage: (message: string) => Promise<void>;
+  sendMessage: (message: string, options?: { isRetry?: boolean }) => Promise<void>;
+  /** Cancel the in-flight stream (server aborts the LLM call too). */
+  stopStreaming: () => void;
+  /** Replay the last user message without duplicating it server-side. */
+  retryLastMessage: () => Promise<void>;
   resetConversation: () => void;
 }

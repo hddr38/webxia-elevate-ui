@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bot } from "lucide-react";
 import { useEffect } from "react";
 import { useLocale } from "@/lib/locale-context";
-import { useChat } from "@/hooks/use-chat";
+import { useChat, abortActiveStream } from "@/hooks/use-chat";
 import { ChatWindow } from "./ChatWindow";
 import { cn } from "@/lib/utils";
 
@@ -11,13 +11,22 @@ export function ChatWidget() {
   const { isOpen, close, toggle } = useChat();
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      // LOT 23 — closing the widget while a stream is running must cancel the
+      // request: otherwise the server keeps generating (and billing) for a
+      // client that is no longer reading.
+      abortActiveStream();
+      return;
+    }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [isOpen, close]);
+
+  // Full page unmount (navigation) — same cancellation guarantee.
+  useEffect(() => () => abortActiveStream(), []);
 
   return (
     <AnimatePresence>

@@ -62,7 +62,7 @@ import {
   getOrCreateConversation,
 } from "@/lib/ai/conversation/conversation-service";
 import { AgentOrchestrator } from "@/lib/ai/agent/orchestrator";
-import { handleChatRequest, resolveChatTimeoutMs } from "./chat";
+import { handleChatRequest, resolveChatHeartbeatMs, resolveChatTimeoutMs } from "./chat";
 
 function ctx(overrides: Record<string, unknown> = {}) {
   return {
@@ -79,16 +79,40 @@ function ctx(overrides: Record<string, unknown> = {}) {
 }
 
 async function readSse(response: Response): Promise<string> {
+  return openSse(response).readAll();
+}
+
+/** Keeps the reader alive so a test can read until a point, act, then drain. */
+function openSse(response: Response) {
   const reader = response.body?.getReader();
   if (!reader) throw new Error("no body");
   const decoder = new TextDecoder();
-  let out = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    out += decoder.decode(value, { stream: true });
-  }
-  return out;
+  let text = "";
+  return {
+    get text(): string {
+      return text;
+    },
+    async readUntil(predicate: (acc: string) => boolean): Promise<string> {
+      while (!predicate(text)) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+      }
+      return text;
+    },
+    async readAll(): Promise<string> {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+      }
+      return text;
+    },
+    /** Tears the stream down (fires `cancel()` on the server side). */
+    async cancel(): Promise<void> {
+      await reader.cancel().catch(() => undefined);
+    },
+  };
 }
 
 describe("handleChatRequest instrumentation", () => {
@@ -113,6 +137,12 @@ describe("handleChatRequest instrumentation", () => {
     expect(text).toContain('"type":"message_start"');
     expect(text).toContain('"type":"text_delta"');
     expect(text).toContain('"type":"message_complete"');
+
+    // every frame carries a monotonic SSE sequence id (additive to `data:`)
+    expect(text).toContain("id: 1\ndata:");
+    expect(text).toContain("id: 2\ndata:");
+    expect(text).toContain("id: 3\ndata:");
+    expect(text).not.toContain("id: 4\ndata:");
 
     // user persisted before the run, assistant after — same conversation.
     expect(addMessage).toHaveBeenCalledTimes(2);
@@ -265,4 +295,204 @@ describe("handleChatRequest lifecycle", () => {
       else process.env.CHAT_REQUEST_TIMEOUT_MS = previous;
     }
   }, 15000);
+});
+
+describe("resolveChatHeartbeatMs", () => {
+  it("defaults to 15s for missing or invalid env values", () => {
+    expect(resolveChatHeartbeatMs(undefined)).toBe(15000);
+    expect(resolveChatHeartbeatMs("not-a-number")).toBe(15000);
+    expect(resolveChatHeartbeatMs("")).toBe(15000);
+    expect(resolveChatHeartbeatMs("   ")).toBe(15000);
+  });
+
+  it("clamps configured values to [250ms, 60s]", () => {
+    expect(resolveChatHeartbeatMs("1")).toBe(250);
+    expect(resolveChatHeartbeatMs("250")).toBe(250);
+    expect(resolveChatHeartbeatMs("4000")).toBe(4000);
+    expect(resolveChatHeartbeatMs("999999")).toBe(60000);
+  });
+});
+
+describe("handleChatRequest SSE keep-alive", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventBus.clear();
+  });
+
+  it("emits a heartbeat comment while the run is stalled, then no more after close", async () => {
+    const previous = process.env.CHAT_HEARTBEAT_MS;
+    process.env.CHAT_HEARTBEAT_MS = "250";
+    try {
+      vi.mocked(AgentOrchestrator).mockImplementationOnce(
+        () =>
+          ({
+            run: () => new Promise(() => undefined),
+          }) as unknown as InstanceType<typeof AgentOrchestrator>,
+      );
+
+      const response = await handleChatRequest(ctx());
+      const stream = openSse(response);
+      let text = "";
+      try {
+        text = await stream.readUntil((acc) => acc.includes(": hb"));
+      } finally {
+        await stream.cancel();
+      }
+
+      expect(text).toContain(": hb ");
+      expect(text).toContain('"type":"message_start"');
+      // the comment never leaks into the `data:` channel
+      expect(text).not.toContain("data: : hb");
+    } finally {
+      if (previous === undefined) delete process.env.CHAT_HEARTBEAT_MS;
+      else process.env.CHAT_HEARTBEAT_MS = previous;
+    }
+  }, 15000);
+
+  it("stays silent while frames are flowing (heartbeat only covers idle gaps)", async () => {
+    const previous = process.env.CHAT_HEARTBEAT_MS;
+    process.env.CHAT_HEARTBEAT_MS = "250";
+    try {
+      vi.mocked(AgentOrchestrator).mockImplementationOnce(
+        () =>
+          ({
+            run: async (opts: StreamOpts) => {
+              // 8 deltas at ~40ms = ~320ms of continuous production, longer
+              // than the heartbeat window but with no idle gap.
+              for (let i = 0; i < 8; i++) {
+                await new Promise<void>((resolve) => setTimeout(resolve, 40));
+                await opts.onStream?.(delta(`t${i} `, opts));
+              }
+              return {
+                finalResponse: "t0 t1 t2 t3 t4 t5 t6 t7 ",
+                messages: [],
+                toolCalls: [],
+                toolResults: [],
+                usage: { promptTokens: 1, completionTokens: 8, totalTokens: 9 },
+                finishReason: "stop",
+                steps: 1,
+                toolCallCount: 0,
+                durationMs: 320,
+                errors: [],
+              };
+            },
+          }) as unknown as InstanceType<typeof AgentOrchestrator>,
+      );
+
+      const text = await readSse(await handleChatRequest(ctx()));
+      expect(text).toContain('"type":"message_complete"');
+      expect(text).not.toContain(": hb ");
+    } finally {
+      if (previous === undefined) delete process.env.CHAT_HEARTBEAT_MS;
+      else process.env.CHAT_HEARTBEAT_MS = previous;
+    }
+  }, 15000);
+});
+
+type StreamOpts = {
+  onStream?: (event: unknown) => void | Promise<void>;
+  conversationId: string;
+  requestId: string;
+};
+
+function delta(content: string, opts: StreamOpts) {
+  return {
+    type: "text_delta",
+    data: { content, index: 0 },
+    timestamp: 1,
+    conversationId: opts.conversationId,
+    requestId: opts.requestId,
+  };
+}
+
+describe("handleChatRequest partial content", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventBus.clear();
+  });
+
+  it("persists what the user already read when the client disconnects mid-stream", async () => {
+    const controller = new AbortController();
+    const request = new Request("http://localhost/api/chat", {
+      method: "POST",
+      signal: controller.signal,
+    });
+
+    vi.mocked(AgentOrchestrator).mockImplementationOnce(
+      () =>
+        ({
+          run: async (opts: StreamOpts) => {
+            await opts.onStream?.(delta("bonjour ", opts));
+            return new Promise(() => undefined);
+          },
+        }) as unknown as InstanceType<typeof AgentOrchestrator>,
+    );
+
+    const response = await handleChatRequest({ ...ctx(), request });
+    const stream = openSse(response);
+    const seen = await stream.readUntil((acc) => acc.includes('"content":"bonjour "'));
+    expect(seen).toContain('"type":"text_delta"');
+
+    controller.abort();
+    const rest = await stream.readAll();
+    expect(rest).toContain('"type":"error"');
+    expect(rest).not.toContain('"type":"message_complete"');
+
+    expect(addMessage).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(addMessage).mock.calls[1][2]).toMatchObject({
+      role: "assistant",
+      content: "bonjour ",
+    });
+  });
+
+  it("still never persists an assistant row on GENERATION_FAILED, even after deltas", async () => {
+    vi.mocked(AgentOrchestrator).mockImplementationOnce(
+      () =>
+        ({
+          run: async (opts: StreamOpts) => {
+            await opts.onStream?.(delta("debut ", opts));
+            throw Object.assign(new Error("LLM generation failed — no response produced"), {
+              code: "GENERATION_FAILED",
+              recoverable: true,
+            });
+          },
+        }) as unknown as InstanceType<typeof AgentOrchestrator>,
+    );
+
+    const response = await handleChatRequest(ctx());
+    const text = await readSse(response);
+    expect(text).toContain('"code":"GENERATION_FAILED"');
+    expect(text).toContain('"content":"debut "');
+    expect(text).not.toContain('"type":"message_complete"');
+
+    expect(addMessage).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(addMessage).mock.calls[0][2]).toMatchObject({ role: "user" });
+  });
+});
+
+describe("handleChatRequest retries", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventBus.clear();
+  });
+
+  it("skips the duplicate user write when isRetry targets an existing conversation", async () => {
+    const response = await handleChatRequest(
+      ctx({ isRetry: true, conversationId: "33333333-3333-3333-3333-333333333333" }),
+    );
+    const text = await readSse(response);
+    expect(text).toContain('"type":"message_complete"');
+
+    expect(addMessage).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(addMessage).mock.calls[0][2]).toMatchObject({ role: "assistant" });
+  });
+
+  it("still writes the user message on the first attempt", async () => {
+    const response = await handleChatRequest(ctx());
+    await readSse(response);
+
+    expect(addMessage).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(addMessage).mock.calls[0][2]).toMatchObject({ role: "user" });
+    expect(vi.mocked(addMessage).mock.calls[1][2]).toMatchObject({ role: "assistant" });
+  });
 });

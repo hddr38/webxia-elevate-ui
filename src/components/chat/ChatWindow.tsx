@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Bot, Plus, MessageCircle, AlertCircle } from "lucide-react";
+import { X, Bot, Plus, MessageCircle, AlertCircle, Square, RotateCcw } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { useChat } from "@/hooks/use-chat";
 import { useStickyScroll } from "@/hooks/use-sticky-scroll";
@@ -28,6 +28,8 @@ export function ChatWindow() {
     isStreaming,
     currentTool,
     temporaryError,
+    errorCode,
+    canRetry,
     messages,
     conversationId,
     messageCount,
@@ -36,6 +38,8 @@ export function ChatWindow() {
     close,
     setDraft,
     sendMessage,
+    stopStreaming,
+    retryLastMessage,
     resetConversation,
   } = useChat();
 
@@ -239,8 +243,26 @@ export function ChatWindow() {
           >
             <Alert variant="destructive" className="border-destructive/50">
               <AlertCircle className="size-4" />
-              <AlertTitle className="text-sm">{t("chat.error.generic")}</AlertTitle>
+              <AlertTitle className="text-sm">
+                {errorCode === "GENERATION_FAILED"
+                  ? t("chat.error.generation.title")
+                  : errorCode === "GLOBAL_TIMEOUT"
+                    ? t("chat.error.timeout.title")
+                    : t("chat.error.generic")}
+              </AlertTitle>
               <AlertDescription className="text-xs">{temporaryError}</AlertDescription>
+              {canRetry && !isStreaming && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void retryLastMessage()}
+                  className="mt-2 h-8 text-xs"
+                >
+                  <RotateCcw className="size-3" />
+                  {t("chat.retry")}
+                </Button>
+              )}
             </Alert>
           </motion.div>
         )}
@@ -326,25 +348,35 @@ export function ChatWindow() {
             aria-label={t("chat.input.placeholder")}
             aria-disabled={isStreaming}
           />
-          <Button
-            type="submit"
-            size="icon"
-            className={cn(
-              "size-10 rounded-xl bg-brand text-brand-foreground",
-              "hover:bg-brand/90",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
-              "transition-colors",
-            )}
-            disabled={isStreaming || !draft.trim()}
-            aria-label={t("chat.input.send")}
-          >
-            <motion.div
-              animate={isStreaming ? { rotate: 360 } : {}}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          {isStreaming ? (
+            <Button
+              type="button"
+              size="icon"
+              onClick={stopStreaming}
+              className={cn(
+                "size-10 rounded-xl bg-brand text-brand-foreground",
+                "hover:bg-brand/90 transition-colors",
+              )}
+              aria-label={t("chat.stop")}
+            >
+              <Square className="size-3 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              size="icon"
+              className={cn(
+                "size-10 rounded-xl bg-brand text-brand-foreground",
+                "hover:bg-brand/90",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                "transition-colors",
+              )}
+              disabled={!draft.trim()}
+              aria-label={t("chat.input.send")}
             >
               <MessageCircle className="size-4" />
-            </motion.div>
-          </Button>
+            </Button>
+          )}
         </div>
         <p
           className={cn(

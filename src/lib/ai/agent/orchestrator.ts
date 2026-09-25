@@ -50,7 +50,13 @@ export interface AgentRunOptions {
   userMessage: string;
   conversationHistory: Message[];
   stream?: boolean;
-  onStream?: (event: TypedStreamEvent) => void;
+  /**
+   * Receives every typed stream event. May return a promise: the orchestrator
+   * awaits it before pulling the next provider chunk, which is how the chat
+   * handler propagates HTTP backpressure all the way to the LLM connection.
+   * Synchronous callbacks keep working unchanged.
+   */
+  onStream?: (event: TypedStreamEvent) => void | Promise<void>;
   onToolStart?: (event: ToolStartEvent) => void;
   onToolResult?: (event: ToolResultEvent) => void;
   onCitation?: (event: CitationEvent) => void;
@@ -244,6 +250,8 @@ export class AgentOrchestrator {
       try {
         let response: ProviderResponse;
         let reasoningChunks = 0;
+        let ttftMs: number | null = null;
+        let chunkCount = 0;
 
         if (stream && onStream) {
           const streamed = await this.streamLLM(
@@ -254,6 +262,8 @@ export class AgentOrchestrator {
           );
           response = streamed.response;
           reasoningChunks = streamed.reasoningChunks;
+          ttftMs = streamed.ttftMs;
+          chunkCount = streamed.chunkCount;
         } else {
           response = await this.llmProvider.complete(providerRequest);
         }
@@ -270,6 +280,8 @@ export class AgentOrchestrator {
           model: response.model,
           durationMs: llmDuration,
           reasoningChunks,
+          ttftMs,
+          chunkCount,
         });
 
         // Handle response
@@ -502,21 +514,31 @@ export class AgentOrchestrator {
 
   private async streamLLM(
     request: ProviderRequest,
-    onStream: (event: TypedStreamEvent) => void,
+    onStream: (event: TypedStreamEvent) => void | Promise<void>,
     conversationId: string,
     requestId: string,
-  ): Promise<{ response: ProviderResponse; reasoningChunks: number }> {
+  ): Promise<{
+    response: ProviderResponse;
+    reasoningChunks: number;
+    ttftMs: number | null;
+    chunkCount: number;
+  }> {
     let fullContent = "";
     let toolCalls: ToolCall[] | undefined;
     let usage: ProviderResponse["usage"] | undefined;
     let finishReason: ProviderResponse["finishReason"] = "stop";
     let reasoningChunks = 0;
     let index = 0;
+    let firstChunkAt: number | null = null;
+    const streamStart = Date.now();
 
     for await (const chunk of this.llmProvider.stream(request)) {
       if (chunk.type === "chunk" && chunk.content) {
+        firstChunkAt ??= Date.now();
         fullContent += chunk.content;
-        onStream({
+        // Awaited so a slow HTTP consumer throttles the provider read loop
+        // (backpressure) instead of buffering the whole answer in memory.
+        await onStream({
           type: "text_delta",
           data: { content: chunk.content, index: index++ },
           timestamp: Date.now(),
@@ -557,6 +579,8 @@ export class AgentOrchestrator {
         toolCalls,
       },
       reasoningChunks,
+      ttftMs: firstChunkAt === null ? null : firstChunkAt - streamStart,
+      chunkCount: index,
     };
   }
 

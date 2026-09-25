@@ -210,9 +210,13 @@ async function runChatRequest(
     timeout: 120000,
     maxRetries: 2,
   };
+  // LLM TTFB budget: must be < CHAT_REQUEST_TIMEOUT_MS (110s) or the
+  // lifecycle kills the request before the provider can time out — and
+  // fallback would never run. 45s ≫ normal nano-omni TTFB (0.2-3s).
+  const llmConfig = { ...nvidiaConfig, timeout: 45000 };
 
   const nvidiaProvider = new NvidiaProvider();
-  await nvidiaProvider.initialize(nvidiaConfig);
+  await nvidiaProvider.initialize(llmConfig);
 
   const embeddingProvider = new NvidiaEmbeddingProvider();
   await embeddingProvider.initialize(nvidiaConfig);
@@ -238,7 +242,9 @@ async function runChatRequest(
   const ragEngine = new RAGEngine(embeddingProvider);
 
   const orchestrator = new AgentOrchestrator({
-    llmProvider: modelRouter.getActive(),
+    // The router itself implements LLMProvider: fallback (nano-omni →
+    // lightning) runs inside its complete()/stream() in production.
+    llmProvider: modelRouter,
     ragEngine,
     config: { defaultModel: chatModel },
   });

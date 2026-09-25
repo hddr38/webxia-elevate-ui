@@ -1,11 +1,26 @@
-import { LLMProvider, ModelRouterConfig, ProviderRegistry, AIModel, ProviderConfig } from "./types";
-import { ProviderError, ProviderErrorCode } from "./errors";
+import {
+  LLMProvider,
+  ModelRouterConfig,
+  ProviderRegistry,
+  AIModel,
+  ProviderConfig,
+  ProviderRequest,
+  ProviderResponse,
+  StreamChunk,
+} from "./types";
+import { ProviderError } from "./errors";
 import { NvidiaProvider } from "./nvidia";
 
-export class ModelRouter implements ProviderRegistry {
+const FALLBACK_CODES = new Set(["UNAVAILABLE", "TIMEOUT", "RATE_LIMIT"]);
+
+export class ModelRouter implements ProviderRegistry, LLMProvider {
   private providers = new Map<string, LLMProvider>();
   private config: ModelRouterConfig;
   private activeProviderId: string;
+  /** Once the fallback engaged in this request (routers are per-request in
+   * chat), every later call — e.g. tool-loop steps — goes straight to the
+   * fallback model instead of re-paying the primary's timeout. */
+  private fallbackEngaged = false;
 
   constructor(config: ModelRouterConfig) {
     this.config = config;
@@ -76,9 +91,52 @@ export class ModelRouter implements ProviderRegistry {
     }
   }
 
-  async completeWithFallback(
-    request: Parameters<LLMProvider["complete"]>[0],
-  ): Promise<ReturnType<LLMProvider["complete"]>> {
+  // ---------------------------------------------------------------------
+  // LLMProvider surface — the router IS the provider handed to the
+  // orchestrator (chat.ts), so fallback actually runs in production.
+  // ---------------------------------------------------------------------
+
+  get id(): string {
+    return this.get(this.activeProviderId)?.id ?? this.config.primaryProvider;
+  }
+
+  get name(): string {
+    return this.get(this.activeProviderId)?.name ?? "Model Router";
+  }
+
+  get models(): AIModel[] {
+    return this.get(this.activeProviderId)?.models ?? [];
+  }
+
+  async initialize(config: ProviderConfig): Promise<void> {
+    await this.getActive().initialize(config);
+  }
+
+  async complete(request: ProviderRequest): Promise<ProviderResponse> {
+    return this.completeWithFallback(request);
+  }
+
+  stream(request: ProviderRequest): AsyncIterable<StreamChunk> {
+    return this.streamWithFallback(request);
+  }
+
+  abort(): void {
+    this.get(this.activeProviderId)?.abort();
+  }
+
+  getModel(modelId: string): AIModel | undefined {
+    return this.get(this.activeProviderId)?.getModel(modelId);
+  }
+
+  isAvailable(): boolean {
+    return this.get(this.activeProviderId)?.isAvailable() ?? false;
+  }
+
+  // ---------------------------------------------------------------------
+  // Fallback core
+  // ---------------------------------------------------------------------
+
+  async completeWithFallback(request: ProviderRequest): Promise<ProviderResponse> {
     const primary = this.get(this.config.primaryProvider);
     if (!primary) {
       throw new ProviderError(
@@ -90,22 +148,34 @@ export class ModelRouter implements ProviderRegistry {
     }
 
     try {
-      return await primary.complete(request);
+      return await primary.complete(this.primedRequest(request));
     } catch (error) {
       if (this.shouldFallback(error) && this.config.fallbackProvider) {
-        const fallback = this.get(this.config.fallbackProvider!);
+        const fallback = this.get(this.config.fallbackProvider);
         if (fallback) {
-          const fallbackRequest = { ...request, model: this.config.fallbackModel ?? request.model };
-          return await fallback.complete(fallbackRequest);
+          const model = this.config.fallbackModel ?? request.model;
+          const reason = error instanceof ProviderError ? error.code : "UNKNOWN";
+          this.logFallback(model, reason);
+          this.fallbackEngaged = true;
+          return await fallback.complete({ ...request, model });
         }
       }
       throw error;
     }
   }
 
-  async *streamWithFallback(
-    request: Parameters<LLMProvider["stream"]>[0],
-  ): AsyncIterable<ReturnType<LLMProvider["stream"]> extends AsyncIterable<infer T> ? T : never> {
+  /**
+   * Stream from the primary provider and switch to the fallback mid-flight.
+   *
+   * NvidiaProvider.stream() never throws — failures arrive as yielded
+   * `{type:"error"}` chunks — so the switch inspects chunks inline. Rules:
+   * - recoverable fallback-eligible error BEFORE any content → switch;
+   * - error after content was forwarded → forward it (switching would
+   *   duplicate text the consumer already received);
+   * - primary ended with NO chunk at all (in-band error swallowed upstream)
+   *   → treat as empty stream and switch.
+   */
+  async *streamWithFallback(request: ProviderRequest): AsyncIterable<StreamChunk> {
     const primary = this.get(this.config.primaryProvider);
     if (!primary) {
       throw new ProviderError(
@@ -116,32 +186,72 @@ export class ModelRouter implements ProviderRegistry {
       );
     }
 
-    try {
-      for await (const chunk of primary.stream(request)) {
-        yield chunk;
-      }
-    } catch (error) {
-      if (this.shouldFallback(error) && this.config.fallbackProvider) {
-        const fallback = this.get(this.config.fallbackProvider!);
-        if (fallback) {
-          const fallbackRequest = { ...request, model: this.config.fallbackModel ?? request.model };
-          for await (const chunk of fallback.stream(fallbackRequest)) {
-            yield chunk;
+    let emitted = false;
+    const primaryRequest = this.primedRequest(request);
+
+    for await (const chunk of primary.stream(primaryRequest)) {
+      if (chunk.type === "error") {
+        const err = chunk.error;
+        if (!emitted && err && this.isFallbackEligible(err.code, err.recoverable)) {
+          const fallbackStream = this.openFallbackStream(request, err.code);
+          if (fallbackStream) {
+            yield* fallbackStream;
+            return;
           }
-          return;
         }
+        yield chunk;
+        return;
       }
-      throw error;
+      emitted = true;
+      yield chunk;
     }
+
+    if (!emitted) {
+      const fallbackStream = this.openFallbackStream(request, "EMPTY_STREAM");
+      if (fallbackStream) {
+        yield* fallbackStream;
+      }
+    }
+  }
+
+  private openFallbackStream(
+    request: ProviderRequest,
+    reason: string,
+  ): AsyncIterable<StreamChunk> | null {
+    if (this.fallbackEngaged) return null;
+    if (!this.config.enableFallback || !this.config.fallbackProvider) return null;
+    const fallback = this.get(this.config.fallbackProvider);
+    if (!fallback) return null;
+    const model = this.config.fallbackModel ?? request.model;
+    this.fallbackEngaged = true;
+    this.logFallback(model, reason);
+    return fallback.stream({ ...request, model });
+  }
+
+  /** After the fallback engaged, later calls use the fallback model on the
+   * primary provider path (same instance here) — no second 45s timeout. */
+  private primedRequest(request: ProviderRequest): ProviderRequest {
+    if (this.fallbackEngaged && this.config.fallbackModel) {
+      return { ...request, model: this.config.fallbackModel };
+    }
+    return request;
+  }
+
+  private logFallback(targetModel: string, reason: string): void {
+    console.warn(
+      `[Webi] FALLBACK ${this.config.primaryProvider}/${this.config.primaryModel} → ${targetModel} (${reason})`,
+    );
+  }
+
+  private isFallbackEligible(code: string, recoverable: boolean): boolean {
+    if (!this.config.enableFallback) return false;
+    if (!recoverable) return false;
+    return FALLBACK_CODES.has(code);
   }
 
   private shouldFallback(error: unknown): boolean {
-    if (!this.config.enableFallback) return false;
     if (!(error instanceof ProviderError)) return false;
-    return (
-      error.recoverable &&
-      (error.code === "UNAVAILABLE" || error.code === "TIMEOUT" || error.code === "RATE_LIMIT")
-    );
+    return this.isFallbackEligible(error.code, error.recoverable);
   }
 
   getConfig(): ModelRouterConfig {

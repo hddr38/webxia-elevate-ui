@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NvidiaProvider } from "../providers/nvidia";
 import { NvidiaEmbeddingProvider } from "../embeddings/nvidia";
 import { ModelRouter, createModelRouter } from "../providers/model-router";
@@ -101,6 +101,55 @@ describe("NvidiaProvider", () => {
       maxRetries: 2,
     });
     expect(provider.isAvailable()).toBe(true);
+  });
+
+  function sseResponse(lines: string[]): Response {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const line of lines) controller.enqueue(encoder.encode(line));
+        controller.close();
+      },
+    });
+    return new Response(body, { status: 200 });
+  }
+
+  it.each([
+    [
+      "ResourceExhausted capacity saturation",
+      { message: "ResourceExhausted: Worker local total request limit reached (16/16)", code: 500 },
+      "RATE_LIMIT",
+      true,
+    ],
+    ["generic 5xx body", { message: "internal error", code: 500 }, "UNAVAILABLE", true],
+    ["4xx logic error", { message: "bad request", code: 400 }, "INVALID_REQUEST", false],
+  ])("surfaces in-band SSE error as error chunk: %s", async (_label, inBand, code, recoverable) => {
+    await provider.initialize({
+      apiKey: "test-key",
+      baseUrl: "https://test.api/v1",
+      timeout: 30000,
+      maxRetries: 2,
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          sseResponse([`data: ${JSON.stringify({ error: inBand })}\n\n`, "data: [DONE]\n\n"]),
+        ),
+    );
+    try {
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of provider.stream(createMockStreamRequest())) {
+        chunks.push(chunk);
+      }
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0].type).toBe("error");
+      expect(chunks[0].error?.code).toBe(code);
+      expect(chunks[0].error?.recoverable).toBe(recoverable);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 
@@ -390,6 +439,7 @@ describe("ModelRouter", () => {
   let mockProvider: ReturnType<typeof createMockProvider>;
 
   beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     mockProvider = createMockProvider();
     router = new ModelRouter({
       primaryProvider: "test",
@@ -399,6 +449,10 @@ describe("ModelRouter", () => {
       fallbackModel: "fallback-model",
     });
     router.register(mockProvider);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("registers and retrieves providers", () => {
@@ -494,6 +548,140 @@ describe("ModelRouter", () => {
       "Invalid request",
     );
     expect(fallbackProvider.complete).not.toHaveBeenCalled();
+  });
+
+  function collectStream(
+    source: ReturnType<ModelRouter["streamWithFallback"]>,
+  ): Promise<StreamChunk[]> {
+    return (async () => {
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of source) chunks.push(chunk);
+      return chunks;
+    })();
+  }
+
+  it("falls back on recoverable error chunk before any content", async () => {
+    const fallbackProvider = createMockProvider({ id: "fallback" });
+    router.register(fallbackProvider);
+    mockProvider.stream.mockImplementationOnce(async function* (): AsyncIterable<StreamChunk> {
+      yield {
+        type: "error",
+        error: { code: "TIMEOUT", message: "Request timeout", recoverable: true },
+        index: 0,
+      };
+    });
+
+    const chunks = await collectStream(router.streamWithFallback(createMockStreamRequest()));
+
+    expect(fallbackProvider.stream).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "fallback-model" }),
+    );
+    expect(chunks.some((c) => c.type === "done")).toBe(true);
+    expect(chunks.some((c) => c.type === "error")).toBe(false);
+  });
+
+  it("does not fall back after content was forwarded", async () => {
+    const fallbackProvider = createMockProvider({ id: "fallback" });
+    router.register(fallbackProvider);
+    mockProvider.stream.mockImplementationOnce(async function* (): AsyncIterable<StreamChunk> {
+      yield { type: "chunk", content: "partial ", index: 0 };
+      yield {
+        type: "error",
+        error: { code: "TIMEOUT", message: "Request timeout", recoverable: true },
+        index: 1,
+      };
+    });
+
+    const chunks = await collectStream(router.streamWithFallback(createMockStreamRequest()));
+
+    expect(fallbackProvider.stream).not.toHaveBeenCalled();
+    expect(chunks.some((c) => c.type === "chunk")).toBe(true);
+    expect(chunks.filter((c) => c.type === "error")).toHaveLength(1);
+  });
+
+  it("does not fall back on non-recoverable error chunk", async () => {
+    const fallbackProvider = createMockProvider({ id: "fallback" });
+    router.register(fallbackProvider);
+    mockProvider.stream.mockImplementationOnce(async function* (): AsyncIterable<StreamChunk> {
+      yield {
+        type: "error",
+        error: { code: "INVALID_REQUEST", message: "Invalid request", recoverable: false },
+        index: 0,
+      };
+    });
+
+    const chunks = await collectStream(router.streamWithFallback(createMockStreamRequest()));
+
+    expect(fallbackProvider.stream).not.toHaveBeenCalled();
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].type).toBe("error");
+  });
+
+  it("falls back when primary stream ends without any chunk", async () => {
+    const fallbackProvider = createMockProvider({ id: "fallback" });
+    router.register(fallbackProvider);
+    mockProvider.stream.mockImplementationOnce(async function* (): AsyncIterable<StreamChunk> {
+      // Empty stream: in-band error swallowed upstream yields no chunk.
+    });
+
+    const chunks = await collectStream(router.streamWithFallback(createMockStreamRequest()));
+
+    expect(fallbackProvider.stream).toHaveBeenCalled();
+    expect(chunks.some((c) => c.type === "done")).toBe(true);
+  });
+
+  it("runs fallback through the LLMProvider stream() entry point", async () => {
+    const fallbackProvider = createMockProvider({ id: "fallback" });
+    router.register(fallbackProvider);
+    mockProvider.stream.mockImplementationOnce(async function* (): AsyncIterable<StreamChunk> {
+      yield {
+        type: "error",
+        error: { code: "RATE_LIMIT", message: "429", recoverable: true },
+        index: 0,
+      };
+    });
+
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of router.stream(createMockStreamRequest())) {
+      chunks.push(chunk);
+    }
+
+    expect(fallbackProvider.stream).toHaveBeenCalled();
+    expect(chunks.some((c) => c.type === "done")).toBe(true);
+  });
+
+  it("uses the fallback model directly for subsequent calls after a fallback", async () => {
+    const fallbackProvider = createMockProvider({ id: "fallback" });
+    router.register(fallbackProvider);
+    mockProvider.stream.mockImplementationOnce(async function* (): AsyncIterable<StreamChunk> {
+      yield {
+        type: "error",
+        error: { code: "TIMEOUT", message: "Request timeout", recoverable: true },
+        index: 0,
+      };
+    });
+
+    await collectStream(router.streamWithFallback(createMockStreamRequest()));
+    expect(mockProvider.stream).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ model: "test-model" }),
+    );
+
+    await collectStream(router.streamWithFallback(createMockStreamRequest()));
+    expect(mockProvider.stream).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ model: "fallback-model" }),
+    );
+  });
+
+  it("exposes the active provider LLMProvider surface", () => {
+    expect(router.id).toBe("test");
+    expect(router.name).toBe("Test Provider");
+    expect(router.models.length).toBeGreaterThan(0);
+    expect(router.isAvailable()).toBe(true);
+    expect(router.getModel("test-model")).toBeDefined();
+    router.abort();
+    expect(mockProvider.abort).toHaveBeenCalled();
   });
 
   it("creates model router with NVIDIA provider", () => {

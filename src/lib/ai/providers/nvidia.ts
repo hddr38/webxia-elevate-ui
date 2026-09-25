@@ -86,6 +86,39 @@ interface NvidiaStreamChunk {
   model: string;
   choices: NvidiaStreamChoice[];
   usage?: NvidiaUsage;
+  /** In-band error delivered with HTTP 200 (e.g. NIM capacity saturation
+   * "ResourceExhausted: Worker local total request limit reached"). */
+  error?: NvidiaStreamError;
+}
+
+interface NvidiaStreamError {
+  message?: string;
+  code?: number | string;
+  status?: string;
+}
+
+/** Map an in-band SSE error to a provider error code the ModelRouter can
+ * fall back on: quota/saturation → RATE_LIMIT, 4xx logic errors →
+ * INVALID_REQUEST (no fallback), anything else (5xx/unknown) → UNAVAILABLE. */
+function mapInBandStreamError(error: NvidiaStreamError): {
+  code: ProviderErrorCode;
+  recoverable: boolean;
+} {
+  const raw =
+    `${error.status ?? ""} ${String(error.code ?? "")} ${error.message ?? ""}`.toUpperCase();
+  if (
+    raw.includes("EXHAUSTED") ||
+    raw.includes("RATE_LIMIT") ||
+    raw.includes("TOO_MANY") ||
+    raw.includes("429")
+  ) {
+    return { code: "RATE_LIMIT", recoverable: true };
+  }
+  const numeric = typeof error.code === "number" ? error.code : undefined;
+  if (numeric !== undefined && numeric >= 400 && numeric < 500) {
+    return { code: "INVALID_REQUEST", recoverable: false };
+  }
+  return { code: "UNAVAILABLE", recoverable: true };
 }
 
 interface NvidiaStreamChoice {
@@ -297,6 +330,24 @@ export class NvidiaProvider implements LLMProvider {
 
           try {
             const chunk: NvidiaStreamChunk = JSON.parse(data);
+
+            // In-band error: surface it as an error chunk (instead of the
+            // silent `chunk.choices[0]` TypeError below) so the ModelRouter
+            // can fall back while no content has been streamed yet.
+            if (chunk.error) {
+              const mapped = mapInBandStreamError(chunk.error);
+              yield {
+                type: "error",
+                error: {
+                  code: mapped.code,
+                  message: chunk.error.message ?? "Provider stream error",
+                  recoverable: mapped.recoverable,
+                },
+                index: index++,
+              };
+              return;
+            }
+
             const choice = chunk.choices[0];
             if (!choice || !choice.delta) continue;
 

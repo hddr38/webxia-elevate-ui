@@ -16,6 +16,21 @@ export const ChatMessageSchema = z.object({
   isRetry: z.boolean().optional(),
 });
 
+/**
+ * LOT 24 — chat history restore (read-only transcript fetch).
+ *
+ * The envelope is deliberately loose: `sessionId` / `conversationId` are
+ * `unknown` so NO attacker-controlled payload can make Zod throw (a thrown
+ * ZodError would surface as an opaque 500). Semantics — presence, UUID shape,
+ * session ownership — are owned by `handleChatHistoryRequest`, which maps them
+ * to deterministic 401 / 400 / 403 exactly like `handleChatRequest`.
+ */
+export const ChatHistorySchema = z.object({
+  sessionId: z.unknown().optional(),
+  conversationId: z.unknown().optional(),
+  limit: z.unknown().optional(),
+});
+
 export const ChatResponseSchema = z.object({
   content: z.string(),
   conversationId: z.string().uuid(),

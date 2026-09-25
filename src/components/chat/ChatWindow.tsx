@@ -2,23 +2,27 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Bot, Plus, MessageCircle, AlertCircle, Square, RotateCcw } from "lucide-react";
+import {
+  X,
+  Bot,
+  Plus,
+  MessageCircle,
+  AlertCircle,
+  Square,
+  RotateCcw,
+  ArrowDown,
+} from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { useChat } from "@/hooks/use-chat";
 import { useStickyScroll } from "@/hooks/use-sticky-scroll";
 import { MOBILE_BREAKPOINT_PX } from "@/components/chat/constants";
 import { ChatMessage } from "./ChatMessage";
-import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { ToolStatus } from "./ToolStatus";
-import { Citation } from "./Citation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "@tanstack/react-router";
-
-const MAX_MESSAGES_PER_SESSION = 10;
 
 export function ChatWindow() {
   const { t } = useLocale();
@@ -45,12 +49,14 @@ export function ChatWindow() {
 
   const {
     containerRef: messagesRef,
+    isSticky,
     forceScrollToBottom,
     notifyMessageComplete,
     notifyStreamingTick,
   } = useStickyScroll();
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const wasStreamingRef = React.useRef<boolean>(false);
+  const dialogRef = React.useRef<HTMLDivElement>(null);
 
   // Sticky-bottom : suit chaque delta pendant le streaming (throttlé 1/frame
   // dans le hook), recale en rAF après un message complet.
@@ -63,10 +69,16 @@ export function ChatWindow() {
   }, [messages, isStreaming, notifyMessageComplete, notifyStreamingTick]);
 
   // Fin du streaming : un dernier recalage conditionnel (ne force jamais
-  // si l'utilisateur lit l'historique).
+  // si l'utilisateur lit l'historique). LOT 24 — le focus volé pendant le
+  // stream n'existe plus : si l'utilisateur n'a rien focusé d'autre entre
+  // deux (bouton, autre onglet), le focus retourne sur l'input.
   React.useEffect(() => {
     if (wasStreamingRef.current && !isStreaming) {
       notifyMessageComplete();
+      const active = typeof document === "undefined" ? null : document.activeElement;
+      if (!active || active === document.body || active === document.documentElement) {
+        inputRef.current?.focus();
+      }
     }
     wasStreamingRef.current = isStreaming;
   }, [isStreaming, notifyMessageComplete]);
@@ -92,15 +104,63 @@ export function ChatWindow() {
     inputRef.current?.focus();
   };
 
+  // LOT 24 — a11y : le dialogue déclare `aria-modal="true"`, donc le Tab doit
+  // rester à l'intérieur (sinon le clavier atteint la page derrière l'overlay).
+  // Trap volontairement minimal : cycle Tab/Shift+Tab, focus initial sur
+  // l'input, restitution au launcher à la fermeture (gérée par ChatWidget).
+  React.useEffect(() => {
+    if (!isOpen || typeof document === "undefined") return;
+    const root = dialogRef.current;
+    if (!root) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    const focusables = (): HTMLElement[] =>
+      Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+
+    inputRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== "Tab") return;
+      const list = focusables();
+      if (list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey) {
+        if (active === first || !root?.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+        return;
+      }
+      if (active === last || !root?.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown, true);
+      // Restitution au launcher (requeryé : l'ancien élément est déjà détaché
+      // quand AnimatePresence a démonté le dialogue), fallback = dernier focus.
+      const launcher = document.querySelector<HTMLElement>("[data-webi-launcher]");
+      (launcher ?? previouslyFocused)?.focus?.();
+    };
+  }, [isOpen]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (draft.trim()) {
-      sendMessage(draft);
-      // a) Envoi utilisateur : scroll FORCÉ même en lisant l'historique.
-      forceScrollToBottom();
-      // Accessibilité : le focus retourne sur l'input après envoi.
-      focusInput();
-    }
+    if (isStreaming || !draft.trim()) return;
+    sendMessage(draft);
+    // a) Envoi utilisateur : scroll FORCÉ même en lisant l'historique.
+    forceScrollToBottom();
+    // Accessibilité : le focus retourne sur l'input après envoi.
+    focusInput();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -139,8 +199,10 @@ export function ChatWindow() {
         "max-md:[max-height:100vh] max-md:[max-height:100dvh]",
       )}
       role="dialog"
+      ref={dialogRef}
       aria-label="Chat Webi"
       aria-modal="true"
+      aria-busy={isStreaming}
     >
       {/* Message limit indicator */}
       {messageCount > 0 && (
@@ -197,9 +259,18 @@ export function ChatWindow() {
         </div>
       </div>
 
-      {/* Messages Area : prend tout l'espace restant (flex-1 + min-h-0). */}
+      {/* Messages Area : prend tout l'espace restant (flex-1 + min-h-0).
+          role="log" + aria-live : les lecteurs d'écran annoncent chaque
+          ajout sans voler le focus (le focus reste sur l'input). */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div ref={messagesRef} className="h-full overflow-y-auto overscroll-contain">
+        <div
+          ref={messagesRef}
+          className="h-full overflow-y-auto overscroll-contain"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions text"
+          aria-label={t("chat.widget.title")}
+        >
           <div className="p-4 space-y-4">
             <AnimatePresence mode="popLayout">
               {messages.length === 0 ? (
@@ -215,7 +286,12 @@ export function ChatWindow() {
                 </motion.div>
               ) : (
                 messages.map((msg, index) => (
-                  <ChatMessage key={msg.id} message={msg} isLast={index === messages.length - 1} />
+                  <ChatMessage
+                    key={msg.id}
+                    message={msg}
+                    isLast={index === messages.length - 1}
+                    isStreaming={isStreaming}
+                  />
                 ))
               )}
             </AnimatePresence>
@@ -224,6 +300,38 @@ export function ChatWindow() {
             {isStreaming && messages.length > 0 && <TypingIndicator />}
           </div>
         </div>
+      </div>
+
+      {/* LOT 24 — pastille « revenir en bas » : visible uniquement quand
+          l'utilisateur a remonté pendant que le transcript continue. */}
+      <AnimatePresence mode="popLayout">
+        {!isSticky && messages.length > 0 && (
+          <motion.div
+            key="chat-jump-bottom"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="pointer-events-none relative z-10 -mt-10 flex justify-center"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={forceScrollToBottom}
+              className="pointer-events-auto h-8 rounded-full gap-1 border-border bg-background/95 text-xs shadow-md backdrop-blur"
+              aria-label={t("chat.scroll.bottom")}
+            >
+              <ArrowDown className="size-3" />
+              {t("chat.scroll.bottom")}
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* LOT 24 — région de statut pour lecteurs d'écran : annonce l'état
+          du flux (écriture / outil) sans jamais voler le focus. */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {isStreaming ? t("chat.status.writing") : currentTool ? t("chat.tool.result") : ""}
       </div>
 
       {/* Tool Status */}
@@ -270,7 +378,7 @@ export function ChatWindow() {
 
       {/* Message Limit Reached - Contact Card */}
       <AnimatePresence mode="popLayout">
-        {messageCount >= MAX_MESSAGES_PER_SESSION && (
+        {messageCount >= maxMessages && (
           <motion.div
             key="chat-limit-reached"
             initial={{ opacity: 0, y: 10 }}
@@ -305,7 +413,7 @@ export function ChatWindow() {
 
       {/* Near Limit Warning */}
       <AnimatePresence mode="popLayout">
-        {isNearLimit && messageCount < MAX_MESSAGES_PER_SESSION && messageCount > 0 && (
+        {isNearLimit && messageCount < maxMessages && messageCount > 0 && (
           <motion.div
             key="chat-near-limit"
             initial={{ opacity: 0, y: 10 }}
@@ -329,24 +437,26 @@ export function ChatWindow() {
         className="shrink-0 p-4 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 max-md:pb-[calc(1rem+env(safe-area-inset-bottom))] max-md:pl-[calc(1rem+env(safe-area-inset-left))] max-md:pr-[calc(1rem+env(safe-area-inset-right))]"
       >
         <div className="flex items-end gap-2">
+          {/* LOT 24 — jamais `disabled` pendant le stream : l'utilisateur
+              compose déjà son message suivant pendant que Webi écrit, et le
+              focus n'est jamais volé ni perdu. L'envoi reste gardé
+              (handleSubmit + Enter) tant que `isStreaming`. */}
           <textarea
             ref={inputRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t("chat.input.placeholder")}
-            disabled={isStreaming}
             rows={1}
             className={cn(
               "flex-1 min-h-[44px] max-h-[150px] px-4 py-3",
               "bg-muted border border-input rounded-xl",
               "text-sm text-foreground placeholder:text-muted-foreground",
               "focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
               "resize-none",
             )}
             aria-label={t("chat.input.placeholder")}
-            aria-disabled={isStreaming}
+            aria-busy={isStreaming}
           />
           {isStreaming ? (
             <Button

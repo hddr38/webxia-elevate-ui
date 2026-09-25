@@ -8,8 +8,12 @@ import {
 import { toast } from "sonner";
 import { useLocale } from "@/lib/locale-context";
 import { createSseParser } from "@/lib/chat/sse-parser";
+import { chatHistory } from "@/server/functions/chat-history";
 import type { TypedStreamEvent } from "@/lib/ai/contracts";
 import type { ChatMessage, UseChatReturn } from "@/components/chat/types";
+
+/** Transcript depth requested on restore (server default = MAX_CONVERSATION_HISTORY). */
+const HISTORY_RESTORE_LIMIT = 50;
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -32,6 +36,23 @@ function isAbortError(error: unknown): boolean {
     typeof error === "object" &&
     error !== null &&
     (error as { name?: string }).name === "AbortError"
+  );
+}
+
+/**
+ * True when the stored conversation id is stale, foreign or closed (401/403/404).
+ * Server functions throw a `Response` — on the client it surfaces either as an
+ * object carrying `status` or as an `Error` whose message embeds the status
+ * text, so both shapes are inspected before deciding to self-heal.
+ */
+function isOwnershipFailure(error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status;
+  if (typeof status === "number") {
+    return status === 401 || status === 403 || status === 404;
+  }
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return (
+    /\b(401|403|404)\b/.test(message) || /session mismatch|Unauthorized|Forbidden/i.test(message)
   );
 }
 
@@ -84,6 +105,45 @@ export function useChat(): UseChatReturn {
 
   // Direct store access for surgical message updates (stable reference, no re-render)
   const set = useChatStore.setState;
+
+  // LOT 24 — restore the persisted transcript for the stored conversation.
+  // Lazily on widget open (never one extra request per page load), once per
+  // conversation id. The server enforces session ownership (ADR-006): a 401/403
+  // means the persisted id is stale or foreign, so it is dropped and the next
+  // send creates a fresh conversation instead of failing forever.
+  const historyRestoreRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const cid = conversationId;
+    if (!cid || !isUuid(cid) || messages.length > 0) return;
+    if (historyRestoreRef.current === cid) return;
+    historyRestoreRef.current = cid;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const sessionId = useChatStore.getState().ensureSessionId();
+        const restored = await chatHistory({
+          data: { sessionId, conversationId: cid, limit: HISTORY_RESTORE_LIMIT },
+        });
+        if (cancelled) return;
+        // Never clobber a live transcript (user may have sent while loading).
+        set((state) => (state.messages.length > 0 ? state : { messages: restored }));
+      } catch (error) {
+        if (cancelled) return;
+        if (isOwnershipFailure(error)) {
+          setConversationId(null);
+          localStorage.removeItem("webxia-conversation-id");
+        }
+        // Other failures stay silent: an offline restore must never raise an
+        // error banner before the first interaction.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, conversationId, messages.length, set, setConversationId]);
 
   const handleStreamEvent = useCallback(
     (event: TypedStreamEvent) => {
@@ -392,6 +452,7 @@ export function useChat(): UseChatReturn {
       clearMessages();
       setConversationId(null);
       lastUserMessageRef.current = null;
+      historyRestoreRef.current = null;
       setErrorCode(null);
       setCanRetry(false);
       localStorage.removeItem("webxia-conversation-id");

@@ -1,9 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import rehypeSanitize from "rehype-sanitize";
-import remarkGfm from "remark-gfm";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bot,
@@ -11,94 +8,56 @@ import {
   Quote,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
+  Check,
+  Copy,
   FileText,
   Wrench,
 } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { cn } from "@/lib/utils";
+import { copyTextToClipboard } from "@/lib/chat/copy-text";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ChatMessage } from "./types";
+import { MarkdownContent } from "./MarkdownContent";
 
 interface ChatMessageProps {
   message: ChatMessage;
+  /** True only for the final message of the transcript while streaming. */
   isLast: boolean;
+  isStreaming: boolean;
 }
 
-const allowedTags = [
-  "p",
-  "br",
-  "strong",
-  "em",
-  "u",
-  "s",
-  "code",
-  "pre",
-  "blockquote",
-  "ul",
-  "ol",
-  "li",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "a",
-  "hr",
-  "table",
-  "thead",
-  "tbody",
-  "tr",
-  "th",
-  "td",
-];
-
-const allowedAttributes = {
-  a: ["href", "target", "rel"],
-  code: ["class"],
-  pre: ["class"],
-  th: ["scope"],
-  td: ["colspan", "rowspan"],
-};
-
-export function ChatMessage({ message, isLast }: ChatMessageProps) {
+export function ChatMessage({ message, isLast, isStreaming }: ChatMessageProps) {
   const { t } = useLocale();
+  const [copied, setCopied] = useState(false);
 
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const isTool = message.role === "tool";
+
+  // LOT 24 — one copy affordance on the LAST assistant message only: a button
+  // per bubble would stack N identical affordances in a long transcript.
+  const handleCopyResponse = (): void => {
+    if (!message.content) return;
+    void copyTextToClipboard(message.content).then((ok) => {
+      if (!ok) return;
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    });
+  };
 
   if (isTool) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}
+        className="flex gap-3 justify-start"
       >
-        <div
-          className={cn(
-            "flex items-start gap-2 max-w-[85%]",
-            isUser ? "flex-row-reverse" : "flex-row",
-          )}
-        >
-          <div
-            className={cn(
-              "relative flex size-8 shrink-0 items-center justify-center rounded-full",
-              isUser ? "bg-primary" : "bg-brand",
-            )}
-          >
-            <Bot
-              className={cn("size-4", isUser ? "text-primary-foreground" : "text-brand-foreground")}
-            />
+        <div className="flex items-start gap-2 max-w-[85%] flex-row">
+          <div className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-brand">
+            <Bot className="size-4 text-brand-foreground" />
           </div>
-          <div
-            className={cn(
-              "flex-1 rounded-2xl px-4 py-2.5 text-sm",
-              isUser ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-            )}
-          >
+          <div className="flex-1 rounded-2xl px-4 py-2.5 text-sm bg-muted text-muted-foreground">
             <div className="flex items-center gap-2 mb-1">
               <span className="font-medium text-xs uppercase tracking-wider">
                 {message.toolName || t("chat.tool.executing")}
@@ -113,6 +72,8 @@ export function ChatMessage({ message, isLast }: ChatMessageProps) {
       </motion.div>
     );
   }
+
+  const showCursor = isStreaming && isLast && isAssistant;
 
   return (
     <motion.div
@@ -147,45 +108,32 @@ export function ChatMessage({ message, isLast }: ChatMessageProps) {
           {isUser && <div className="whitespace-pre-wrap break-words">{message.content}</div>}
 
           {isAssistant && (
-            <ReactMarkdown
-              components={{
-                code: ({ children, ...props }) => (
-                  <pre className="bg-muted/50 p-3 rounded-lg overflow-x-auto my-2">
-                    <code {...props}>{children}</code>
-                  </pre>
-                ),
-                blockquote: ({ children }) => (
-                  <blockquote className="border-l-4 border-brand/50 pl-4 my-2 italic text-muted-foreground/80">
-                    {children}
-                  </blockquote>
-                ),
-                a: ({ href, children, ...props }) => (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-brand underline hover:text-brand/80"
-                    {...props}
+            <>
+              <MarkdownContent content={message.content} />
+              {/* Streaming caret — never a fake "done" look while tokens arrive. */}
+              {showCursor && (
+                <span
+                  aria-hidden="true"
+                  className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 animate-pulse rounded-full bg-brand align-middle"
+                />
+              )}
+              {isLast && message.content && !isStreaming && (
+                <div className="mt-1.5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleCopyResponse}
+                    aria-label={t("chat.response.copy")}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors",
+                      "text-muted-foreground/70 hover:bg-background hover:text-foreground",
+                    )}
                   >
-                    {children}
-                    <ExternalLink className="inline size-3 ml-1" />
-                  </a>
-                ),
-                ul: ({ children }) => (
-                  <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>
-                ),
-                ol: ({ children }) => (
-                  <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>
-                ),
-                li: ({ children }) => <li>{children}</li>,
-                strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                em: ({ children }) => <em className="italic">{children}</em>,
-              }}
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[[rehypeSanitize, { allowedTags, allowedAttributes }]]}
-            >
-              {message.content}
-            </ReactMarkdown>
+                    {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+                    <span aria-live="polite">{copied ? t("chat.copy.done") : ""}</span>
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
           {/* Citations */}

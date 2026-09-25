@@ -49,6 +49,7 @@ export function ChatWidget() {
           )}
           aria-label={t("chat.widget.title")}
           aria-expanded={isOpen}
+          data-webi-launcher=""
         >
           <span className="relative inline-flex size-8 items-center justify-center rounded-full bg-brand text-brand-foreground">
             <span className="absolute inset-0 animate-ping rounded-full bg-brand opacity-40" />

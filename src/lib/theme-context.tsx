@@ -8,8 +8,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
-    const stored = (typeof window !== "undefined" && localStorage.getItem("webxia-theme")) as Theme | null;
-    const initial: Theme = stored ?? "dark";
+    const stored = (typeof window !== "undefined" &&
+      localStorage.getItem("webxia-theme")) as Theme | null;
+    const systemPrefersDark =
+      typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const initial: Theme = stored ?? (systemPrefersDark ? "dark" : "light");
     setTheme(initial);
   }, []);
 
@@ -21,7 +24,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle: () => setTheme((t) => (t === "dark" ? "light" : "dark")) }}>
+    <ThemeContext.Provider
+      value={{ theme, toggle: () => setTheme((t) => (t === "dark" ? "light" : "dark")) }}
+    >
       {children}
     </ThemeContext.Provider>
   );

@@ -1,4 +1,5 @@
 import {
+  EmbedOptions,
   EmbeddingProvider,
   ProviderConfig,
   ProviderError,
@@ -15,6 +16,9 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
   private config: ProviderConfig | null = null;
   private initialized = false;
 
+  private abortController: AbortController | null = null;
+  private abortReason: string | undefined;
+
   async initialize(config: ProviderConfig): Promise<void> {
     this.config = config;
     this.initialized = true;
@@ -22,6 +26,11 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
 
   isAvailable(): boolean {
     return this.initialized && !!this.config?.apiKey;
+  }
+
+  abort(reason?: string): void {
+    this.abortReason = reason;
+    this.abortController?.abort();
   }
 
   private getHeaders(): Record<string, string> {
@@ -39,8 +48,8 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
     return this.config?.baseUrl ?? "https://integrate.api.nvidia.com/v1";
   }
 
-  async embed(text: string): Promise<number[]> {
-    const results = await this.batchEmbed([text]);
+  async embed(text: string, options?: EmbedOptions): Promise<number[]> {
+    const results = await this.batchEmbed([text], options);
     const first = results[0];
     if (!first) {
       throw new ProviderError("Empty embeddings response", "INVALID_RESPONSE", this.id, false);
@@ -48,7 +57,7 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
     return first;
   }
 
-  async batchEmbed(texts: string[]): Promise<number[][]> {
+  async batchEmbed(texts: string[], options?: EmbedOptions): Promise<number[][]> {
     if (!this.initialized || !this.config) {
       throw new ProviderError(
         "Provider not initialized. Call initialize() first.",
@@ -60,8 +69,26 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
 
     if (texts.length === 0) return [];
 
+    const abortedError = (): ProviderError =>
+      new ProviderError(this.abortReason ?? "Embedding request aborted", "ABORTED", this.id, false);
+
+    const externalSignal = options?.signal;
+    if (externalSignal?.aborted) {
+      throw abortedError();
+    }
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.config.timeout);
+    this.abortController = controller;
+    this.abortReason = undefined;
+
+    const onExternalAbort = (): void => controller.abort();
+    externalSignal?.addEventListener("abort", onExternalAbort, { once: true });
+
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, this.config.timeout);
 
     try {
       const response = await fetch(`${this.getBaseUrl()}/embeddings`, {
@@ -78,6 +105,8 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
       });
 
       clearTimeout(timeout);
+      externalSignal?.removeEventListener("abort", onExternalAbort);
+      if (this.abortController === controller) this.abortController = null;
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -128,9 +157,21 @@ export class NvidiaEmbeddingProvider implements EmbeddingProvider {
       return vectors;
     } catch (error) {
       clearTimeout(timeout);
+      externalSignal?.removeEventListener("abort", onExternalAbort);
+      if (this.abortController === controller) this.abortController = null;
       if (error instanceof ProviderError) throw error;
       if (error instanceof Error && error.name === "AbortError") {
-        throw new ProviderError("Embedding request timeout", "TIMEOUT", this.id, true);
+        // The internal timer and the abort() / external signal are the only
+        // sources of abort: `timedOut` disambiguates them.
+        if (timedOut) {
+          throw new ProviderError("Embedding request timeout", "TIMEOUT", this.id, true);
+        }
+        throw new ProviderError(
+          this.abortReason ?? "Embedding request aborted",
+          "ABORTED",
+          this.id,
+          false,
+        );
       }
       throw new ProviderError(
         error instanceof Error ? error.message : "Unknown embedding error",

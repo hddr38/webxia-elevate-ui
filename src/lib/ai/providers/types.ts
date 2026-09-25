@@ -11,6 +11,7 @@ import type {
   ProviderResponse,
   LLMProvider,
   EmbeddingProvider,
+  EmbedOptions,
   StreamChunk,
 } from "../contracts";
 
@@ -27,6 +28,7 @@ export type {
   ProviderResponse,
   LLMProvider,
   EmbeddingProvider,
+  EmbedOptions,
   StreamChunk,
 };
 

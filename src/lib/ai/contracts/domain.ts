@@ -180,14 +180,22 @@ export interface LLMProvider {
   isAvailable(): boolean;
 }
 
+/** Optional per-call options for embedding requests. */
+export interface EmbedOptions {
+  /** Caller-provided abort signal, propagated to the underlying fetch. */
+  signal?: AbortSignal;
+}
+
 export interface EmbeddingProvider {
   readonly id: string;
   readonly name: string;
   readonly dimensions: number;
 
   initialize(config: ProviderConfig): Promise<void>;
-  embed(text: string): Promise<number[]>;
-  batchEmbed(texts: string[]): Promise<number[][]>;
+  embed(text: string, options?: EmbedOptions): Promise<number[]>;
+  batchEmbed(texts: string[], options?: EmbedOptions): Promise<number[][]>;
+  /** Abort any in-flight embedding request. No-op when idle. */
+  abort(reason?: string): void;
   isAvailable(): boolean;
 }
 

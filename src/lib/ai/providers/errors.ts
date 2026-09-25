@@ -13,6 +13,7 @@ export class ProviderError extends Error {
 
 export type ProviderErrorCode =
   | "TIMEOUT"
+  | "ABORTED"
   | "AUTHENTICATION_ERROR"
   | "RATE_LIMIT"
   | "UNAVAILABLE"

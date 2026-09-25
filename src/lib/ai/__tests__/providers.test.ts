@@ -266,6 +266,123 @@ describe("NvidiaEmbeddingProvider", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  function pendingFetch() {
+    return vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+      return new Promise<Response>((_resolve, reject) => {
+        const abortErr = (): Error => {
+          const err = new Error("This operation was aborted");
+          err.name = "AbortError";
+          return err;
+        };
+        if (init.signal?.aborted) {
+          reject(abortErr());
+          return;
+        }
+        init.signal?.addEventListener("abort", () => reject(abortErr()), { once: true });
+      });
+    });
+  }
+
+  it("embed resolves a single 2048-dim vector (nominal)", async () => {
+    await initProvider();
+    vi.stubGlobal("fetch", mockEmbeddingFetch([dims(2048)]));
+    try {
+      const vector = await provider.embed("hello");
+      expect(vector).toHaveLength(2048);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("abort() interrupts an in-flight request with a typed ABORTED error", async () => {
+    await initProvider();
+    vi.stubGlobal("fetch", pendingFetch());
+    try {
+      const pending = provider.batchEmbed(["test"]);
+      provider.abort("caller cancelled");
+      await expect(pending).rejects.toMatchObject({
+        name: "ProviderError",
+        code: "ABORTED",
+        recoverable: false,
+        message: "caller cancelled",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("propagates an external AbortSignal passed via options", async () => {
+    await initProvider();
+    vi.stubGlobal("fetch", pendingFetch());
+    try {
+      const controller = new AbortController();
+      const pending = provider.embed("test", { signal: controller.signal });
+      controller.abort();
+      await expect(pending).rejects.toMatchObject({
+        code: "ABORTED",
+        recoverable: false,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("rejects immediately with ABORTED when the external signal is already aborted", async () => {
+    await initProvider();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const controller = new AbortController();
+      controller.abort();
+      await expect(provider.embed("test", { signal: controller.signal })).rejects.toMatchObject({
+        code: "ABORTED",
+        recoverable: false,
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps the internal timeout typed as recoverable TIMEOUT", async () => {
+    await provider.initialize({
+      apiKey: "test-key",
+      baseUrl: "https://test.api/v1",
+      timeout: 5,
+      maxRetries: 1,
+    });
+    vi.stubGlobal("fetch", pendingFetch());
+    try {
+      await expect(provider.batchEmbed(["slow"])).rejects.toMatchObject({
+        code: "TIMEOUT",
+        recoverable: true,
+        message: "Embedding request timeout",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("stays usable after abort() (fresh controller per request)", async () => {
+    await initProvider();
+    vi.stubGlobal("fetch", pendingFetch());
+    try {
+      const pending = provider.batchEmbed(["first"]);
+      provider.abort();
+      await expect(pending).rejects.toMatchObject({ code: "ABORTED" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    vi.stubGlobal("fetch", mockEmbeddingFetch([dims(2048)]));
+    try {
+      const vector = await provider.embed("next");
+      expect(vector).toHaveLength(2048);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 describe("ModelRouter", () => {

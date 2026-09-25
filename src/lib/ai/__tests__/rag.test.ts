@@ -58,6 +58,7 @@ function createMockEmbeddingProvider(
     initialize: vi.fn().mockResolvedValue(undefined),
     embed: vi.fn().mockResolvedValue(new Array(EMBEDDING_CONFIG.dimensions).fill(0.1)),
     batchEmbed: vi.fn().mockResolvedValue([new Array(EMBEDDING_CONFIG.dimensions).fill(0.1)]),
+    abort: vi.fn(),
     isAvailable: vi.fn().mockReturnValue(true),
     ...overrides,
   };
@@ -375,6 +376,7 @@ describe("RAGEngine", () => {
       initialize: vi.fn().mockResolvedValue(undefined),
       embed: vi.fn().mockResolvedValue(new Array(EMBEDDING_CONFIG.dimensions).fill(0.1)),
       batchEmbed: vi.fn().mockResolvedValue([new Array(EMBEDDING_CONFIG.dimensions).fill(0.1)]),
+      abort: vi.fn(),
       isAvailable: vi.fn().mockReturnValue(true),
       ...overrides,
     };

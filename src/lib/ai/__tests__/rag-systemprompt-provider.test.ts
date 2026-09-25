@@ -43,6 +43,7 @@ function fakeEmbeddingProvider(): EmbeddingProvider {
     initialize: vi.fn().mockResolvedValue(undefined),
     embed: vi.fn().mockResolvedValue(new Array(dims).fill(0.1)),
     batchEmbed: vi.fn().mockResolvedValue([new Array(dims).fill(0.1)]),
+    abort: vi.fn(),
     isAvailable: vi.fn().mockReturnValue(true),
   };
 }

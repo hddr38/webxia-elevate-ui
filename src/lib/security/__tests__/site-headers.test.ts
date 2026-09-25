@@ -15,6 +15,19 @@ describe("buildSiteCsp", () => {
     expect(csp).not.toContain("localhost");
   });
 
+  it("allows the Cal.com booking embed (script, connect, frame)", () => {
+    const csp = buildSiteCsp();
+    expect(csp).toContain(
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cal.com https://*.cal.com",
+    );
+    expect(csp).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co");
+    expect(csp).toContain("https://cal.com https://*.cal.com");
+    expect(csp).toContain("frame-src https://cal.com https://*.cal.com");
+    // Le reste du périmètre reste fermé.
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).not.toContain("https://evil.example");
+  });
+
   it("adds dev-only connect sources in dev", () => {
     expect(buildSiteCsp({ dev: true })).toContain("ws://localhost:*");
     expect(buildSiteCsp({ dev: true })).toContain("http://127.0.0.1:*");

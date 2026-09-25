@@ -10,17 +10,23 @@ const DEV_CONNECT_SOURCES = [
   "ws://127.0.0.1:*",
 ];
 
+// Cal.com (embed booking sur /contact) : le script externe, ses fetchs et
+// l'iframe de booking. Étendu à *.cal.com car Cal bascule entre app.cal.com
+// et cal.com (redirections / anciens flux). Tout reste sous contrôle Cal.
+const CAL_SOURCES = ["https://cal.com", "https://*.cal.com"];
+
 export function buildSiteCsp({ dev = false }: SiteHeaderOptions = {}): string {
-  const connectSrc = ["'self'", "https://*.supabase.co", "wss://*.supabase.co"];
+  const connectSrc = ["'self'", "https://*.supabase.co", "wss://*.supabase.co", ...CAL_SOURCES];
   if (dev) connectSrc.push(...DEV_CONNECT_SOURCES);
 
   return [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${CAL_SOURCES.join(" ")}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
     `connect-src ${connectSrc.join(" ")}`,
+    `frame-src ${CAL_SOURCES.join(" ")}`,
     "object-src 'none'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

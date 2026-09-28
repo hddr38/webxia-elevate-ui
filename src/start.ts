@@ -1,4 +1,4 @@
-import { createStart, createMiddleware } from "@tanstack/react-start";
+import { createStart, createMiddleware, createCsrfMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
 import { getSessionUser } from "./lib/auth/session";
@@ -90,6 +90,16 @@ const adminPathGuardMiddleware = createMiddleware({ type: "request" }).server(
   },
 );
 
+// CSRF protection for server functions (createServerFn RPC endpoints).
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === "serverFn",
+});
+
 export const startInstance = createStart(() => ({
-  requestMiddleware: [securityHeadersMiddleware, adminPathGuardMiddleware, errorMiddleware],
+  requestMiddleware: [
+    csrfMiddleware,
+    securityHeadersMiddleware,
+    adminPathGuardMiddleware,
+    errorMiddleware,
+  ],
 }));

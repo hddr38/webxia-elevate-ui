@@ -72,10 +72,12 @@ export function createSecurityMiddleware(
         });
       }
 
-      const body = await request
-        .clone()
-        .json()
-        .catch(() => ({}) as Record<string, unknown>);
+      // Lit le body directement (sans clone) : srvx route json() vers
+      // readBody(this.#req) qui lit le flux Node brut, alors que clone()
+      // passe par le getter _request -> Readable.toWeb() et échoue si le
+      // flux a déjà été consommé en amont (middleware Netlify, etc.).
+      // Le body parsé est transmis downstream via context.sanitizedBody.
+      const body = await request.json().catch(() => ({}) as Record<string, unknown>);
 
       if (typeof (body as Record<string, unknown>).message === "string") {
         const rawMessage = (body as Record<string, unknown>).message as string;

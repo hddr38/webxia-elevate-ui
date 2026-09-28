@@ -63,3 +63,6 @@ supabase/.temp/
 
 # OpenCode local plans (artefact d'outil)
 .opencode/plans/
+
+# Local Netlify folder
+.netlify

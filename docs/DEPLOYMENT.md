@@ -109,8 +109,8 @@ curl -fsS -o /dev/null -w "%{http_code}\n" https://<domaine>/admin   # 200 ou 30
 
 | Commande | Rôle |
 | --- | --- |
-| `npm test` | Vitest unitaire/intégration (433 tests) — requis par CI |
-| `npm run test:e2e` | Playwright (accueil, chat mocké, admin) — requis par `e2e.yml` |
+| `npm test` | Vitest unitaire/intégration (438 tests) — requis par CI |
+| `npm run test:e2e` | Playwright (accueil, chat mocké, admin, health) — requis par `e2e.yml` |
 | `npm run build` | Build de production (détecte les régressions TS/bundle) |
 
 Les E2E tournent sur un build **preview** local (`webServer` Playwright) : ils
@@ -122,9 +122,55 @@ aucun appel LLM réel).
 - **Logs** : `console.*` côté serveur (Netlify Function logs) + client
   `reportLovableError` (hook Lovable `__lovableEvents`).
 - **Health** : `src/server/functions/health.ts` (`health`, `healthDetailed`)
-  existe mais **n'est exposé par aucune route** — usage actuellement mort.
+  exposé depuis le **LOT 29** par la route `GET /api/health` — voir « Health
+  check » ci-dessous (la route appelle l'export plat `collectHealthSnapshot`,
+  même corps que `healthDetailed`).
 - **Métriques** : `src/lib/observability.ts` (TTFT émis par l'event bus).
 - **Erreurs runtime** : pas de Sentry/équivalent branché (Option C du LOT 26).
+
+### Health check (LOT 29)
+
+| Point | Valeur |
+| --- | --- |
+| URL | `https://<site>.netlify.app/api/health` |
+| Méthode | `GET` |
+| Auth | aucune (public — Option 6A, retour minimal) |
+| Code HTTP | `200` (`healthy` / `degraded`) · `503` (`unhealthy`) |
+| `Cache-Control` | `no-store` (200 **et** 503) |
+
+Exemple de retour (JSON minimal — whitelist stricte) :
+
+```json
+{
+  "status": "healthy",
+  "checks": [
+    { "name": "db", "status": "ok" },
+    { "name": "llm_provider", "status": "ok" },
+    { "name": "embeddings", "status": "ok" }
+  ],
+  "duration_ms": 12,
+  "timestamp": "2026-09-28T21:00:00.000Z",
+  "version": "105382e"
+}
+```
+
+- **Normalisation** : `database→db`, `nvidia_provider→llm_provider`,
+  `embedding_provider→embeddings` ; statuts `pass→ok`, `warn→degraded`,
+  `fail→failed`. Toute clé inconnue est ignorée par construction.
+- **Jamais exposé** : `metrics` (contient des identifiants IP sous forme de
+  labels), `checks.*.message` (messages d'erreur DB bruts), `uptimeMs`,
+  versions de libs, URLs/hosts, config env, stack traces.
+- **Implémentation** : `GET` → `handleHealthRequest(request)` →
+  `collectHealthSnapshot(request)` (export plat de `health.ts`, identique au
+  corps de `healthDetailed`). Un server fn n'est résolvable en build de
+  production que s'il est référencé depuis le graph client : une route serveur
+  sans composant ne l'est pas — d'où l'export plat, sur le modèle de
+  `handleChatRequest` pour `/api/chat`.
+- **Usage** : uptime monitor externe (UptimeRobot, Better Stack) → `GET`
+  toutes les 5 min, alerte si code ≠ `200`.
+- **Limite** : le check DB lit `VITE_SUPABASE_URL` — en CI E2E l'env est
+  factice (`e2e-dummy.supabase.co`, injoignable) donc la réponse attendue est
+  `503` : c'est le comportement correct (DB indisponible = unhealthy).
 
 ## 9. État réel au LOT 26 (écarts)
 

@@ -23,6 +23,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as WorkSlugRouteImport } from './routes/work/$slug'
 import { Route as JournalSlugRouteImport } from './routes/journal/$slug'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AdminRealisationsIndexRouteImport } from './routes/admin/realisations/index'
 import { Route as AdminMessagesIndexRouteImport } from './routes/admin/messages/index'
@@ -104,6 +105,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/services': typeof ServicesRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/journal/$slug': typeof JournalSlugRoute
   '/work/$slug': typeof WorkSlugRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/services': typeof ServicesRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/journal/$slug': typeof JournalSlugRoute
   '/work/$slug': typeof WorkSlugRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/services': typeof ServicesRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/journal/$slug': typeof JournalSlugRoute
   '/work/$slug': typeof WorkSlugRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/politique-confidentialite'
     | '/services'
     | '/api/chat'
+    | '/api/health'
     | '/auth/login'
     | '/journal/$slug'
     | '/work/$slug'
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/politique-confidentialite'
     | '/services'
     | '/api/chat'
+    | '/api/health'
     | '/auth/login'
     | '/journal/$slug'
     | '/work/$slug'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/politique-confidentialite'
     | '/services'
     | '/api/chat'
+    | '/api/health'
     | '/auth/login'
     | '/journal/$slug'
     | '/work/$slug'
@@ -312,6 +324,7 @@ export interface RootRouteChildren {
   PolitiqueConfidentialiteRoute: typeof PolitiqueConfidentialiteRoute
   ServicesRoute: typeof ServicesRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   AuthLoginRoute: typeof AuthLoginRoute
   JournalSlugRoute: typeof JournalSlugRoute
   WorkSlugRoute: typeof WorkSlugRoute
@@ -419,6 +432,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -523,6 +543,7 @@ const rootRouteChildren: RootRouteChildren = {
   PolitiqueConfidentialiteRoute: PolitiqueConfidentialiteRoute,
   ServicesRoute: ServicesRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiHealthRoute: ApiHealthRoute,
   AuthLoginRoute: AuthLoginRoute,
   JournalSlugRoute: JournalSlugRoute,
   WorkSlugRoute: WorkSlugRoute,

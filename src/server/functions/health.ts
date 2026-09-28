@@ -140,24 +140,29 @@ export const health = createServerFn({ method: "GET" })
     };
   });
 
+/**
+ * Même implémentation que `healthDetailed`, exposée en fonction simple :
+ * les routes serveur (ex. `GET /api/health`) appellent cette export plat,
+ * comme `handleChatRequest` pour `/api/chat`. Un server fn n'est résolvable
+ * en build de production que s'il est référencé depuis le graph client.
+ */
+export async function collectHealthSnapshot(request: Request) {
+  // Get metrics
+  const { metrics: metricsCollector } = await import("@/lib/observability");
+  const allMetrics = metricsCollector.getAllMetrics();
+
+  // Get health checks
+  const healthResult = await runHealthChecks(request);
+  metrics.histogram("webi_health_check_duration_ms", healthResult.durationMs);
+  const startedAt = (globalThis as { __webi_start_time?: number }).__webi_start_time ?? Date.now();
+
+  return {
+    ...healthResult,
+    metrics: allMetrics,
+    uptimeMs: Date.now() - startedAt,
+  };
+}
+
 export const healthDetailed = createServerFn({ method: "GET" })
   .middleware([requestMiddleware])
-  .handler(async ({ context }) => {
-    const request = context.request;
-
-    // Get metrics
-    const { metrics: metricsCollector } = await import("@/lib/observability");
-    const allMetrics = metricsCollector.getAllMetrics();
-
-    // Get health checks
-    const healthResult = await runHealthChecks(request);
-    metrics.histogram("webi_health_check_duration_ms", healthResult.durationMs);
-    const startedAt =
-      (globalThis as { __webi_start_time?: number }).__webi_start_time ?? Date.now();
-
-    return {
-      ...healthResult,
-      metrics: allMetrics,
-      uptimeMs: Date.now() - startedAt,
-    };
-  });
+  .handler(async ({ context }) => collectHealthSnapshot(context.request));

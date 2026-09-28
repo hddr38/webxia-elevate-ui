@@ -66,3 +66,9 @@ supabase/.temp/
 
 # Local Netlify folder
 .netlify
+
+# Playwright (artefacts de run)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

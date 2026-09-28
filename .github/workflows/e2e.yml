@@ -1,0 +1,40 @@
+name: E2E
+
+# LOT 26 — smoke E2E sur build de production (Playwright).
+# ci.yml est inchangé : ce workflow est un ajout indépendant.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # Valeurs factices, NON secrètes : VITE_* est inliné au build, et les
+      # specs mockent le chat (SSE) + l'auth Supabase côté navigateur.
+      # Aucun appel LLM réel, aucun appel auth réel.
+      VITE_SUPABASE_URL: https://e2e-dummy.supabase.co
+      VITE_SUPABASE_ANON_KEY: e2e-dummy-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: e2e-dummy-service-role-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+          if-no-files-found: ignore

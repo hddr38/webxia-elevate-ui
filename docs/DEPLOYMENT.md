@@ -195,3 +195,19 @@ Exemple de retour (JSON minimal — whitelist stricte) :
 - `/admin` : garde serveur (`adminMiddleware`, 401) + garde client (`beforeLoad`).
 - Rotation : clés NVIDIA NIM et `SUPABASE_SERVICE_ROLE_KEY` uniquement via
   l'UI Netlify (jamais dans le dépôt).
+
+### Secrets scanning (Netlify) — LOT 30b
+
+- Le stage « secrets scanning » compare **toutes** les valeurs d'variables
+  d'environnement au build output (indépendamment du flag *Contains secret
+  values*). Le premier deploy a donc échoué sur `VITE_SUPABASE_URL` et
+  `VITE_SUPABASE_ANON_KEY`, **publiques par construction** : le préfixe
+  `VITE_` injecte ces valeurs dans le bundle client, visibles dans les
+  devtools.
+- Whitelist ciblée dans `netlify.toml` :
+  `SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY"`
+  (2 clés publiques uniquement).
+- `SUPABASE_SERVICE_ROLE_KEY` et `NVIDIA_NIM_API_KEY` **restent scannés** ;
+  `SECRETS_SCAN_ENABLED` reste actif (jamais `false`).
+- Alternative sans commit : définir `SECRETS_SCAN_OMIT_KEYS` dans
+  *Site settings → Environment variables* (la valeur UI prime).

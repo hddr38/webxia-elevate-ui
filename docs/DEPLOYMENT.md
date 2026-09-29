@@ -6,26 +6,26 @@
 
 ## 1. Cible
 
-| Élément | Valeur |
-| --- | --- |
-| Plateforme | Netlify (TanStack Start / Nitro via `@netlify/vite-plugin-tanstack-start`) |
-| Build | `npm run build` |
-| Publish | `dist/client` |
-| Redirects | `/api/*` → `/.netlify/functions/server` (fonction server unique) |
-| Config | `netlify.toml` (racine) + plugin Netlify dans `vite.config.ts` |
-| Node | 22 (`.nvmrc`) |
-| Alternative documentée | Vercel ou Cloudflare Pages (`ARCHITECTURE.md`) — non configurées |
+| Élément                | Valeur                                                                     |
+| ---------------------- | -------------------------------------------------------------------------- |
+| Plateforme             | Netlify (TanStack Start / Nitro via `@netlify/vite-plugin-tanstack-start`) |
+| Build                  | `npm run build`                                                            |
+| Publish                | `dist/client`                                                              |
+| Redirects              | `/api/*` → `/.netlify/functions/server` (fonction server unique)           |
+| Config                 | `netlify.toml` (racine) + plugin Netlify dans `vite.config.ts`             |
+| Node                   | 22 (`.nvmrc`)                                                              |
+| Alternative documentée | Vercel ou Cloudflare Pages (`ARCHITECTURE.md`) — non configurées           |
 
 La fonction Netlify générée (`@netlify/vite-plugin server handler`, `path: /*`,
 `preferStatic: true`) délégué à `dist/server/server.js` (export `fetch`).
 
 ## 2. Environnements
 
-| Environnement | Déclencheur | État |
-| --- | --- | --- |
-| **preview** | push branche + PR (Netlify Deploy Previews) | ⏳ à activer (liaison du site) |
-| **production** | push sur `main` | ⏳ à activer (liaison du site) |
-| **staging** | — | non prévu (projet solo : preview = staging) |
+| Environnement  | Déclencheur                                 | État                                        |
+| -------------- | ------------------------------------------- | ------------------------------------------- |
+| **preview**    | push branche + PR (Netlify Deploy Previews) | ⏳ à activer (liaison du site)              |
+| **production** | push sur `main`                             | ⏳ à activer (liaison du site)              |
+| **staging**    | —                                           | non prévu (projet solo : preview = staging) |
 
 Aucun workflow GitHub Actions ne déploie aujourd'hui : `ci.yml` ne fait que
 lint / typecheck / test / build.
@@ -37,28 +37,28 @@ scoped Production + Deploy previews. Jamais de valeurs dans le dépôt.
 
 ### Requises (build + runtime)
 
-| Variable | Usage |
-| --- | --- |
-| `VITE_SUPABASE_URL` | Client browser + SSR (publié dans le bundle client) |
-| `VITE_SUPABASE_ANON_KEY` | Client browser + SSR (publié dans le bundle client) |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Server only** — client admin, Server Functions |
-| `NVIDIA_NIM_API_KEY` | **Server only** — génération Webi |
-| `NVIDIA_NIM_BASE_URL` | **Server only** — endpoint NVIDIA NIM |
-| `NVIDIA_NIM_DEFAULT_MODEL` | Modèle primaire (nano-omni) |
-| `NVIDIA_NIM_FALLBACK_MODEL` | Modèle fallback (lightning) |
-| `NVIDIA_NIM_EMBEDDING_MODEL` | Embeddings RAG + `ai_memory` |
+| Variable                     | Usage                                               |
+| ---------------------------- | --------------------------------------------------- |
+| `VITE_SUPABASE_URL`          | Client browser + SSR (publié dans le bundle client) |
+| `VITE_SUPABASE_ANON_KEY`     | Client browser + SSR (publié dans le bundle client) |
+| `SUPABASE_SERVICE_ROLE_KEY`  | **Server only** — client admin, Server Functions    |
+| `NVIDIA_NIM_API_KEY`         | **Server only** — génération Webi                   |
+| `NVIDIA_NIM_BASE_URL`        | **Server only** — endpoint NVIDIA NIM               |
+| `NVIDIA_NIM_DEFAULT_MODEL`   | Modèle primaire (nano-omni)                         |
+| `NVIDIA_NIM_FALLBACK_MODEL`  | Modèle fallback (lightning)                         |
+| `NVIDIA_NIM_EMBEDDING_MODEL` | Embeddings RAG + `ai_memory`                        |
 
 ### Optionnelles (défauts sains)
 
-| Variable | Défaut / rôle |
-| --- | --- |
-| `AI_FALLBACK_ENABLED` | `false` — activation du fallback runtime |
-| `AI_FALLBACK_PROVIDER` | `nvidia` |
-| `AI_TIMEOUT_MS` | `120000` |
-| `AI_MAX_RETRIES` | `2` |
-| `AI_MAX_TOKENS` | `4096` |
+| Variable                  | Défaut / rôle                                  |
+| ------------------------- | ---------------------------------------------- |
+| `AI_FALLBACK_ENABLED`     | `false` — activation du fallback runtime       |
+| `AI_FALLBACK_PROVIDER`    | `nvidia`                                       |
+| `AI_TIMEOUT_MS`           | `120000`                                       |
+| `AI_MAX_RETRIES`          | `2`                                            |
+| `AI_MAX_TOKENS`           | `4096`                                         |
 | `CHAT_REQUEST_TIMEOUT_MS` | `110000` — doit rester > budget TTFB LLM (45s) |
-| `CHAT_HEARTBEAT_MS` | `15000` — heartbeat SSE anti-déconnexion proxy |
+| `CHAT_HEARTBEAT_MS`       | `15000` — heartbeat SSE anti-déconnexion proxy |
 
 > `VITE_*` = exposé au client par construction. Toute autre variable est
 > **server-only**. Ne jamais préfixer un secret par `VITE_`.
@@ -85,7 +85,7 @@ décision documentée `docs/DECISIONS.md`, lot dédié à réactiver).
 
 ## 5. Rollback
 
-- **Netlify UI** → Deploys → production deploy précédent → *Publish deploy*.
+- **Netlify UI** → Deploys → production deploy précédent → _Publish deploy_.
   Rapide, sans commit.
 - **Git** : `git revert <sha>` puis push `main` (jamais de force-push).
 - **DB / migrations** : hors périmètre ici — voir `supabase/MIGRATIONS.md`.
@@ -107,11 +107,11 @@ curl -fsS -o /dev/null -w "%{http_code}\n" https://<domaine>/admin   # 200 ou 30
 
 ## 7. Tests liés au déploiement
 
-| Commande | Rôle |
-| --- | --- |
-| `npm test` | Vitest unitaire/intégration (438 tests) — requis par CI |
+| Commande           | Rôle                                                                   |
+| ------------------ | ---------------------------------------------------------------------- |
+| `npm test`         | Vitest unitaire/intégration (438 tests) — requis par CI                |
 | `npm run test:e2e` | Playwright (accueil, chat mocké, admin, health) — requis par `e2e.yml` |
-| `npm run build` | Build de production (détecte les régressions TS/bundle) |
+| `npm run build`    | Build de production (détecte les régressions TS/bundle)                |
 
 Les E2E tournent sur un build **preview** local (`webServer` Playwright) : ils
 ne nécessitent **aucun secret** (flux chat et auth Supabase mockés côté navigateur,
@@ -130,13 +130,13 @@ aucun appel LLM réel).
 
 ### Health check (LOT 29)
 
-| Point | Valeur |
-| --- | --- |
-| URL | `https://<site>.netlify.app/api/health` |
-| Méthode | `GET` |
-| Auth | aucune (public — Option 6A, retour minimal) |
-| Code HTTP | `200` (`healthy` / `degraded`) · `503` (`unhealthy`) |
-| `Cache-Control` | `no-store` (200 **et** 503) |
+| Point           | Valeur                                               |
+| --------------- | ---------------------------------------------------- |
+| URL             | `https://<site>.netlify.app/api/health`              |
+| Méthode         | `GET`                                                |
+| Auth            | aucune (public — Option 6A, retour minimal)          |
+| Code HTTP       | `200` (`healthy` / `degraded`) · `503` (`unhealthy`) |
+| `Cache-Control` | `no-store` (200 **et** 503)                          |
 
 Exemple de retour (JSON minimal — whitelist stricte) :
 
@@ -174,17 +174,17 @@ Exemple de retour (JSON minimal — whitelist stricte) :
 
 ## 9. État réel au LOT 26 (écarts)
 
-| Point | État |
-| --- | --- |
-| `netlify.toml` + plugin | ✅ commités |
-| Site Netlify lié au repo | ❌ (`.netlify/state.json` sans `siteId`) |
-| DNS `webxia.fr` | ❌ NXDOMAIN |
-| Env vars Netlify | ❌ à renseigner (noms en §3) |
-| GitHub Secrets | ❌ inutilisés (CI sans secret) |
-| Déploiement auto `main` | ❌ activer après liaison du site |
+| Point                     | État                                         |
+| ------------------------- | -------------------------------------------- |
+| `netlify.toml` + plugin   | ✅ commités                                  |
+| Site Netlify lié au repo  | ❌ (`.netlify/state.json` sans `siteId`)     |
+| DNS `webxia.fr`           | ❌ NXDOMAIN                                  |
+| Env vars Netlify          | ❌ à renseigner (noms en §3)                 |
+| GitHub Secrets            | ❌ inutilisés (CI sans secret)               |
+| Déploiement auto `main`   | ❌ activer après liaison du site             |
 | Protection branche `main` | ❌ statu quo documenté (`docs/DECISIONS.md`) |
-| Health endpoint exposé | ❌ code présent, route absente |
-| Sentry / monitoring | ❌ absent |
+| Health endpoint exposé    | ❌ code présent, route absente               |
+| Sentry / monitoring       | ❌ absent                                    |
 
 ## 10. Sécurité du déploiement
 
@@ -199,8 +199,8 @@ Exemple de retour (JSON minimal — whitelist stricte) :
 ### Secrets scanning (Netlify) — LOT 30b
 
 - Le stage « secrets scanning » compare **toutes** les valeurs d'variables
-  d'environnement au build output (indépendamment du flag *Contains secret
-  values*). Le premier deploy a donc échoué sur `VITE_SUPABASE_URL` et
+  d'environnement au build output (indépendamment du flag _Contains secret
+  values_). Le premier deploy a donc échoué sur `VITE_SUPABASE_URL` et
   `VITE_SUPABASE_ANON_KEY`, **publiques par construction** : le préfixe
   `VITE_` injecte ces valeurs dans le bundle client, visibles dans les
   devtools.
@@ -210,4 +210,68 @@ Exemple de retour (JSON minimal — whitelist stricte) :
 - `SUPABASE_SERVICE_ROLE_KEY` et `NVIDIA_NIM_API_KEY` **restent scannés** ;
   `SECRETS_SCAN_ENABLED` reste actif (jamais `false`).
 - Alternative sans commit : définir `SECRETS_SCAN_OMIT_KEYS` dans
-  *Site settings → Environment variables* (la valeur UI prime).
+  _Site settings → Environment variables_ (la valeur UI prime).
+
+## 11. Performance (bundle & Core Web Vitals) � LOT 31
+
+### Baseline (avant, prod `webxia-fr.netlify.app`)
+
+- Payload initial de `/` : **1 296 004 o brut / 370 712 o gzip** (16 assets),
+  dont `index-*.js` = **1 035 300 o / 304 314 o gzip** (warning � chunk > 500 kB �).
+- Lighthouse **mobile (perf 73)** : FCP 2,9 s � LCP 4,2 s � TBT 210 ms � SI 5,3 s �
+  CLS 0,003 ; a11y 95 � BP 100 � SEO 100.
+- Lighthouse **desktop (perf 94)** : FCP 0,9 s � LCP 1,0 s � TBT 20 ms � CLS 0,012.
+
+### Optimisations appliqu�es (LOT 31)
+
+| Fichier                      | Changement                                                                                                                                                                                                        |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/routes/__root.tsx`      | `ChatWidget` + `AdminHeader` en `React.lazy` (charg�s apr�s hydration) ; probe session Supabase via `import()` dynamique ; polices Inter r�duites � `400;500;600;700` (800/900 jamais utilis�s)                   |
+| `src/routes/admin/route.tsx` | Client Supabase import� dynamiquement dans `beforeLoad` (la config de route est charg�e eager via `routeTree.gen.ts`)                                                                                             |
+| `vite.config.ts`             | `build.rollupOptions.output.manualChunks` (vendors react/radix/motion/lucide/sonner/zod/rhf/supabase), helper preload Vite rattach� � `vendor-react`, markdown **non group�**, tout gard� sous guard `isSsrBuild` |
+
+Choix explicites :
+
+- **Fallback `null`** du `Suspense` chat : le launcher est en `position: fixed`
+  (56�56), aucun layout shift possible ? `CLS 0` conserv�.
+- **Markdown non group�** : avec un groupe `vendor-markdown`, Rolldown y attirait
+  `react/jsx-runtime`, ce qui remettait les ~47 ko gzip de markdown sur le
+  chemin critique de _toutes_ les pages. Sans groupe, le stack markdown
+  (`lib-*.js`) n'est charg� que par ChatWidget + les routes articles.
+- **Helper `vite/preload-helper`** rattach� � `vendor-react` : par d�faut il
+  tombait dans `vendor-supabase-*`, ce qui rendait supabase-js un d�pendance
+  _statique_ de l'entree (pr�charg� sur chaque page).
+
+### Mesures (apr�s, build local `vite build` + `vite preview`)
+
+| Indicateur                 | Avant                   | Apr�s                  | ?                       |
+| -------------------------- | ----------------------- | ---------------------- | ----------------------- |
+| Payload initial `/` (brut) | 1 296 004 o             | **912 209 o**          | -30 %                   |
+| Payload initial `/` (gzip) | 370 712 o               | **264 198 o**          | -29 %                   |
+| Assets pr�charg�s          | 16                      | **11**                 | -5                      |
+| `index-*.js` (brut)        | 1 035 300 o             | **287 810 o**          | -72 %                   |
+| `index-*.js` (gzip)        | 304 314 o               | **86 265 o**           | -72 %                   |
+| Plus gros chunk JS         | 1 035 300 o             | 287 810 o              | warning 500 kB supprim� |
+| CSS (inchang�)             | 124 350 o / 19 954 o gz | idem                   | �                       |
+| JS total client            | 60 fichiers / 1 476 ko  | 58 fichiers / 1 512 ko | d�coupage redistribu�   |
+
+Reste sur le chemin critique : `vendor-react` (react-dom), `vendor-radix`,
+`vendor-motion` (contient `react/jsx-runtime` � placement Rolldown non ma�tris�,
+mais d�j� pr�charg� pour Framer Motion), `vendor-lucide`, `vendor-sonner`,
+`routes-*`.
+
+### Recommandations (post-d�ploiement)
+
+1. Mesurer **Lighthouse mobile/desktop sur la prod** (avant/apr�s) � voir
+   baseline �11 plus haut ; refaire apr�s chaque gros lot UI.
+2. D�couper `vendor-radix` (108 ko) en r�duisant les imports de primitives
+   inutilis�es.
+3. Sortir `recharts` (mort, seul `ui/chart.tsx` l'importe) et `input-otp`
+   (0 r�f�rence) � **lot s�par�**, refus� sur LOT 31.
+4. Sourcemaps / `reportCompressedSize` : � activer en CI si besoin de budget
+   de bundle automatis� (Lighthouse CI ou `size-limit`).
+
+### V�rifications (gates LOT 31)
+
+`npm run lint` � `npm run typecheck` � `npm test` (438/438) �
+`npm run test:e2e` (11/11, dont garde `/admin` avec l'import dynamique).

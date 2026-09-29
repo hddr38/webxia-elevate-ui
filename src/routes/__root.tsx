@@ -8,7 +8,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -17,11 +17,19 @@ import { ThemeProvider } from "@/lib/theme-context";
 import { LocaleProvider, useLocale } from "@/lib/locale-context";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
-import { ChatWidget } from "@/components/chat";
-import { AdminHeader } from "@/components/admin/admin-header";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { seo } from "@/lib/seo";
+
+// LOT 31 — perf: the chat stack (react-markdown + chat UI), AdminHeader and
+// supabase-js must stay out of the entry chunk (index-*.js). They are loaded
+// on demand after hydration. The launcher is position:fixed, so the deferral
+// cannot shift layout — Suspense fallback is null by design.
+const ChatWidget = lazy(() =>
+  import("@/components/chat/ChatWidget").then((m) => ({ default: m.ChatWidget })),
+);
+const AdminHeader = lazy(() =>
+  import("@/components/admin/admin-header").then((m) => ({ default: m.AdminHeader })),
+);
 
 function NotFoundComponent() {
   const { t } = useLocale();
@@ -106,7 +114,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
         {
           rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap",
+          href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
         },
       ],
     };
@@ -139,15 +147,28 @@ function RootComponent() {
   const routerState = useRouterState();
   const isAdmin = routerState.location.pathname.startsWith("/admin");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [chatReady, setChatReady] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    getSupabaseBrowserClient()
-      .auth.getSession()
-      .then(({ data }) => {
+    // LOT 31 — supabase-js is imported lazily so the auth probe never pulls
+    // the browser client into the entry chunk. Failure stays non-fatal.
+    void (async () => {
+      try {
+        const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
+        const { data } = await getSupabaseBrowserClient().auth.getSession();
         setIsAuthenticated(!!data.session);
-      })
-      .catch(() => {});
+      } catch {
+        // auth probe failure keeps the public layout (same as before)
+      }
+    })();
+  }, []);
+
+  // LOT 31 — mount the chat launcher after hydration (chat chunk stays out
+  // of the critical path; the launcher itself is position:fixed).
+  useEffect(() => {
+    const timer = window.setTimeout(() => setChatReady(true), 150);
+    return () => window.clearTimeout(timer);
   }, []);
 
   // Dev-only: purge stale service workers. This app ships no service
@@ -190,7 +211,13 @@ function RootComponent() {
               >
                 {t("a11y.skip")}
               </a>
-              {isAuthenticated ? <AdminHeader /> : <Header />}
+              {isAuthenticated ? (
+                <Suspense fallback={null}>
+                  <AdminHeader />
+                </Suspense>
+              ) : (
+                <Header />
+              )}
               <main
                 id="main-content"
                 className={
@@ -200,7 +227,11 @@ function RootComponent() {
                 <Outlet />
               </main>
               {!isAuthenticated && <Footer />}
-              {!isAuthenticated && <ChatWidget />}
+              {!isAuthenticated && chatReady && (
+                <Suspense fallback={null}>
+                  <ChatWidget />
+                </Suspense>
+              )}
             </>
           )}
           <Toaster position="bottom-right" richColors />

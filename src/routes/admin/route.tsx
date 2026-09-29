@@ -1,5 +1,4 @@
 import { createFileRoute, Outlet, Link, redirect, useRouter } from "@tanstack/react-router";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import { adminMiddleware } from "@/lib/auth/middleware";
@@ -14,6 +13,9 @@ export const Route = createFileRoute("/admin")({
   // Lecture du stockage local uniquement, aucun appel réseau.
   beforeLoad: async ({ location }) => {
     if (typeof window === "undefined") return;
+    // LOT 31 - perf: import dynamique pour sortir supabase-js du chunk d'entree
+    // (la config de route est chargee eager via routeTree.gen.ts).
+    const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
     const { data } = await getSupabaseBrowserClient().auth.getSession();
     if (!data.session) {
       throw redirect({

@@ -198,7 +198,7 @@ Exemple de retour (JSON minimal — whitelist stricte) :
 
 ### Secrets scanning (Netlify) — LOT 30b
 
-- Le stage « secrets scanning » compare **toutes** les valeurs d'variables
+- Le stage « secrets scanning » compare **toutes** les valeurs de variables
   d'environnement au build output (indépendamment du flag _Contains secret
   values_). Le premier deploy a donc échoué sur `VITE_SUPABASE_URL` et
   `VITE_SUPABASE_ANON_KEY`, **publiques par construction** : le préfixe
@@ -212,66 +212,103 @@ Exemple de retour (JSON minimal — whitelist stricte) :
 - Alternative sans commit : définir `SECRETS_SCAN_OMIT_KEYS` dans
   _Site settings → Environment variables_ (la valeur UI prime).
 
-## 11. Performance (bundle & Core Web Vitals) � LOT 31
+## 11. Performance (bundle & Core Web Vitals) — LOT 31
 
 ### Baseline (avant, prod `webxia-fr.netlify.app`)
 
 - Payload initial de `/` : **1 296 004 o brut / 370 712 o gzip** (16 assets),
-  dont `index-*.js` = **1 035 300 o / 304 314 o gzip** (warning � chunk > 500 kB �).
-- Lighthouse **mobile (perf 73)** : FCP 2,9 s � LCP 4,2 s � TBT 210 ms � SI 5,3 s �
-  CLS 0,003 ; a11y 95 � BP 100 � SEO 100.
-- Lighthouse **desktop (perf 94)** : FCP 0,9 s � LCP 1,0 s � TBT 20 ms � CLS 0,012.
+  dont `index-*.js` = **1 035 300 o / 304 314 o gzip** (warning « chunk > 500 kB »).
+- Lighthouse **mobile (perf 73)** : FCP 2,9 s · LCP 4,2 s · TBT 210 ms · SI 5,3 s ·
+  CLS 0,003 ; a11y 95 · BP 100 · SEO 100.
+- Lighthouse **desktop (perf 94)** : FCP 0,9 s · LCP 1,0 s · TBT 20 ms · CLS 0,012.
 
-### Optimisations appliqu�es (LOT 31)
+### Optimisations appliquées (LOT 31)
 
 | Fichier                      | Changement                                                                                                                                                                                                        |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/routes/__root.tsx`      | `ChatWidget` + `AdminHeader` en `React.lazy` (charg�s apr�s hydration) ; probe session Supabase via `import()` dynamique ; polices Inter r�duites � `400;500;600;700` (800/900 jamais utilis�s)                   |
-| `src/routes/admin/route.tsx` | Client Supabase import� dynamiquement dans `beforeLoad` (la config de route est charg�e eager via `routeTree.gen.ts`)                                                                                             |
-| `vite.config.ts`             | `build.rollupOptions.output.manualChunks` (vendors react/radix/motion/lucide/sonner/zod/rhf/supabase), helper preload Vite rattach� � `vendor-react`, markdown **non group�**, tout gard� sous guard `isSsrBuild` |
+| `src/routes/__root.tsx`      | `ChatWidget` + `AdminHeader` en `React.lazy` (chargés après hydration) ; probe session Supabase via `import()` dynamique ; polices Inter réduites à `400;500;600;700` (800/900 jamais utilisés)                   |
+| `src/routes/admin/route.tsx` | Client Supabase importé dynamiquement dans `beforeLoad` (la config de route est chargée eager via `routeTree.gen.ts`)                                                                                             |
+| `vite.config.ts`             | `build.rollupOptions.output.manualChunks` (vendors react/radix/motion/lucide/sonner/zod/rhf/supabase), helper preload Vite rattaché à `vendor-react`, markdown **non groupé**, tout gardé sous guard `isSsrBuild` |
 
 Choix explicites :
 
 - **Fallback `null`** du `Suspense` chat : le launcher est en `position: fixed`
-  (56�56), aucun layout shift possible ? `CLS 0` conserv�.
-- **Markdown non group�** : avec un groupe `vendor-markdown`, Rolldown y attirait
+  (56×56), aucun layout shift possible → `CLS 0` conservé.
+- **Markdown non groupé** : avec un groupe `vendor-markdown`, Rolldown y attirait
   `react/jsx-runtime`, ce qui remettait les ~47 ko gzip de markdown sur le
   chemin critique de _toutes_ les pages. Sans groupe, le stack markdown
-  (`lib-*.js`) n'est charg� que par ChatWidget + les routes articles.
-- **Helper `vite/preload-helper`** rattach� � `vendor-react` : par d�faut il
-  tombait dans `vendor-supabase-*`, ce qui rendait supabase-js un d�pendance
-  _statique_ de l'entree (pr�charg� sur chaque page).
+  (`lib-*.js`) n'est chargé que par ChatWidget + les routes articles.
+- **Helper `vite/preload-helper`** rattaché à `vendor-react` : par défaut il
+  tombait dans `vendor-supabase-*`, ce qui rendait supabase-js un dépendance
+  _statique_ de l'entree (préchargé sur chaque page).
 
-### Mesures (apr�s, build local `vite build` + `vite preview`)
+### Mesures (après, build local `vite build` + `vite preview`)
 
-| Indicateur                 | Avant                   | Apr�s                  | ?                       |
+| Indicateur                 | Avant                   | Après                  | Δ                       |
 | -------------------------- | ----------------------- | ---------------------- | ----------------------- |
-| Payload initial `/` (brut) | 1 296 004 o             | **912 209 o**          | -30 %                   |
-| Payload initial `/` (gzip) | 370 712 o               | **264 198 o**          | -29 %                   |
-| Assets pr�charg�s          | 16                      | **11**                 | -5                      |
-| `index-*.js` (brut)        | 1 035 300 o             | **287 810 o**          | -72 %                   |
-| `index-*.js` (gzip)        | 304 314 o               | **86 265 o**           | -72 %                   |
-| Plus gros chunk JS         | 1 035 300 o             | 287 810 o              | warning 500 kB supprim� |
-| CSS (inchang�)             | 124 350 o / 19 954 o gz | idem                   | �                       |
-| JS total client            | 60 fichiers / 1 476 ko  | 58 fichiers / 1 512 ko | d�coupage redistribu�   |
+| Payload initial `/` (brut) | 1 296 004 o             | **912 209 o**          | −30 %                   |
+| Payload initial `/` (gzip) | 370 712 o               | **264 198 o**          | −29 %                   |
+| Assets préchargés          | 16                      | **11**                 | −5                      |
+| `index-*.js` (brut)        | 1 035 300 o             | **287 810 o**          | −72 %                   |
+| `index-*.js` (gzip)        | 304 314 o               | **86 265 o**           | −72 %                   |
+| Plus gros chunk JS         | 1 035 300 o             | 287 810 o              | warning 500 kB supprimé |
+| CSS (inchangé)             | 124 350 o / 19 954 o gz | idem                   | —                       |
+| JS total client            | 60 fichiers / 1 476 ko  | 58 fichiers / 1 512 ko | découpage redistribué   |
 
 Reste sur le chemin critique : `vendor-react` (react-dom), `vendor-radix`,
-`vendor-motion` (contient `react/jsx-runtime` � placement Rolldown non ma�tris�,
-mais d�j� pr�charg� pour Framer Motion), `vendor-lucide`, `vendor-sonner`,
+`vendor-motion` (contient `react/jsx-runtime` — placement Rolldown non maîtrisé,
+mais déjà préchargé pour Framer Motion), `vendor-lucide`, `vendor-sonner`,
 `routes-*`.
 
-### Recommandations (post-d�ploiement)
+### Recommandations (post-déploiement)
 
-1. Mesurer **Lighthouse mobile/desktop sur la prod** (avant/apr�s) � voir
-   baseline �11 plus haut ; refaire apr�s chaque gros lot UI.
-2. D�couper `vendor-radix` (108 ko) en r�duisant les imports de primitives
-   inutilis�es.
+1. Mesurer **Lighthouse mobile/desktop sur la prod** (avant/après) — voir
+   baseline §11 plus haut ; refaire après chaque gros lot UI.
+2. Découper `vendor-radix` (108 ko) en réduisant les imports de primitives
+   inutilisées.
 3. Sortir `recharts` (mort, seul `ui/chart.tsx` l'importe) et `input-otp`
-   (0 r�f�rence) � **lot s�par�**, refus� sur LOT 31.
-4. Sourcemaps / `reportCompressedSize` : � activer en CI si besoin de budget
-   de bundle automatis� (Lighthouse CI ou `size-limit`).
+   (0 référence) — **lot séparé**, refusé sur LOT 31.
+4. Sourcemaps / `reportCompressedSize` : à activer en CI si besoin de budget
+   de bundle automatisé (Lighthouse CI ou `size-limit`).
 
-### V�rifications (gates LOT 31)
+### Vérifications (gates LOT 31)
 
-`npm run lint` � `npm run typecheck` � `npm test` (438/438) �
+`npm run lint` · `npm run typecheck` · `npm test` (438/438) ·
 `npm run test:e2e` (11/11, dont garde `/admin` avec l'import dynamique).
+
+## 12. Hygiène repo & version — LOT 32
+
+### Fix version (`health.ts`)
+
+- `src/server/functions/health.ts` (retour du server fn `health`) lit
+  désormais :
+  `process.env.COMMIT_REF?.slice(0, 7) ?? process.env.npm_package_version ?? "unknown"`
+  — aligné sur `src/routes/api/health.ts`, qui lisait déjà `COMMIT_REF`.
+- **Cause racine constatée** : `GET /api/health` renvoyait déjà
+  `version: "unknown"` **malgré** cette lecture de `COMMIT_REF` dans la route :
+  `COMMIT_REF` n'est donc **pas exposé au runtime** de la fonction Netlify
+  (seulement à l'environnement de build). Le fix appliqué aligne les deux
+  chemins, mais **ne suffit pas** : la valeur reste `unknown` tant que la
+  variable est absente du runtime.
+- **Remédiation prévue LOT 33** : injection **build-time** de la version
+  (constante injectée au build depuis `COMMIT_REF`, disponible en env de
+  build) puis lecture côté route.
+- Vérification post-déploiement :
+  `curl https://<site>/api/health` → `version` = SHA court du commit
+  (attendu : encore `unknown` tant que le LOT 33 n'est pas fait).
+
+### Dossiers `.agents/` et `.opencode/` (retirés du tracking)
+
+- **106 fichiers** (54 `.agents/` + 52 `.opencode/`) retirés du suivi git via
+  `git rm -r --cached` ; les fichiers **restent sur disque** et dans l'historique.
+- `.agents/` et `.opencode/` ajoutés au `.gitignore` (l'ancienne règle
+  `.opencode/plans/` est englobée).
+- **Justification** : skills/commands d'outillage agent = artefacts d'outils
+  locaux, pas du code projet. Audit LOT 32 : **aucun** fichier tracké n'y
+  référençait (seul `.gitignore` matchait), et **aucun artefact local** n'était
+  tracké (`.opencode/node_modules`, `package.json`, `plans/` déjà ignorés via
+  `.opencode/.gitignore`).
+- **Conséquence assumée** : ces skills ne sont plus visibles d'un clone neuf ni
+  de l'éditeur cloud Lovable ; ils restent utilisables localement.
+- Aucune modification fonctionnelle : code applicatif, tests et build inchangés
+  hors la ligne `health.ts` ci-dessus.

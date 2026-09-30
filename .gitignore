@@ -61,8 +61,10 @@ supabase/.temp/
 .impeccable/live/*.png
 # impeccable-ignore-end
 
-# OpenCode local plans (artefact d'outil)
-.opencode/plans/
+# Outils locaux (skills/commands d'outillage agent — jamais commités)
+# .opencode/ englobe l'ancienne règle .opencode/plans/
+.agents/
+.opencode/
 
 # Local Netlify folder
 .netlify

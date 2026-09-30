@@ -135,7 +135,7 @@ export const health = createServerFn({ method: "GET" })
       status,
       checks,
       timestamp: Date.now(),
-      version: process.env.npm_package_version ?? "unknown",
+      version: process.env.COMMIT_REF?.slice(0, 7) ?? process.env.npm_package_version ?? "unknown",
       durationMs,
     };
   });

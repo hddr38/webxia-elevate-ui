@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Bot,
   Globe,
@@ -12,7 +12,7 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useLocale } from "@/lib/locale-context";
 
 const marqueeKeys: {
@@ -69,7 +69,11 @@ const gap = 16;
 const totalItems = marqueeKeys.length;
 const singleRowWidth = totalItems * itemWidth + (totalItems - 1) * gap;
 const pixelsPerSecond = 35;
-const duration = singleRowWidth / pixelsPerSecond;
+// LOT 34 — decalage d'une boucle seamless : largeur d'un bloc complet +
+// le gap qui le suit (l'ancien pilotage rAF bouclait sur -singleRowWidth,
+// soit un saut de 16px a chaque tour).
+const marqueeShift = singleRowWidth + gap;
+const duration = marqueeShift / pixelsPerSecond;
 
 function MarqueeCard({
   icon: Icon,
@@ -107,54 +111,21 @@ export function ExpertiseMarquee() {
   const [userPaused, setUserPaused] = useState(false);
   const [hoverPaused, setHoverPaused] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [tabVisible, setTabVisible] = useState(
-    typeof document === "undefined" ? true : !document.hidden,
-  );
+  // LOT 34 — init a `true` pour coller au HTML SSR (sinon mismatch de style
+  // hydration : le serveur ecrit running, le client paused, et rien ne
+  // re-rend). La vraie valeur est synchro au montage dans l'effect ci-dessous.
+  const [tabVisible, setTabVisible] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
-  const progress = useMotionValue(0);
-  const rafRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number>(0);
-  const isAnimatingRef = useRef(false);
 
+  // LOT 34 — le pilotage rAF + MotionValue est remplace par une animation CSS
+  // (voir .marquee-track dans styles.css) : le compositor l'execute, le
+  // main thread n'est plus sollicite frame par frame pendant le scroll.
+  // Tous les etats de pause sont conserves et pilotent animation-play-state.
   const paused = userPaused || hoverPaused || !isVisible || !tabVisible;
-
-  const animate = (timestamp: number) => {
-    if (isAnimatingRef.current) {
-      const delta = (timestamp - lastTimeRef.current) / 1000;
-      lastTimeRef.current = timestamp;
-      const newProgress = (progress.get() + delta / duration) % 1;
-      progress.set(newProgress);
-    }
-    rafRef.current = requestAnimationFrame(animate);
-  };
-
-  useEffect(() => {
-    lastTimeRef.current = performance.now();
-    isAnimatingRef.current = !reduceMotion;
-    rafRef.current = requestAnimationFrame(animate);
-    return () => {
-      isAnimatingRef.current = false;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-    // animate only reads isAnimatingRef (ref) and progress (stable MotionValue)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduceMotion]);
-
-  useEffect(() => {
-    if (reduceMotion) {
-      isAnimatingRef.current = false;
-      return;
-    }
-    if (paused) {
-      isAnimatingRef.current = false;
-    } else {
-      lastTimeRef.current = performance.now();
-      isAnimatingRef.current = true;
-    }
-  }, [paused, reduceMotion]);
 
   useEffect(() => {
     const onVisibility = () => setTabVisible(!document.hidden);
+    onVisibility();
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
@@ -169,12 +140,11 @@ export function ExpertiseMarquee() {
     return () => observer.disconnect();
   }, []);
 
-  const x = useTransform(progress, [0, 1], [0, -singleRowWidth]);
-
   return (
     <motion.div
       ref={containerRef}
-      initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+      // LOT 34 — visible des le SSR (pas de pop-in differe apres hydratation).
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.55 }}
       className="mx-auto mt-16 w-full"
@@ -187,11 +157,19 @@ export function ExpertiseMarquee() {
     >
       <div className="relative">
         <div className="overflow-x-hidden">
-          <motion.div
-            style={{ x: reduceMotion ? 0 : x, width: singleRowWidth * 2 + gap }}
-            className="flex gap-4 overflow-visible py-8 will-change-transform"
+          <div
             role="list"
             aria-label={t("services.eyebrow")}
+            className="marquee-track flex gap-4 overflow-visible py-8 will-change-transform"
+            style={
+              {
+                width: singleRowWidth * 2 + gap,
+                "--marquee-shift": `${marqueeShift}px`,
+                "--marquee-duration": `${duration}s`,
+                animation: reduceMotion ? "none" : undefined,
+                animationPlayState: paused ? "paused" : "running",
+              } as CSSProperties
+            }
           >
             {marqueeKeys.map((m, i) => (
               <MarqueeCard
@@ -210,7 +188,7 @@ export function ExpertiseMarquee() {
                 hidden
               />
             ))}
-          </motion.div>
+          </div>
         </div>
         {!reduceMotion && (
           <div className="mt-2 flex justify-center">

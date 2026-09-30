@@ -184,6 +184,30 @@
   animation: float-slow 9s ease-in-out infinite;
 }
 
+/* LOT 34 — marquee des expertises anime par le compositor (execute hors main
+   thread pendant le scroll ; l'ancienne boucle rAF + MotionValue tournait en
+   continu sur le main thread). La piste contient 2 x 6 cartes : la variable
+   --marquee-shift = largeur d'un bloc complet + son gap (boucle seamless).
+   Les etats de pause (hover/touch/visibility/IntersectionObserver/bouton)
+   pilotent animation-play-state depuis expertise-marquee.tsx. */
+@keyframes webxia-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(calc(-1 * var(--marquee-shift, 1776px)), 0, 0);
+  }
+}
+.marquee-track {
+  animation: webxia-marquee var(--marquee-duration, 51s) linear infinite;
+}
+/* double filet : le composant force aussi animation:none via style React */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;

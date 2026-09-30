@@ -43,7 +43,9 @@ export function Hero() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
-          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+          // LOT 33 — visible des le SSR (LCP) : le conteneur etait aussi
+          // opacity:0 en SSR, corriger le seul h1 n'aurait pas suffi.
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto max-w-4xl text-center"
@@ -54,7 +56,8 @@ export function Hero() {
           </span>
 
           <motion.h1
-            initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+            // LOT 33 — le h1 est l'element LCP : visible des le SSR.
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="mt-8 font-display text-5xl font-semibold tracking-[-0.04em] text-balance sm:text-6xl md:text-7xl lg:text-[88px] lg:leading-[0.95]"

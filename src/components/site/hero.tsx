@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import { ExpertiseMarquee } from "@/components/site/expertise-marquee";
 export function Hero() {
   const { t } = useLocale();
   const { theme } = useTheme();
-  const reduceMotion = useReducedMotion();
 
   return (
     <section className="relative isolate overflow-hidden pt-28 pb-12 md:pb-16">
@@ -66,7 +65,9 @@ export function Hero() {
           </motion.h1>
 
           <motion.p
-            initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+            // LOT 34 — visible des le SSR comme le h1 (LOT 33) : le sous-titre
+            // partait de opacity:0 et poppait apres hydratation (flash).
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.25 }}
             className="mx-auto mt-8 max-w-2xl text-balance text-base text-muted-foreground sm:text-lg"
@@ -75,7 +76,8 @@ export function Hero() {
           </motion.p>
 
           <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+            // LOT 34 — meme chose pour les CTA : visibles des le SSR.
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
             className="mt-10 flex flex-wrap items-center justify-center gap-3"

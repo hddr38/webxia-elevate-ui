@@ -139,7 +139,8 @@ describe("GET /api/health", () => {
       checks: [],
       duration_ms: 0,
       timestamp: expect.any(String),
-      version: "unknown",
+      // LOT 33 — version = SHA inline au build (define Vite, "dev" en local).
+      version: __COMMIT_SHA__,
     });
     expectConsistency(body, res.status);
     expect(JSON.stringify(body)).not.toContain("ECONNREFUSED");

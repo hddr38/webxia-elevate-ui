@@ -135,7 +135,8 @@ export const health = createServerFn({ method: "GET" })
       status,
       checks,
       timestamp: Date.now(),
-      version: process.env.COMMIT_REF?.slice(0, 7) ?? process.env.npm_package_version ?? "unknown",
+      // LOT 33 — SHA inline au build (COMMIT_REF absent du runtime Netlify).
+      version: __COMMIT_SHA__,
       durationMs,
     };
   });

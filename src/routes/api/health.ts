@@ -47,14 +47,14 @@ function sanitize(raw: Awaited<ReturnType<typeof collectHealthSnapshot>>): Healt
     status: mapCheckStatus(raw.checks[key].status),
   }));
 
-  const commitRef = typeof process !== "undefined" ? process.env.COMMIT_REF : undefined;
-
   return {
     status: mapOverallStatus(raw.status),
     checks,
     duration_ms: raw.durationMs,
     timestamp: new Date().toISOString(),
-    version: commitRef ? commitRef.slice(0, 7) : "unknown",
+    // LOT 33 — SHA inline au build (define Vite) : COMMIT_REF n'est pas
+    // disponible au runtime de la fonction Netlify.
+    version: __COMMIT_SHA__,
   };
 }
 
@@ -82,7 +82,7 @@ export async function handleHealthRequest(request: Request): Promise<Response> {
         checks: [],
         duration_ms: 0,
         timestamp: new Date().toISOString(),
-        version: "unknown",
+        version: __COMMIT_SHA__,
       },
       503,
     );

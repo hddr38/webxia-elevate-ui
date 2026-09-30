@@ -58,6 +58,15 @@ export default defineConfig(({ isSsrBuild }) => ({
     react(),
     tailwindcss(),
   ],
+  // LOT 33 — version build-time : COMMIT_REF n'existe qu'au build Netlify,
+  // pas au runtime des fonctions. On inline le SHA court dans le bundle
+  // (client + SSR + dev). Meme define dans vitest.config.ts (obligatoire :
+  // -health.test.ts importe le module reel).
+  define: {
+    __COMMIT_SHA__: JSON.stringify(
+      process.env.COMMIT_REF?.slice(0, 7) ?? process.env.GITHUB_SHA?.slice(0, 7) ?? "dev",
+    ),
+  },
   css: { transformer: "lightningcss" },
   resolve: {
     alias: { "@": `${process.cwd()}/src` },

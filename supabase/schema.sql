@@ -394,6 +394,21 @@ create policy "admin_users_delete_self" on public.admin_users
 --     for insert with check (auth.uid() = user_id);
 
 -- ============================================================
+-- LOT 37 — Bootstrap admin_users insert (whitelist email)
+-- ============================================================
+-- Privilège INSERT pour authenticated (révoqué par 019)
+GRANT INSERT ON public.admin_users TO authenticated;
+
+-- Policy bootstrap
+DROP POLICY IF EXISTS "admin_users_insert_bootstrap" ON public.admin_users;
+CREATE POLICY "admin_users_insert_bootstrap" ON public.admin_users
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    auth.jwt() ->> 'email' = 'webxia33@gmail.com'
+    AND user_id = auth.uid()
+  );
+
+-- ============================================================
 -- RLS POLICIES - ARTICLES
 -- ============================================================
 create policy "articles_select_published" on public.articles

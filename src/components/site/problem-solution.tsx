@@ -4,6 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
 
+// LOT 34 — entrees en vue assagies : 0,35 s (au lieu de 0,6 s) et decalage
+// indexe PAR POSITION du bloc (0,08 s/bloc), jamais le meme delai fixe
+// copie-colle sur chaque element.
+const reveal = (position: number) => ({
+  duration: 0.35,
+  delay: position * 0.08,
+  ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+});
+
 export function ProblemSolution() {
   const { t } = useLocale();
 
@@ -26,10 +35,10 @@ export function ProblemSolution() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          transition={reveal(0)}
           className="mx-auto max-w-3xl mb-16 md:mb-20"
         >
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
@@ -47,10 +56,10 @@ export function ProblemSolution() {
         <div className="relative grid gap-6 sm:gap-8 md:grid-cols-[1fr_auto_1fr] items-stretch">
           {/* Challenges column */}
           <motion.article
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 8 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            transition={reveal(1)}
             className="rounded-3xl border border-border bg-card p-6 md:p-8 flex flex-col"
           >
             <div className="flex flex-col items-center text-center mb-6">
@@ -65,10 +74,10 @@ export function ProblemSolution() {
               {challenges.map((challenge, i) => (
                 <motion.li
                   key={i}
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ opacity: 0, y: 8 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.5, delay: 0.1 + i * 0.08 }}
+                  transition={{ duration: 0.35, delay: 0.1 + i * 0.08 }}
                   className="flex items-start gap-3 text-sm leading-relaxed text-foreground/90"
                 >
                   <XCircle
@@ -95,7 +104,12 @@ export function ProblemSolution() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true, margin: "-100px" }}
               animate={{ x: [0, 10, 5] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              transition={{
+                // LOT 34 — entree assagie (0,35 s, position 2) ; l'oscillation
+                // decorative garde sa propre transition (x, infinie).
+                ...reveal(2),
+                x: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+              }}
               className="text-brand/30"
             >
               <ArrowRight className="size-12" />
@@ -109,7 +123,10 @@ export function ProblemSolution() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true, margin: "-50px" }}
               animate={{ x: [0, -6, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              transition={{
+                ...reveal(2),
+                x: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+              }}
               className="text-brand/30 rotate-90"
             >
               <ArrowRight className="size-10" />
@@ -118,10 +135,10 @@ export function ProblemSolution() {
 
           {/* Solutions column */}
           <motion.article
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 8 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            transition={reveal(3)}
             className="rounded-3xl border border-border bg-card p-6 md:p-8 flex flex-col"
           >
             <div className="flex flex-col items-center text-center mb-6">
@@ -136,10 +153,10 @@ export function ProblemSolution() {
               {solutions.map((solution, i) => (
                 <motion.li
                   key={i}
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ opacity: 0, y: 8 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}
+                  transition={{ duration: 0.35, delay: 0.2 + i * 0.08 }}
                   className="flex items-start gap-3 text-sm leading-relaxed text-foreground/90"
                 >
                   <CheckCircle2

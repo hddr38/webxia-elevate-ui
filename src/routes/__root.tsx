@@ -204,7 +204,11 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <MotionConfig reducedMotion="user">
-        <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
+        {/* LOT 34 — overflow-x-clip et non hidden : `overflow-x: hidden` force
+            overflow-y a `auto` (spec CSS), ce qui faisait de ce wrapper un
+            conteneur de scroll (footer pending y:20 = +20px scrollables =
+            double scrollbar en haut de page). `clip` coupe sans scroller. */}
+        <div className="relative min-h-screen overflow-x-clip bg-background text-foreground">
           {isAdmin ? (
             <Outlet />
           ) : (

@@ -11,7 +11,7 @@ import {
   Square,
   RotateCcw,
   ArrowDown,
-  History,
+  Trash2,
 } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { useChat } from "@/hooks/use-chat";
@@ -20,11 +20,13 @@ import { MOBILE_BREAKPOINT_PX } from "@/components/chat/constants";
 import { ChatMessage } from "./ChatMessage";
 import { TypingIndicator } from "./TypingIndicator";
 import { ToolStatus } from "./ToolStatus";
-import { ConversationSidebar } from "./ConversationSidebar";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "@tanstack/react-router";
+
+/** LOT 36 — fenêtre de confirmation inline du bouton « Effacer ». */
+const CLEAR_CONFIRM_TIMEOUT_MS = 5000;
 
 export function ChatWindow() {
   const { t } = useLocale();
@@ -47,12 +49,7 @@ export function ChatWindow() {
     stopStreaming,
     retryLastMessage,
     resetConversation,
-    selectConversation,
   } = useChat();
-
-  // LOT 35 — panneau d'historique FERMÉ par défaut : aucun appel
-  // `_serverFn` n'est lancé tant que l'utilisateur ne l'ouvre pas.
-  const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
 
   const {
     containerRef: messagesRef,
@@ -110,6 +107,43 @@ export function ChatWindow() {
   const focusInput = (): void => {
     inputRef.current?.focus();
   };
+
+  // LOT 36 — confirmation INLINE (2 boutons pendant 5 s) : aucun portail Radix
+  // (le focus trap du dialogue reste seul maître du Tab) et aucun
+  // `window.confirm` bloquant. L'action reste réversible tant que l'utilisateur
+  // n'a pas cliqué « Effacer ».
+  const [isClearConfirming, setIsClearConfirming] = React.useState(false);
+  const clearTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelClearConfirm = React.useCallback(() => {
+    setIsClearConfirming(false);
+    if (clearTimerRef.current) {
+      clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = null;
+    }
+  }, []);
+
+  const startClearConfirm = React.useCallback(() => {
+    setIsClearConfirming(true);
+    if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+    clearTimerRef.current = setTimeout(() => {
+      clearTimerRef.current = null;
+      setIsClearConfirming(false);
+    }, CLEAR_CONFIRM_TIMEOUT_MS);
+  }, []);
+
+  const confirmClear = React.useCallback(() => {
+    cancelClearConfirm();
+    resetConversation();
+  }, [cancelClearConfirm, resetConversation]);
+
+  // Fermeture du widget pendant la confirmation : le timer ne doit pas
+  // survivre à l'unmount (AnimatePresence démonte la fenêtre).
+  React.useEffect(() => {
+    return () => {
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+    };
+  }, []);
 
   // LOT 24 — a11y : le dialogue déclare `aria-modal="true"`, donc le Tab doit
   // rester à l'intérieur (sinon le clavier atteint la page derrière l'overlay).
@@ -183,18 +217,6 @@ export function ChatWindow() {
 
   const remainingMessages = maxMessages - messageCount;
 
-  // Sur mobile le panneau est une overlay plein écran : la sélection referme
-  // l'historique pour retrouver le transcript. Sur desktop il reste ancré.
-  const handleSelectConversation = (id: string): void => {
-    selectConversation(id);
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`).matches
-    ) {
-      setIsHistoryOpen(false);
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -255,17 +277,47 @@ export function ChatWindow() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsHistoryOpen((open) => !open)}
-            className="size-11 text-muted-foreground hover:text-foreground"
-            aria-label={t("chat.history.toggle")}
-            aria-expanded={isHistoryOpen}
-            disabled={isStreaming}
-          >
-            <History className="size-4" />
-          </Button>
+          {/* LOT 36 — Effacer la conversation : Trash2 -> confirmation inline
+              (« Effacer » / « Annuler ») pendant 5 s, puis resetConversation. */}
+          {isClearConfirming ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={confirmClear}
+                className="h-9 gap-1.5 px-2 text-xs text-destructive hover:text-destructive"
+                aria-label={t("chat.clear.confirm")}
+                title={t("chat.clear.confirm")}
+                disabled={isStreaming}
+              >
+                <Trash2 className="size-3.5" aria-hidden="true" />
+                {t("chat.clear.confirm")}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelClearConfirm}
+                className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                aria-label={t("chat.clear.cancel")}
+                title={t("chat.clear.cancel")}
+                disabled={isStreaming}
+              >
+                {t("chat.clear.cancel")}
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={startClearConfirm}
+              className="size-11 text-muted-foreground hover:text-destructive"
+              aria-label={t("chat.clear.button")}
+              title={t("chat.clear.button")}
+              disabled={isStreaming}
+            >
+              <Trash2 className="size-4" aria-hidden="true" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -289,198 +341,177 @@ export function ChatWindow() {
         </div>
       </div>
 
-      {/* Corps : historique optionnel à gauche, transcript à droite.
-          Aucun portail : les éléments focusables restent dans dialogRef
-          (le piège à focus de LOT 22 les capte sinon incorrectement). */}
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        {isHistoryOpen && (
-          <ConversationSidebar
-            selectedId={conversationId}
-            onSelect={handleSelectConversation}
-            onClearSelected={resetConversation}
-            onClose={() => setIsHistoryOpen(false)}
-          />
-        )}
+      {/* Messages Area : prend tout l'espace restant (flex-1 + min-h-0).
+          role="log" + aria-live : les lecteurs d'écran annoncent chaque
+          ajout sans voler le focus (le focus reste sur l'input). */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div
+          ref={messagesRef}
+          className="h-full overflow-y-auto overscroll-contain"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions text"
+          aria-label={t("chat.widget.title")}
+        >
+          <div className="p-4 space-y-4">
+            <AnimatePresence mode="popLayout">
+              {messages.length === 0 ? (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="flex flex-col items-center justify-center h-[200px] text-center text-muted-foreground"
+                >
+                  <Bot className="size-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-sm max-w-xs">{t("chat.empty")}</p>
+                </motion.div>
+              ) : (
+                messages.map((msg, index) => (
+                  <ChatMessage
+                    key={msg.id}
+                    message={msg}
+                    isLast={index === messages.length - 1}
+                    isStreaming={isStreaming}
+                  />
+                ))
+              )}
+            </AnimatePresence>
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Messages Area : prend tout l'espace restant (flex-1 + min-h-0).
-              role="log" + aria-live : les lecteurs d'écran annoncent chaque
-              ajout sans voler le focus (le focus reste sur l'input). */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <div
-              ref={messagesRef}
-              className="h-full overflow-y-auto overscroll-contain"
-              role="log"
-              aria-live="polite"
-              aria-relevant="additions text"
-              aria-label={t("chat.widget.title")}
-            >
-              <div className="p-4 space-y-4">
-                <AnimatePresence mode="popLayout">
-                  {messages.length === 0 ? (
-                    <motion.div
-                      key="empty"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col items-center justify-center h-[200px] text-center text-muted-foreground"
-                    >
-                      <Bot className="size-12 mx-auto mb-4 opacity-50" />
-                      <p className="text-sm max-w-xs">{t("chat.empty")}</p>
-                    </motion.div>
-                  ) : (
-                    messages.map((msg, index) => (
-                      <ChatMessage
-                        key={msg.id}
-                        message={msg}
-                        isLast={index === messages.length - 1}
-                        isStreaming={isStreaming}
-                      />
-                    ))
-                  )}
-                </AnimatePresence>
-
-                {/* Typing indicator */}
-                {isStreaming && messages.length > 0 && <TypingIndicator />}
-              </div>
-            </div>
+            {/* Typing indicator */}
+            {isStreaming && messages.length > 0 && <TypingIndicator />}
           </div>
+        </div>
+      </div>
 
-          {/* LOT 24 — pastille « revenir en bas » : visible uniquement quand
+      {/* LOT 24 — pastille « revenir en bas » : visible uniquement quand
           l'utilisateur a remonté pendant que le transcript continue. */}
-          <AnimatePresence mode="popLayout">
-            {!isSticky && messages.length > 0 && (
-              <motion.div
-                key="chat-jump-bottom"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="pointer-events-none relative z-10 -mt-10 flex justify-center"
-              >
+      <AnimatePresence mode="popLayout">
+        {!isSticky && messages.length > 0 && (
+          <motion.div
+            key="chat-jump-bottom"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="pointer-events-none relative z-10 -mt-10 flex justify-center"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={forceScrollToBottom}
+              className="pointer-events-auto h-8 rounded-full gap-1 border-border bg-background/95 text-xs shadow-md backdrop-blur"
+              aria-label={t("chat.scroll.bottom")}
+            >
+              <ArrowDown className="size-3" />
+              {t("chat.scroll.bottom")}
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* LOT 24 — région de statut pour lecteurs d'écran : annonce l'état
+          du flux (écriture / outil) sans jamais voler le focus. */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {isStreaming ? t("chat.status.writing") : currentTool ? t("chat.tool.result") : ""}
+      </div>
+
+      {/* Tool Status */}
+      <AnimatePresence mode="popLayout">
+        {currentTool && <ToolStatus key={`tool-${currentTool}`} toolName={currentTool} />}
+      </AnimatePresence>
+
+      {/* Temporary Error */}
+      <AnimatePresence mode="popLayout">
+        {temporaryError && (
+          <motion.div
+            key="chat-temporary-error"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mx-4 mb-4"
+          >
+            <Alert variant="destructive" className="border-destructive/50">
+              <AlertCircle className="size-4" />
+              <AlertTitle className="text-sm">
+                {errorCode === "GENERATION_FAILED"
+                  ? t("chat.error.generation.title")
+                  : errorCode === "GLOBAL_TIMEOUT"
+                    ? t("chat.error.timeout.title")
+                    : t("chat.error.generic")}
+              </AlertTitle>
+              <AlertDescription className="text-xs">{temporaryError}</AlertDescription>
+              {canRetry && !isStreaming && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={forceScrollToBottom}
-                  className="pointer-events-auto h-8 rounded-full gap-1 border-border bg-background/95 text-xs shadow-md backdrop-blur"
-                  aria-label={t("chat.scroll.bottom")}
+                  onClick={() => void retryLastMessage()}
+                  className="mt-2 h-8 text-xs"
                 >
-                  <ArrowDown className="size-3" />
-                  {t("chat.scroll.bottom")}
+                  <RotateCcw className="size-3" />
+                  {t("chat.retry")}
                 </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              )}
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* LOT 24 — région de statut pour lecteurs d'écran : annonce l'état
-          du flux (écriture / outil) sans jamais voler le focus. */}
-          <div role="status" aria-live="polite" className="sr-only">
-            {isStreaming ? t("chat.status.writing") : currentTool ? t("chat.tool.result") : ""}
-          </div>
+      {/* Message Limit Reached - Contact Card */}
+      <AnimatePresence mode="popLayout">
+        {messageCount >= maxMessages && (
+          <motion.div
+            key="chat-limit-reached"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mx-4 mb-4"
+          >
+            <Alert variant="default" className="border-destructive/50 bg-destructive/10">
+              <AlertCircle className="size-4 text-destructive" />
+              <AlertTitle className="text-sm text-destructive">
+                {t("chat.limit.reached")}
+              </AlertTitle>
+              <AlertDescription className="text-sm">
+                {t("chat.limit.description")}
+                <div className="mt-3 flex gap-2">
+                  <Link
+                    to="/contact"
+                    className="text-sm font-medium text-brand hover:underline"
+                    onClick={close}
+                  >
+                    {t("chat.contact.cta")}
+                  </Link>
+                  <Button variant="ghost" size="sm" onClick={resetConversation} className="text-xs">
+                    {t("chat.reset")}
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* Tool Status */}
-          <AnimatePresence mode="popLayout">
-            {currentTool && <ToolStatus key={`tool-${currentTool}`} toolName={currentTool} />}
-          </AnimatePresence>
-
-          {/* Temporary Error */}
-          <AnimatePresence mode="popLayout">
-            {temporaryError && (
-              <motion.div
-                key="chat-temporary-error"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mx-4 mb-4"
-              >
-                <Alert variant="destructive" className="border-destructive/50">
-                  <AlertCircle className="size-4" />
-                  <AlertTitle className="text-sm">
-                    {errorCode === "GENERATION_FAILED"
-                      ? t("chat.error.generation.title")
-                      : errorCode === "GLOBAL_TIMEOUT"
-                        ? t("chat.error.timeout.title")
-                        : t("chat.error.generic")}
-                  </AlertTitle>
-                  <AlertDescription className="text-xs">{temporaryError}</AlertDescription>
-                  {canRetry && !isStreaming && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void retryLastMessage()}
-                      className="mt-2 h-8 text-xs"
-                    >
-                      <RotateCcw className="size-3" />
-                      {t("chat.retry")}
-                    </Button>
-                  )}
-                </Alert>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Message Limit Reached - Contact Card */}
-          <AnimatePresence mode="popLayout">
-            {messageCount >= maxMessages && (
-              <motion.div
-                key="chat-limit-reached"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mx-4 mb-4"
-              >
-                <Alert variant="default" className="border-destructive/50 bg-destructive/10">
-                  <AlertCircle className="size-4 text-destructive" />
-                  <AlertTitle className="text-sm text-destructive">
-                    {t("chat.limit.reached")}
-                  </AlertTitle>
-                  <AlertDescription className="text-sm">
-                    {t("chat.limit.description")}
-                    <div className="mt-3 flex gap-2">
-                      <Link
-                        to="/contact"
-                        className="text-sm font-medium text-brand hover:underline"
-                        onClick={close}
-                      >
-                        {t("chat.contact.cta")}
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={resetConversation}
-                        className="text-xs"
-                      >
-                        {t("chat.reset")}
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Near Limit Warning */}
-          <AnimatePresence mode="popLayout">
-            {isNearLimit && messageCount < maxMessages && messageCount > 0 && (
-              <motion.div
-                key="chat-near-limit"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mx-4 mb-4"
-              >
-                <Alert variant="default" className="border-orange-500/50 bg-orange-500/10">
-                  <AlertCircle className="size-4 text-orange-500" />
-                  <AlertDescription className="text-sm text-orange-600 dark:text-orange-400">
-                    {remainingMessages} {t("chat.limit.remaining")}
-                  </AlertDescription>
-                </Alert>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+      {/* Near Limit Warning */}
+      <AnimatePresence mode="popLayout">
+        {isNearLimit && messageCount < maxMessages && messageCount > 0 && (
+          <motion.div
+            key="chat-near-limit"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mx-4 mb-4"
+          >
+            <Alert variant="default" className="border-orange-500/50 bg-orange-500/10">
+              <AlertCircle className="size-4 text-orange-500" />
+              <AlertDescription className="text-sm text-orange-600 dark:text-orange-400">
+                {remainingMessages} {t("chat.limit.remaining")}
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Input Form : fixé en bas, respecte la barre home iOS */}
       <form

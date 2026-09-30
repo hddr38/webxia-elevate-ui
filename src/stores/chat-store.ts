@@ -31,8 +31,6 @@ interface ChatState {
   setSessionId: (id: string | null) => void;
   ensureSessionId: () => string;
   clearMessages: () => void;
-  /** Drop the current conversation selection (sidebar delete) without closing the widget. */
-  clearConversation: () => void;
   reset: () => void;
   incrementMessageCount: () => void;
   getMessageCount: () => number;
@@ -133,15 +131,6 @@ export const useChatStore = create<ChatState>()(
       },
 
       clearMessages: () => set({ messages: [] }),
-
-      clearConversation: () => {
-        try {
-          localStorage.removeItem("webxia-conversation-id");
-        } catch {
-          // private mode / disabled storage: the in-memory state still resets
-        }
-        set({ conversationId: null, messages: [] });
-      },
 
       reset: () => set(initialState),
 

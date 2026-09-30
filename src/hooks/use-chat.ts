@@ -457,30 +457,6 @@ export function useChat(): UseChatReturn {
       setCanRetry(false);
       localStorage.removeItem("webxia-conversation-id");
     }, [clearMessages, setConversationId]),
-    /**
-     * Sidebar selection: abort the in-flight stream first (LOT 23 — a stream
-     * started under conversation A must never write into conversation B),
-     * swap the transcript, and re-arm the lazy history restore for the new id.
-     */
-    selectConversation: useCallback(
-      (id: string) => {
-        if (!isUuid(id)) return;
-        abortActiveStream();
-        clearMessages();
-        setConversationId(id);
-        try {
-          localStorage.setItem("webxia-conversation-id", id);
-        } catch {
-          // storage unavailable: the selection still holds for this session
-        }
-        lastUserMessageRef.current = null;
-        historyRestoreRef.current = null;
-        setErrorCode(null);
-        setCanRetry(false);
-        setTemporaryError(null);
-      },
-      [clearMessages, setConversationId, setTemporaryError],
-    ),
   };
 }
 

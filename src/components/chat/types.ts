@@ -45,6 +45,4 @@ export interface UseChatReturn {
   /** Replay the last user message without duplicating it server-side. */
   retryLastMessage: () => Promise<void>;
   resetConversation: () => void;
-  /** Switch the widget to an existing conversation from the history sidebar. */
-  selectConversation: (id: string) => void;
 }

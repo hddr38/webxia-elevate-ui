@@ -196,7 +196,7 @@ create unique index uq_conversations_one_active_per_session
 comment on index public.uq_conversations_one_active_per_session is
   'Idempotence guard: a single active conversation per Webi session';
 
-comment on table public.conversations is 'Anonymous chat conversations for Webi - session-isolated via RLS';
+comment on table public.conversations is 'Anonymous chat conversations for Webi - isolation via service_role server functions (ADR-006)';
 
 create table public.messages (
   id uuid primary key default uuid_generate_v4(),
@@ -213,7 +213,7 @@ create table public.messages (
 create index idx_messages_conversation on public.messages(conversation_id, created_at asc);
 create index idx_messages_tool_call on public.messages(tool_call_id) where tool_call_id is not null;
 
-comment on table public.messages is 'Chat messages for Webi conversations - session-isolated via conversation RLS';
+comment on table public.messages is 'Chat messages for Webi conversations - isolation via service_role server functions (ADR-006)';
 
 -- ============================================================
 -- KNOWLEDGE BASE (RAG)
@@ -485,41 +485,22 @@ create policy "ai_memory_delete_own" on public.ai_memory
   for delete using (auth.uid() = user_id);
 
 -- ============================================================
--- RLS POLICIES - CONVERSATIONS / MESSAGES (session anonyme)
+-- RLS POLICIES - CONVERSATIONS / MESSAGES
 -- ============================================================
-create policy "conversations_select_own_session" on public.conversations
-  for select using (session_id::text = (current_setting('request.jwt.claims', true)::json->>'session_id'));
-
-create policy "conversations_insert_own_session" on public.conversations
-  for insert with check (session_id::text = (current_setting('request.jwt.claims', true)::json->>'session_id'));
-
-create policy "conversations_update_own_session" on public.conversations
-  for update using (session_id::text = (current_setting('request.jwt.claims', true)::json->>'session_id'))
-  with check (session_id::text = (current_setting('request.jwt.claims', true)::json->>'session_id'));
-
-create policy "conversations_delete_own_session" on public.conversations
-  for delete using (session_id::text = (current_setting('request.jwt.claims', true)::json->>'session_id'));
-
+-- RETIRÉS par 20260930145024 (LOT 35) — ne pas réintroduire :
+--   conversations_select_own_session   (claim JWT 'session_id' inexistant
+--   conversations_insert_own_session   avec les cles modernes sb_* =>
+--   conversations_update_own_session   predicate NULL, policies mortes)
+--   conversations_delete_own_session
+--   messages_select_own_session        (mêmes raisons)
+--   messages_insert_own_session
+-- L'isolation par session vit désormais côté Server Functions
+-- (getSupabaseAdmin() + .eq('session_id', ...) — ADR-006).
+-- ============================================================
 create policy "conversations_admin_all" on public.conversations
   for all using (
     exists (
       select 1 from public.admin_users where user_id = auth.uid()
-    )
-  );
-
-create policy "messages_select_own_session" on public.messages
-  for select using (
-    conversation_id in (
-      select id from public.conversations
-      where session_id::text = (current_setting('request.jwt.claims', true)::json->>'session_id')
-    )
-  );
-
-create policy "messages_insert_own_session" on public.messages
-  for insert with check (
-    conversation_id in (
-      select id from public.conversations
-      where session_id::text = (current_setting('request.jwt.claims', true)::json->>'session_id')
     )
   );
 

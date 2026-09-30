@@ -1,6 +1,8 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+/* LOT 33 — Inter self-hosted (remplace le <link> Google Fonts render-blocking) */
+@import "./styles/fonts.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

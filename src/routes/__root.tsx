@@ -110,11 +110,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { rel: "stylesheet", href: appCss },
         { rel: "icon", href: "/logo.svg", type: "image/svg+xml" },
         { rel: "manifest", href: "/manifest.json" },
-        { rel: "preconnect", href: "https://fonts.googleapis.com" },
-        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        // LOT 33 — Inter self-hosted : preload du woff2 (couvre 400-700,
+        // Google sert Inter en variable) puis styles.css en stylesheet.
+        // Le <link> Google Fonts (render-blocking, 862 ms) est supprime.
         {
-          rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+          rel: "preload",
+          href: "/fonts/inter-latin.woff2",
+          as: "font",
+          type: "font/woff2",
+          crossOrigin: "anonymous",
         },
       ],
     };

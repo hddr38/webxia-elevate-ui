@@ -45,7 +45,8 @@ create type ai_audit_event_type as enum (
   'oversized_payload',
   'context_too_large',
   'max_steps_exceeded',
-  'suspicious_activity'
+  'suspicious_activity',
+  'lead_created'
 );
 create type ai_audit_severity as enum ('low', 'medium', 'high', 'critical');
 
@@ -214,6 +215,56 @@ create index idx_messages_conversation on public.messages(conversation_id, creat
 create index idx_messages_tool_call on public.messages(tool_call_id) where tool_call_id is not null;
 
 comment on table public.messages is 'Chat messages for Webi conversations - isolation via service_role server functions (ADR-006)';
+
+-- ============================================================
+-- LEADS TABLE (LOT 38a)
+-- ============================================================
+create table public.leads (
+  id uuid primary key default uuid_generate_v4(),
+  session_id uuid not null,
+  conversation_id uuid references public.conversations(id) on delete set null,
+  first_name text not null,
+  email text,
+  phone text,
+  summary text not null,
+  metadata jsonb not null default '{}',
+  created_at timestamptz not null default now(),
+  constraint leads_contact_check check (
+    email is not null or phone is not null
+  )
+);
+
+create index idx_leads_created_at
+  on public.leads(created_at desc);
+create index idx_leads_session_id
+  on public.leads(session_id);
+create index idx_leads_email
+  on public.leads(email) where email is not null;
+create index idx_leads_phone
+  on public.leads(phone) where phone is not null;
+
+alter table public.leads enable row level security;
+
+-- SELECT admin uniquement (via EXISTS admin_users)
+create policy leads_select_admin on public.leads
+  for select to authenticated
+  using (
+    exists (
+      select 1 from public.admin_users
+      where user_id = auth.uid() and role = 'admin'
+    )
+  );
+
+-- Aucune policy INSERT/UPDATE/DELETE pour authenticated/anon :
+-- tout passe par service_role (server functions)
+-- Les server functions service_role bypassent la RLS de toute façon.
+
+-- Grants : aucun privilège pour anon, aucun pour authenticated hors SELECT
+grant select on public.leads to authenticated;
+
+comment on table public.leads is
+  'Leads capturés via tool call LLM lors des conversations visiteurs. '
+  'Accès admin SELECT uniquement. INSERT via service_role server function.';
 
 -- ============================================================
 -- KNOWLEDGE BASE (RAG)
@@ -583,6 +634,16 @@ create policy "contact_messages_update_admin" on public.contact_messages
 
 create policy "contact_messages_delete_admin" on public.contact_messages
   for delete using (
+    exists (
+      select 1 from public.admin_users where user_id = auth.uid()
+    )
+  );
+
+-- ============================================================
+-- RLS POLICIES - LEADS (LOT 38a, admin SELECT only)
+-- ============================================================
+create policy "leads_select_admin" on public.leads
+  for select using (
     exists (
       select 1 from public.admin_users where user_id = auth.uid()
     )

@@ -10,6 +10,7 @@ import { AgentOrchestrator, AgentRunResult } from "@/lib/ai/agent/orchestrator";
 import { ModelRouter } from "@/lib/ai/providers/model-router";
 import { NvidiaProvider } from "@/lib/ai/providers/nvidia";
 import { RAGEngine } from "@/lib/ai/rag/rag-engine";
+import { initializeSkills } from "@/lib/ai/skills";
 import type { SessionUser } from "@/lib/auth/session";
 import { ChatMessageSchema } from "@/lib/ai/security/validation";
 import { createSecurityMiddleware, addSecurityHeaders } from "@/lib/ai/security/middleware";
@@ -270,6 +271,9 @@ async function runChatRequest(
   modelRouter.register(nvidiaProvider);
 
   const ragEngine = new RAGEngine(embeddingProvider);
+
+  // Initialize skills (register save_lead, summarize, search_knowledge)
+  initializeSkills(modelRouter, chatModel, ragEngine);
 
   const orchestrator = new AgentOrchestrator({
     // The router itself implements LLMProvider: fallback (nano-omni →

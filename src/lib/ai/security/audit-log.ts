@@ -15,7 +15,8 @@ export type AuditEventType =
   | "oversized_payload"
   | "context_too_large"
   | "max_steps_exceeded"
-  | "suspicious_activity";
+  | "suspicious_activity"
+  | "lead_created";
 
 export type AuditSeverity = "low" | "medium" | "high" | "critical";
 

@@ -17,7 +17,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  // LOT 38a — plafond 2 workers (aligné CI) : au-delà, 4 Chromium + screencast
+  // dépassent la mémoire disponible (16 GB) et le renderer crash
+  // ("Target crashed") — exécution parallèle bornée = déterministe (LOT 28).
+  workers: 2,
   reporter: process.env.CI ? [["github"], ["list"]] : [["list"]],
   timeout: 45_000,
   expect: { timeout: 10_000 },

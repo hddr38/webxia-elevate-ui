@@ -423,8 +423,8 @@ export function createKnowledgeRepository(client: KnowledgeDbClient): KnowledgeR
         query_embedding: serializeEmbedding(params.embedding),
         match_threshold: clampThreshold(params.threshold),
         match_count: clampTopK(params.topK),
-        filter_locale: params.locale ?? null,
-        filter_source_type: params.sourceType ?? null,
+        filter_locale: params.locale,
+        filter_source_type: params.sourceType,
       });
       if (error) throw dbError("searchChunks failed", error);
       return (data ?? []).map(toMatch);

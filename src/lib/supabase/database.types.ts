@@ -1,6 +1,11 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5";
+  };
   public: {
     Tables: {
       admin_users: {
@@ -38,7 +43,7 @@ export type Database = {
           event_data: Json;
           event_type: Database["public"]["Enums"]["ai_audit_event_type"];
           id: string;
-          ip_address: string | null;
+          ip_address: unknown;
           request_id: string | null;
           session_id: string | null;
           severity: Database["public"]["Enums"]["ai_audit_severity"];
@@ -52,7 +57,7 @@ export type Database = {
           event_data?: Json;
           event_type: Database["public"]["Enums"]["ai_audit_event_type"];
           id?: string;
-          ip_address?: string | null;
+          ip_address?: unknown;
           request_id?: string | null;
           session_id?: string | null;
           severity?: Database["public"]["Enums"]["ai_audit_severity"];
@@ -66,7 +71,7 @@ export type Database = {
           event_data?: Json;
           event_type?: Database["public"]["Enums"]["ai_audit_event_type"];
           id?: string;
-          ip_address?: string | null;
+          ip_address?: unknown;
           request_id?: string | null;
           session_id?: string | null;
           severity?: Database["public"]["Enums"]["ai_audit_severity"];
@@ -95,11 +100,11 @@ export type Database = {
           expires_at?: string | null;
           id?: string;
           key: string;
-          memory_type: Database["public"]["Enums"]["ai_memory_type"];
+          memory_type?: Database["public"]["Enums"]["ai_memory_type"];
           metadata?: Json;
           session_id: string;
           updated_at?: string;
-          user_id: string;
+          user_id?: string;
           value?: Json;
         };
         Update: {
@@ -271,7 +276,15 @@ export type Database = {
           id?: string;
           metadata?: Json;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_chunks_document_id_fkey";
+            columns: ["document_id"];
+            isOneToOne: false;
+            referencedRelation: "knowledge_documents";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       knowledge_documents: {
         Row: {
@@ -301,7 +314,7 @@ export type Database = {
           metadata?: Json;
           priority?: number;
           source_path?: string | null;
-          source_type: Database["public"]["Enums"]["knowledge_doc_type"];
+          source_type?: Database["public"]["Enums"]["knowledge_doc_type"];
           source_url?: string | null;
           tags?: string[];
           title: string;
@@ -326,6 +339,50 @@ export type Database = {
           version?: string | null;
         };
         Relationships: [];
+      };
+      leads: {
+        Row: {
+          conversation_id: string | null;
+          created_at: string;
+          email: string | null;
+          first_name: string;
+          id: string;
+          metadata: Json;
+          phone: string | null;
+          session_id: string;
+          summary: string;
+        };
+        Insert: {
+          conversation_id?: string | null;
+          created_at?: string;
+          email?: string | null;
+          first_name: string;
+          id?: string;
+          metadata?: Json;
+          phone?: string | null;
+          session_id: string;
+          summary: string;
+        };
+        Update: {
+          conversation_id?: string | null;
+          created_at?: string;
+          email?: string | null;
+          first_name?: string;
+          id?: string;
+          metadata?: Json;
+          phone?: string | null;
+          session_id?: string;
+          summary?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "leads_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "conversations";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       messages: {
         Row: {
@@ -361,7 +418,15 @@ export type Database = {
           tool_calls?: Json | null;
           tool_name?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "conversations";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       realisations: {
         Row: {
@@ -439,48 +504,60 @@ export type Database = {
         Relationships: [];
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      [_ in never]: never;
+    };
     Functions: {
-      generate_slug: { Args: { input_text: string }; Returns: string };
-      is_admin: { Args: Record<string, never>; Returns: boolean };
-      get_articles_stats: {
-        Args: Record<string, never>;
-        Returns: { total: number; published: number; drafts: number };
+      generate_slug: {
+        Args: { input_text: string };
+        Returns: string;
       };
-      get_realisations_stats: {
-        Args: Record<string, never>;
-        Returns: { total: number; published: number; drafts: number; featured: number };
+      get_articles_stats: {
+        Args: never;
+        Returns: Json;
       };
       get_memory_stats: {
-        Args: Record<string, never>;
-        Returns: {
-          total: number;
-          sessions: number;
-          byType: Array<{ memory_type: string; count: number }>;
-        };
+        Args: never;
+        Returns: Json;
+      };
+      get_realisations_stats: {
+        Args: never;
+        Returns: Json;
+      };
+      is_admin: {
+        Args: never;
+        Returns: boolean;
       };
       match_knowledge_chunks: {
         Args: {
-          query_embedding: string;
-          match_threshold?: number;
+          filter_locale?: string;
+          filter_source_type?: Database["public"]["Enums"]["knowledge_doc_type"];
           match_count?: number;
-          filter_locale?: string | null;
-          filter_source_type?: Database["public"]["Enums"]["knowledge_doc_type"] | null;
+          match_threshold?: number;
+          query_embedding: string;
         };
-        Returns: Array<{
-          chunk_id: string;
-          document_id: string;
-          chunk_index: number;
+        Returns: {
           chunk_content: string;
+          chunk_id: string;
+          chunk_index: number;
           chunk_metadata: Json;
-          document_title: string;
-          document_source_type: Database["public"]["Enums"]["knowledge_doc_type"];
-          document_source_url: string | null;
-          document_source_path: string | null;
+          document_id: string;
           document_locale: string;
           document_metadata: Json;
+          document_source_path: string;
+          document_source_type: Database["public"]["Enums"]["knowledge_doc_type"];
+          document_source_url: string;
+          document_title: string;
           similarity: number;
-        }>;
+        }[];
+      };
+      show_limit: {
+        Args: never;
+        Returns: number;
+      };
+      show_trgm: {
+        Args: { "": string };
+        Returns: string[];
       };
     };
     Enums: {
@@ -498,12 +575,160 @@ export type Database = {
         | "oversized_payload"
         | "context_too_large"
         | "max_steps_exceeded"
-        | "suspicious_activity";
+        | "suspicious_activity"
+        | "lead_created";
       ai_audit_severity: "low" | "medium" | "high" | "critical";
       ai_memory_type: "conversation" | "context" | "knowledge" | "preference";
       article_status: "draft" | "published" | "archived";
       knowledge_doc_type: "website" | "pdf" | "manual" | "faq" | "blog" | "case_study";
       realisation_status: "draft" | "published" | "archived";
     };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
 };
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R;
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
+      }
+      ? R
+      : never
+    : never;
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I;
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I;
+      }
+      ? I
+      : never
+    : never;
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U;
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U;
+      }
+      ? U
+      : never
+    : never;
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never;
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never;
+
+export const Constants = {
+  public: {
+    Enums: {
+      ai_audit_event_type: [
+        "auth_failure",
+        "rate_limit_exceeded",
+        "unauthorized_tool_access",
+        "prompt_injection_detected",
+        "validation_failure",
+        "provider_error",
+        "tool_execution_failure",
+        "memory_access_violation",
+        "rag_access_violation",
+        "permission_denied",
+        "oversized_payload",
+        "context_too_large",
+        "max_steps_exceeded",
+        "suspicious_activity",
+        "lead_created",
+      ],
+      ai_audit_severity: ["low", "medium", "high", "critical"],
+      ai_memory_type: ["conversation", "context", "knowledge", "preference"],
+      article_status: ["draft", "published", "archived"],
+      knowledge_doc_type: ["website", "pdf", "manual", "faq", "blog", "case_study"],
+      realisation_status: ["draft", "published", "archived"],
+    },
+  },
+} as const;

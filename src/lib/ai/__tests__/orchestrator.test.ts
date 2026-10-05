@@ -66,7 +66,8 @@ vi.mock("../skills", () => {
 });
 
 import { eventBus } from "../events";
-import { skillRegistry, skillExecutor } from "../skills";
+import { skillRegistry, skillExecutor, getAllToolDefinitions } from "../skills";
+import { auditLogger } from "../security/audit-log";
 
 type MockLLMProvider = LLMProvider & {
   initialize: Mock<(config: ProviderConfig) => Promise<void>>;
@@ -259,6 +260,521 @@ describe("AgentOrchestrator", () => {
     expect(result.toolCalls[0].function.name).toBe("search_knowledge");
     expect(result.toolResults).toHaveLength(1);
     expect(mockLLMProvider.complete).toHaveBeenCalledTimes(2);
+  });
+
+  it("executes tool calls even when finishReason is not tool_calls (FIX B)", async () => {
+    const toolCall: ToolCall = {
+      id: "call-1",
+      type: "function",
+      function: { name: "search_knowledge", arguments: JSON.stringify({ query: "WebXIA" }) },
+    };
+
+    skillExecutor.execute = vi.fn().mockResolvedValue({
+      result: {
+        toolCallId: "call-1",
+        toolName: "search_knowledge",
+        content: JSON.stringify({ success: true }),
+        success: true,
+      },
+      skillResult: { success: true, data: {} },
+    });
+
+    mockLLMProvider.complete
+      .mockResolvedValueOnce({
+        id: "completion-1",
+        content: "Assistant text alongside the tool call",
+        model: "test-model",
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        finishReason: "stop",
+        toolCalls: [toolCall],
+      })
+      .mockResolvedValueOnce({
+        id: "completion-2",
+        content: "Final response after tool execution",
+        model: "test-model",
+        usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
+        finishReason: "stop",
+      });
+
+    const result = await orchestrator.run({
+      conversationId: "conv-1",
+      sessionId: "session-1",
+      locale: "fr",
+      requestId: "req-1",
+      userMessage: "Search for WebXIA",
+      conversationHistory: [],
+      onToolStart: vi.fn(),
+      onToolResult: vi.fn(),
+      onCitation: vi.fn(),
+    });
+
+    // FIX B: the tool call must run despite finish_reason "stop".
+    expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
+    expect(result.toolCallCount).toBe(1);
+    expect(result.toolResults).toHaveLength(1);
+    expect(mockLLMProvider.complete).toHaveBeenCalledTimes(2);
+    expect(result.finalResponse).toBe("Final response after tool execution");
+    expect(result.steps).toBe(2);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("audits tool_execution_failure and recovers on malformed tool arguments (FIX C-bis)", async () => {
+    const toolCall: ToolCall = {
+      id: "call-1",
+      type: "function",
+      function: { name: "search_knowledge", arguments: "{not-valid-json" },
+    };
+
+    skillExecutor.execute = vi.fn().mockResolvedValue({
+      result: {
+        toolCallId: "call-1",
+        toolName: "search_knowledge",
+        content: "{}",
+        success: true,
+      },
+      skillResult: { success: true, data: {} },
+    });
+
+    mockLLMProvider.complete
+      .mockResolvedValueOnce({
+        id: "c1",
+        content: "",
+        model: "test-model",
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        finishReason: "tool_calls",
+        toolCalls: [toolCall],
+      })
+      .mockResolvedValueOnce({
+        id: "c2",
+        content: "Recovered final answer",
+        model: "test-model",
+        usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
+        finishReason: "stop",
+      });
+
+    const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+    const onToolResult = vi.fn();
+
+    const result = await orchestrator.run({
+      conversationId: "conv-1",
+      sessionId: "session-1",
+      locale: "fr",
+      requestId: "req-1",
+      userMessage: "Search for WebXIA",
+      conversationHistory: [],
+      onToolStart: vi.fn(),
+      onToolResult,
+      onCitation: vi.fn(),
+    });
+
+    // The malformed call never reaches the executor, is audited, and is
+    // surfaced as a recoverable tool failure so the model can correct it.
+    expect(skillExecutor.execute).not.toHaveBeenCalled();
+    expect(auditSpy).toHaveBeenCalledWith(
+      "tool_execution_failure",
+      expect.objectContaining({
+        severity: "medium",
+        requestId: "req-1",
+        eventData: expect.objectContaining({
+          skill_name: "search_knowledge",
+          received_args: expect.stringContaining("{not-valid-json"),
+        }),
+      }),
+    );
+    expect(onToolResult).toHaveBeenCalledTimes(1);
+    expect(result.toolResults[0].success).toBe(false);
+    expect(result.toolResults[0].error).toContain("Invalid JSON");
+    expect(result.finalResponse).toBe("Recovered final answer");
+    auditSpy.mockRestore();
+  });
+
+  it("excludes a tool from the next provider request after a successful execution (FIX F)", async () => {
+    vi.mocked(getAllToolDefinitions).mockReturnValue([
+      {
+        type: "function",
+        function: {
+          name: "save_lead",
+          description: "Save a lead",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+    ]);
+
+    const toolCall: ToolCall = {
+      id: "call-1",
+      type: "function",
+      function: {
+        name: "save_lead",
+        arguments: JSON.stringify({
+          first_name: "Jean",
+          email: "jean@exemple.fr",
+          summary: "x",
+        }),
+      },
+    };
+
+    skillExecutor.execute = vi.fn().mockResolvedValue({
+      result: { toolCallId: "call-1", toolName: "save_lead", content: "{}", success: true },
+      skillResult: { success: true, data: {} },
+    });
+
+    mockLLMProvider.complete
+      .mockResolvedValueOnce({
+        id: "c1",
+        content: "",
+        model: "test-model",
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        finishReason: "tool_calls",
+        toolCalls: [toolCall],
+      })
+      .mockResolvedValueOnce({
+        id: "c2",
+        content: "Confirmation finale",
+        model: "test-model",
+        usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
+        finishReason: "stop",
+      });
+
+    try {
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
+      expect(result.toolCallCount).toBe(1);
+
+      const secondRequest = mockLLMProvider.complete.mock.calls[1][0];
+      expect(secondRequest.tools ?? []).toHaveLength(0);
+      // FIX F: every tool succeeded -> the key is omitted entirely (NIM
+      // accepts the shape; mapTools(undefined) drops it from the payload).
+      expect(secondRequest.tools).toBeUndefined();
+      expect(result.finalResponse).toBe("Confirmation finale");
+    } finally {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([]);
+    }
+  });
+
+  it("keeps a tool available after a failed execution so it can be retried (FIX F)", async () => {
+    vi.mocked(getAllToolDefinitions).mockReturnValue([
+      {
+        type: "function",
+        function: {
+          name: "save_lead",
+          description: "Save a lead",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+    ]);
+
+    const toolCall: ToolCall = {
+      id: "call-1",
+      type: "function",
+      function: {
+        name: "save_lead",
+        arguments: JSON.stringify({ first_name: "Jean", email: "jean@exemple.fr", summary: "x" }),
+      },
+    };
+
+    skillExecutor.execute = vi.fn().mockResolvedValue({
+      result: {
+        toolCallId: "call-1",
+        toolName: "save_lead",
+        content: JSON.stringify({ error: "boom" }),
+        success: false,
+        error: "boom",
+      },
+      skillResult: {
+        success: false,
+        error: { code: "EXECUTION_FAILED", message: "boom", recoverable: true },
+      },
+    });
+
+    mockLLMProvider.complete
+      .mockResolvedValueOnce({
+        id: "c1",
+        content: "",
+        model: "test-model",
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        finishReason: "tool_calls",
+        toolCalls: [toolCall],
+      })
+      .mockResolvedValueOnce({
+        id: "c2",
+        content: "Réponse après échec",
+        model: "test-model",
+        usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
+        finishReason: "stop",
+      });
+
+    try {
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
+      expect(result.toolResults[0].success).toBe(false);
+
+      const secondRequest = mockLLMProvider.complete.mock.calls[1][0];
+      expect(secondRequest.tools?.some((t) => t.function.name === "save_lead")).toBe(true);
+    } finally {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([]);
+    }
+  });
+
+  it("feeds the tool call and its result back to the next LLM request (FIX G)", async () => {
+    vi.mocked(getAllToolDefinitions).mockReturnValue([
+      {
+        type: "function",
+        function: {
+          name: "save_lead",
+          description: "Save a lead",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+    ]);
+
+    const toolCall: ToolCall = {
+      id: "call-1",
+      type: "function",
+      function: {
+        name: "save_lead",
+        arguments: JSON.stringify({ first_name: "Jean", email: "jean@exemple.fr", summary: "x" }),
+      },
+    };
+
+    skillExecutor.execute = vi.fn().mockResolvedValue({
+      result: {
+        toolCallId: "call-1",
+        toolName: "save_lead",
+        content: '{"ok":true}',
+        success: true,
+      },
+      skillResult: { success: true, data: {} },
+    });
+
+    mockLLMProvider.complete
+      .mockResolvedValueOnce({
+        id: "c1",
+        content: "",
+        model: "test-model",
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        finishReason: "tool_calls",
+        toolCalls: [toolCall],
+      })
+      .mockResolvedValueOnce({
+        id: "c2",
+        content: "Confirmation après résultat d'outil",
+        model: "test-model",
+        usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
+        finishReason: "stop",
+      });
+
+    try {
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      const secondRequest = mockLLMProvider.complete.mock.calls[1][0];
+      const roles = secondRequest.messages.map((m) => m.role);
+
+      // Without FIX G the model received the SAME static conversation on
+      // every step (no feedback) and blind-repeated save_lead to MAX_STEPS.
+      expect(secondRequest.messages.some((m) => m.role === "assistant" && !!m.toolCalls)).toBe(
+        true,
+      );
+      const toolMsg = secondRequest.messages.find((m) => m.role === "tool");
+      expect(toolMsg).toBeDefined();
+      expect(toolMsg?.content).toContain('"ok":true');
+      expect(roles.indexOf("user")).toBeLessThan(roles.indexOf("tool"));
+      expect(result.finalResponse).toBe("Confirmation après résultat d'outil");
+    } finally {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([]);
+    }
+  });
+
+  it("never re-executes a successful tool and ends the turn on the model text (FIX G1/G2)", async () => {
+    vi.mocked(getAllToolDefinitions).mockReturnValue([
+      {
+        type: "function",
+        function: {
+          name: "save_lead",
+          description: "Save a lead",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+    ]);
+
+    const toolCall: ToolCall = {
+      id: "call-1",
+      type: "function",
+      function: {
+        name: "save_lead",
+        arguments: JSON.stringify({ first_name: "Jean", email: "jean@exemple.fr", summary: "x" }),
+      },
+    };
+
+    skillExecutor.execute = vi.fn().mockResolvedValue({
+      result: {
+        toolCallId: "call-1",
+        toolName: "save_lead",
+        content: '{"ok":true}',
+        success: true,
+      },
+      skillResult: { success: true, data: {} },
+    });
+
+    mockLLMProvider.complete
+      .mockResolvedValueOnce({
+        id: "c1",
+        content: "",
+        model: "test-model",
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        finishReason: "tool_calls",
+        toolCalls: [toolCall],
+      })
+      .mockResolvedValueOnce({
+        id: "c2",
+        content: "Votre demande est bien enregistrée.",
+        model: "test-model",
+        usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
+        finishReason: "tool_calls",
+        toolCalls: [{ ...toolCall, id: "call-2" }],
+      });
+
+    try {
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      // G1: the duplicate call never reaches the executor.
+      expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
+      expect(result.toolCallCount).toBe(1);
+
+      // The duplicate still produced a canned "already completed" result.
+      expect(result.toolResults).toHaveLength(2);
+      expect(result.toolResults[1].success).toBe(true);
+      expect(result.toolResults[1].content).toContain('"alreadyCompleted":true');
+
+      // The real result of turn 1 was fed back to the model.
+      const secondRequest = mockLLMProvider.complete.mock.calls[1][0];
+      const fedBack = secondRequest.messages.filter((m) => m.role === "tool");
+      expect(fedBack).toHaveLength(1);
+      expect(fedBack[0].content).toContain('"ok":true');
+
+      // G2: the turn ends on the model text instead of MAX_STEPS.
+      expect(result.finalResponse).toBe("Votre demande est bien enregistrée.");
+      expect(result.errors.some((e) => e.code === "MAX_STEPS_EXCEEDED")).toBe(false);
+      expect(mockLLMProvider.complete).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([]);
+    }
+  });
+
+  it("feeds the summarize result back to the next request (FIX G, non-lead tool)", async () => {
+    vi.mocked(getAllToolDefinitions).mockReturnValue([
+      {
+        type: "function",
+        function: {
+          name: "summarize",
+          description: "Summarize text",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+    ]);
+
+    const toolCall: ToolCall = {
+      id: "call-1",
+      type: "function",
+      function: { name: "summarize", arguments: JSON.stringify({ text: "Long text" }) },
+    };
+
+    skillExecutor.execute = vi.fn().mockResolvedValue({
+      result: {
+        toolCallId: "call-1",
+        toolName: "summarize",
+        content: '{"summary":"Résumé court."}',
+        success: true,
+      },
+      skillResult: { success: true, data: {} },
+    });
+
+    mockLLMProvider.complete
+      .mockResolvedValueOnce({
+        id: "c1",
+        content: "",
+        model: "test-model",
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        finishReason: "tool_calls",
+        toolCalls: [toolCall],
+      })
+      .mockResolvedValueOnce({
+        id: "c2",
+        content: "Voici le résumé demandé.",
+        model: "test-model",
+        usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
+        finishReason: "stop",
+      });
+
+    try {
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-1",
+        userMessage: "Résume ce texte",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      // FIX G is tool-agnostic: feedback works for summarize like save_lead.
+      expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
+      const secondRequest = mockLLMProvider.complete.mock.calls[1][0];
+      expect(secondRequest.messages.some((m) => m.role === "assistant" && !!m.toolCalls)).toBe(
+        true,
+      );
+      const toolMsg = secondRequest.messages.find((m) => m.role === "tool");
+      expect(toolMsg?.content).toContain("Résumé court");
+      // alreadyIncluded (context-builder): the user message is never duplicated.
+      expect(secondRequest.messages.filter((m) => m.role === "user")).toHaveLength(1);
+      expect(result.finalResponse).toBe("Voici le résumé demandé.");
+      expect(result.steps).toBe(2);
+    } finally {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([]);
+    }
   });
 
   it("handles multiple tool calls in sequence", async () => {

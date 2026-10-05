@@ -77,12 +77,44 @@ export class SkillExecutor {
           },
         };
         toolResult = this.createToolError(skillName, requestId, skillResult.error!);
+        // FIX C (LOT 38a bis): rejected arguments were silent — audit them so
+        // a model sending invalid args is observable (H3b).
+        await auditLogger.logSecurityEvent("validation_failure", {
+          severity: "medium",
+          userId: context.userId,
+          sessionId: context.sessionId,
+          conversationId: context.conversationId,
+          requestId,
+          eventData: {
+            skill_name: skillName,
+            error: error.message,
+            received_args: JSON.stringify(rawArguments).slice(0, 500),
+          },
+          errorMessage: error.message,
+        });
       } else if (error instanceof SkillExecutionError) {
         skillResult = {
           success: false,
           error: error.errorInfo,
         };
         toolResult = this.createToolError(skillName, requestId, error.errorInfo);
+        // FIX C (LOT 38a bis): an unknown skill means the model hallucinated
+        // a tool — audit it instead of failing silently.
+        if (error.errorInfo.code === "NOT_FOUND") {
+          await auditLogger.logSecurityEvent("tool_execution_failure", {
+            severity: "medium",
+            userId: context.userId,
+            sessionId: context.sessionId,
+            conversationId: context.conversationId,
+            requestId,
+            eventData: {
+              skill_name: skillName,
+              error: error.message,
+              received_args: JSON.stringify(rawArguments).slice(0, 500),
+            },
+            errorMessage: error.message,
+          });
+        }
       } else {
         const errorInfo = this.createError(
           "INTERNAL_ERROR",

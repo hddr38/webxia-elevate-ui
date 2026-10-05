@@ -241,6 +241,40 @@ export class NvidiaProvider implements LLMProvider {
     }
   }
 
+  /**
+   * FIX E (LOT 38a bis): NIM free-tier workers emit transient 429/503
+   * (ResourceExhausted: Worker local total request limit reached). One
+   * retry with a 500ms backoff before surfacing the error.
+   */
+  private async fetchChatCompletions(body: string, signal: AbortSignal): Promise<Response> {
+    const url = `${this.getBaseUrl()}/chat/completions`;
+    const doFetch = (): Promise<Response> =>
+      fetch(url, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body,
+        signal,
+      });
+
+    let response = await doFetch();
+
+    if (!response.ok && (response.status === 429 || response.status === 503) && !signal.aborted) {
+      const firstBody = await response.text().catch(() => "");
+      console.log("[Webi] nvidia_retry", {
+        status: response.status,
+        attempt: 1,
+        body: firstBody.slice(0, 300),
+      });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      response = await doFetch();
+      if (!response.ok && (response.status === 429 || response.status === 503)) {
+        console.log("[Webi] nvidia_retry_exhausted", { status: response.status });
+      }
+    }
+
+    return response;
+  }
+
   async complete(request: ProviderRequest): Promise<ProviderResponse> {
     this.ensureInitialized();
     this.abortController = new AbortController();
@@ -248,12 +282,10 @@ export class NvidiaProvider implements LLMProvider {
     const timeout = setTimeout(() => this.abortController?.abort(), this.config!.timeout);
 
     try {
-      const response = await fetch(`${this.getBaseUrl()}/chat/completions`, {
-        method: "POST",
-        headers: this.getHeaders(),
-        body: JSON.stringify(this.buildRequest(request, false)),
-        signal: this.abortController.signal,
-      });
+      const response = await this.fetchChatCompletions(
+        JSON.stringify(this.buildRequest(request, false)),
+        this.abortController.signal,
+      );
 
       clearTimeout(timeout);
 
@@ -293,12 +325,10 @@ export class NvidiaProvider implements LLMProvider {
     let reasoningChunks = 0;
 
     try {
-      const response = await fetch(`${this.getBaseUrl()}/chat/completions`, {
-        method: "POST",
-        headers: this.getHeaders(),
-        body: JSON.stringify(this.buildRequest(request, true)),
-        signal: this.abortController.signal,
-      });
+      const response = await this.fetchChatCompletions(
+        JSON.stringify(this.buildRequest(request, true)),
+        this.abortController.signal,
+      );
 
       clearTimeout(timeout);
 

@@ -17,6 +17,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
+  // LOT 38a bis — @real-nim (E2E NIM/Supabase réels) hors run standard :
+  // 14/14 exact sans variable ; activer avec E2E_REAL_NIM=1 npm run test:e2e
+  testIgnore: process.env.E2E_REAL_NIM ? [] : ["e2e/real-nim.spec.ts"],
   // LOT 38a — plafond 2 workers (aligné CI) : au-delà, 4 Chromium + screencast
   // dépassent la mémoire disponible (16 GB) et le renderer crash
   // ("Target crashed") — exécution parallèle bornée = déterministe (LOT 28).

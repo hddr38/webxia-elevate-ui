@@ -126,6 +126,14 @@ export class AgentOrchestrator {
     const messages: Message[] = [...conversationHistory];
     const toolCalls: ToolCall[] = [];
     const toolResults: ToolResult[] = [];
+    // FIX F (LOT 38a bis): tools that already succeeded in this run are
+    // stripped from every later provider request (deterministic one-shot
+    // guard — the model cannot re-call what is no longer offered).
+    const successfulToolNames = new Set<string>();
+    // FIX G (LOT 38a bis): provider-facing feedback of the current run
+    // (assistant tool-call turns + tool results). Deliberately kept out of
+    // `messages`: only the final assistant answer is returned/persisted.
+    const toolFeedback: Message[] = [];
 
     // Accumulated usage across all LLM calls
     const accumulatedUsage = {
@@ -190,7 +198,9 @@ export class AgentOrchestrator {
         requestId,
         userMessage,
         ragEngine: this.ragEngine,
-        conversationHistory: messages,
+        // FIX G: include this run's tool feedback so the model sees the
+        // outcome of its tool calls on the next step.
+        conversationHistory: [...messages, ...toolFeedback],
         maxHistoryMessages: 20,
         maxMemoryEntries: 10,
       });
@@ -229,16 +239,32 @@ export class AgentOrchestrator {
         });
       }
 
+      // FIX F: drop tools that already succeeded in this run (no-op on the
+      // first turn — the set is empty then).
+      const toolsForThisTurn = (agentContext.availableTools ?? []).filter(
+        (t) => !successfulToolNames.has(t.function.name),
+      );
+      if (successfulToolNames.size > 0) {
+        console.log("[Webi] tools_excluded", [...successfulToolNames]);
+      }
+
       // Prepare provider request
       const providerRequest: ProviderRequest = {
         model: this.config.defaultModel,
         messages: agentContext.messages,
         systemPrompt: agentContext.systemPrompt,
-        tools: agentContext.availableTools,
+        // FIX F: omit the key entirely when every tool was already used —
+        // an empty array plus tool_choice is not a shape all providers like.
+        tools: toolsForThisTurn.length > 0 ? toolsForThisTurn : undefined,
         temperature: 0.7,
         maxTokens: 2000,
         stream,
       };
+
+      console.log(
+        "[Webi] tools_sent",
+        (providerRequest.tools ?? []).map((t) => t.function.name),
+      );
 
       // Emit LLM started
       eventBus.emit("agent.llm.started", requestId, {
@@ -284,13 +310,21 @@ export class AgentOrchestrator {
           chunkCount,
         });
 
+        console.log("[Webi] llm_response", {
+          finishReason: response.finishReason,
+          toolCallsCount: response.toolCalls?.length ?? 0,
+          hasContent: !!response.content,
+        });
+
         // Handle response
-        if (
-          response.finishReason === "tool_calls" &&
-          response.toolCalls &&
-          response.toolCalls.length > 0
-        ) {
+        // FIX B (LOT 38a bis): gate on toolCalls presence, never on
+        // finish_reason — some providers return tool_calls with another
+        // finish_reason; a tool call must never be dropped silently.
+        if (response.toolCalls && response.toolCalls.length > 0) {
           // Tool calls requested
+          const toolResultsBefore = toolResults.length;
+          let executedThisTurn = 0;
+          let blockedThisTurn = 0;
           for (const toolCall of response.toolCalls) {
             if (toolCallCount >= this.limits.maxToolCalls) {
               const limitError = this.createAgentError(
@@ -300,10 +334,44 @@ export class AgentOrchestrator {
                 { toolCallCount },
               );
               errors.push(limitError);
+              // FIX G: keep the assistant tool-call turn well-formed — every
+              // tool_call in history must be answered by a tool message or
+              // providers reject the request.
+              toolFeedback.push({
+                id: `msg-${requestId}-tool-${toolCall.id}`,
+                role: "tool",
+                content: JSON.stringify({
+                  error: `Maximum tool calls (${this.limits.maxToolCalls}) exceeded`,
+                }),
+                timestamp: Date.now(),
+                toolCallId: toolCall.id,
+                toolName: toolCall.function.name,
+              });
               break;
             }
 
+            // FIX G1 (LOT 38a bis): the model can re-emit a tool name it saw
+            // succeed in its own history even when the tool was removed from
+            // the request — a tool that already succeeded in this run must
+            // NEVER execute twice (duplicate leads, duplicated side effects).
+            if (successfulToolNames.has(toolCall.function.name)) {
+              blockedThisTurn++;
+              toolResults.push({
+                toolCallId: toolCall.id,
+                toolName: toolCall.function.name,
+                content: JSON.stringify({
+                  alreadyCompleted: true,
+                  message:
+                    "Cet outil a déjà réussi dans cette conversation — n'y reviens pas, rédige ta réponse finale.",
+                }),
+                success: true,
+                metadata: { alreadyCompleted: true },
+              });
+              continue;
+            }
+
             toolCallCount++;
+            executedThisTurn++;
             toolCalls.push(toolCall);
 
             // Emit tool started (SSE stream)
@@ -326,6 +394,61 @@ export class AgentOrchestrator {
 
             // Execute tool with auth context
             const toolStartTime = Date.now();
+
+            // FIX C-bis (LOT 38a bis): malformed tool arguments must not
+            // crash the step unobserved — audit + surface a recoverable
+            // tool failure the model can correct on the next turn.
+            let parsedArgs: Record<string, unknown>;
+            try {
+              parsedArgs = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
+            } catch (parseError) {
+              const rawArguments = toolCall.function.arguments;
+              const parseMessage =
+                parseError instanceof Error ? parseError.message : "Invalid JSON";
+              await auditLogger.logSecurityEvent("tool_execution_failure", {
+                severity: "medium",
+                userId,
+                sessionId,
+                conversationId,
+                requestId,
+                eventData: {
+                  skill_name: toolCall.function.name,
+                  error: `Invalid JSON in tool arguments: ${parseMessage}`,
+                  received_args:
+                    typeof rawArguments === "string"
+                      ? rawArguments.slice(0, 500)
+                      : String(rawArguments),
+                },
+                errorMessage: "Invalid JSON in tool arguments",
+              });
+
+              const invalidArgsResult: ToolResult = {
+                toolCallId: toolCall.id,
+                toolName: toolCall.function.name,
+                content: JSON.stringify({ error: "Invalid JSON in tool arguments" }),
+                success: false,
+                error: "Invalid JSON in tool arguments",
+                metadata: { errorCode: "VALIDATION_ERROR", recoverable: true },
+              };
+              toolResults.push(invalidArgsResult);
+
+              onToolResult?.({
+                type: "tool_result",
+                data: invalidArgsResult,
+                timestamp: Date.now(),
+                conversationId,
+                requestId,
+              });
+
+              eventBus.emit("agent.tool.completed", requestId, {
+                toolName: toolCall.function.name,
+                durationMs: Date.now() - toolStartTime,
+                success: false,
+              });
+
+              continue;
+            }
+
             const executionResult = await this.skillExecutor.execute(
               toolCall.function.name,
               {
@@ -338,7 +461,7 @@ export class AgentOrchestrator {
                   ? { isAuthenticated: authContext.isAuthenticated, isAdmin: authContext.isAdmin }
                   : {},
               },
-              JSON.parse(toolCall.function.arguments),
+              parsedArgs,
             );
 
             const toolDuration = Date.now() - toolStartTime;
@@ -353,6 +476,11 @@ export class AgentOrchestrator {
             };
 
             toolResults.push(toolResult);
+
+            // FIX F: remember the success so later turns stop offering it.
+            if (executionResult.result.success) {
+              successfulToolNames.add(toolCall.function.name);
+            }
 
             // Emit tool result (SSE stream)
             onToolResult?.({
@@ -385,6 +513,62 @@ export class AgentOrchestrator {
                 });
               }
             }
+          }
+
+          // FIX G: close the feedback loop — the next LLM call must see this
+          // turn's assistant tool-call message and the matching tool results.
+          // Without it every step sends the model the same static
+          // conversation and it blind-repeats save_lead until MAX_STEPS.
+          const turnToolResults = toolResults.slice(toolResultsBefore);
+          toolFeedback.push({
+            id: `msg-${requestId}-assistant-tools-${steps}`,
+            role: "assistant",
+            content: response.content,
+            timestamp: Date.now(),
+            toolCalls: response.toolCalls,
+          });
+          for (const tr of turnToolResults) {
+            toolFeedback.push({
+              id: `msg-${requestId}-tool-${tr.toolCallId}`,
+              role: "tool",
+              content: tr.content,
+              timestamp: Date.now(),
+              toolCallId: tr.toolCallId,
+              toolName: tr.toolName,
+            });
+          }
+
+          // FIX G2: every call this turn targeted a tool that already
+          // succeeded and the model still produced text — promote that text
+          // to the final answer instead of spinning to MAX_STEPS.
+          if (
+            blockedThisTurn > 0 &&
+            executedThisTurn === 0 &&
+            response.content &&
+            response.content.trim().length > 0
+          ) {
+            messages.push({
+              id: `msg-${requestId}-assistant-${steps}`,
+              role: "assistant",
+              content: response.content,
+              timestamp: Date.now(),
+              toolCalls: response.toolCalls,
+            });
+            eventBus.emit("agent.response.completed", requestId, {
+              durationMs: Date.now() - startTime,
+            });
+            return {
+              finalResponse: response.content,
+              messages,
+              toolCalls,
+              toolResults,
+              usage: accumulatedUsage,
+              finishReason: response.finishReason,
+              steps,
+              toolCallCount,
+              durationMs: Date.now() - startTime,
+              errors,
+            };
           }
 
           // Continue loop for next LLM call with tool results

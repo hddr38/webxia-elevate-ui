@@ -12,6 +12,7 @@ import {
   getSkillsByPermission,
 } from "../skills/registry";
 import { SkillExecutor } from "../skills/executor";
+import { auditLogger } from "../security/audit-log";
 import { SkillValidator, createSkillSchema, SkillValidationError } from "../skills/validator";
 import { SearchKnowledgeSkill, createSearchKnowledgeSkill } from "../skills/search-knowledge";
 import { SummarizeSkill, createSummarizeSkill } from "../skills/summarize";
@@ -349,6 +350,54 @@ describe("SkillExecutor", () => {
     expect(result.result.toolCallId).toBe("call-req-123");
     expect(result.result.toolName).toBe("test_skill");
     expect(typeof result.result.content).toBe("string");
+  });
+
+  it("audits validation_failure when arguments are rejected (FIX C)", async () => {
+    const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+    const context = createMockSkillContext({ requestId: "req-audit-1" });
+    mockSkill.validate = vi.fn().mockImplementation(() => {
+      throw new Error("Validation failed");
+    });
+
+    const result = await executor.execute("test_skill", context, { invalid: true });
+
+    expect(result.result.success).toBe(false);
+    expect(result.skillResult.error?.code).toBe("VALIDATION_ERROR");
+    expect(auditSpy).toHaveBeenCalledWith(
+      "validation_failure",
+      expect.objectContaining({
+        severity: "medium",
+        requestId: "req-audit-1",
+        eventData: expect.objectContaining({
+          skill_name: "test_skill",
+          error: expect.stringContaining("Validation failed"),
+          received_args: expect.stringContaining("invalid"),
+        }),
+      }),
+    );
+    auditSpy.mockRestore();
+  });
+
+  it("audits tool_execution_failure for an unknown skill (FIX C)", async () => {
+    const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+    const context = createMockSkillContext({ requestId: "req-audit-2" });
+
+    const result = await executor.execute("unknown_skill", context, { foo: "bar" });
+
+    expect(result.result.success).toBe(false);
+    expect(result.result.error).toContain("not found");
+    expect(auditSpy).toHaveBeenCalledWith(
+      "tool_execution_failure",
+      expect.objectContaining({
+        severity: "medium",
+        requestId: "req-audit-2",
+        eventData: expect.objectContaining({
+          skill_name: "unknown_skill",
+          received_args: expect.stringContaining("bar"),
+        }),
+      }),
+    );
+    auditSpy.mockRestore();
   });
 });
 

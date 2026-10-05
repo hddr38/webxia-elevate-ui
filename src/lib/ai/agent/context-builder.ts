@@ -187,12 +187,19 @@ export async function buildAgentContext(options: ContextBuilderOptions): Promise
     knowledge?.contextString ?? "",
   );
 
-  // 6. Create AgentContext. The current user message is appended unless
-  // the caller already included it as the last history entry (the
-  // orchestrator pushes it before building context) — never twice.
-  const lastHistory = history[history.length - 1];
-  const alreadyIncluded =
-    lastHistory !== undefined && lastHistory.role === "user" && lastHistory.content === userMessage;
+  // 6. Create AgentContext. The current user message is appended unless the
+  // caller already included it (the orchestrator pushes it before building
+  // context) — never twice. With FIX G the history can end on tool/assistant
+  // feedback messages, so the match targets the last *user* entry, not the
+  // very last entry.
+  let lastUser: Message | undefined;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === "user") {
+      lastUser = history[i];
+      break;
+    }
+  }
+  const alreadyIncluded = lastUser !== undefined && lastUser.content === userMessage;
   const messages: Message[] = alreadyIncluded
     ? history
     : [

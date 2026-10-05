@@ -235,9 +235,12 @@ export function ChatWindow() {
         // Classes purement CSS (aucun état JS) : pas de layout shift brutal.
         "max-md:inset-0 max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:top-0",
         "max-md:w-full max-md:max-w-none max-md:rounded-none max-md:z-[60]",
-        // 100dvh avec fallback 100vh ([height:100dvh] invalide = ignoré).
-        "max-md:[height:100vh] max-md:[height:100dvh]",
-        "max-md:[max-height:100vh] max-md:[max-height:100dvh]",
+        // dvh seul, jamais de fallback 100vh : Tailwind trie les propriétés
+        // arbitraires par ordre alphabétique (100dvh avant 100vh), donc le
+        // "fallback" 100vh l'emportait sur dvh et le panneau debordait sous
+        // la barre d'adresse iOS (bouton d'envoi hors viewport). Les
+        // utilitaires core h-dvh / max-h-dvh n'ont pas ce piege.
+        "max-md:h-dvh max-md:max-h-dvh",
       )}
       role="dialog"
       ref={dialogRef}

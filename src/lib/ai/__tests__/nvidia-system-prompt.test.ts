@@ -183,6 +183,24 @@ describe("NvidiaProvider system prompt transmission", () => {
     expect(body.tool_choice).toBe("auto");
   });
 
+  // LOT 38a quater (FIX 1) — a per-turn forced tool_choice must reach the
+  // NIM payload verbatim (H2': the model ignores save_lead under "auto").
+  it("passes a forced tool_choice through to the request body", async () => {
+    const provider = await initProvider();
+    const fetchMock = vi.fn().mockResolvedValue(completionResponse("ok"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await provider.complete({
+      model: "m",
+      messages: [userMessage("Jean, mon email est jean@exemple.fr")],
+      tools: [createMockToolDefinition()],
+      toolChoice: { type: "function", function: { name: "save_lead" } },
+    });
+
+    const body = capturedBody(fetchMock);
+    expect(body.tool_choice).toEqual({ type: "function", function: { name: "save_lead" } });
+  });
+
   it("disables thinking via chat_template_kwargs (fast TTFB, no silent reasoning)", async () => {
     const provider = await initProvider();
     const fetchMock = vi.fn().mockResolvedValue(completionResponse("ok"));

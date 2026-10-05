@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import { AgentOrchestrator } from "../agent/orchestrator";
 import type {
   AIModel,
@@ -1638,5 +1638,181 @@ describe("AgentOrchestrator RAG citations", () => {
     });
 
     expect(onCitation).not.toHaveBeenCalled();
+  });
+
+  // FIX K (LOT 38a quater) — forced save_lead tool_choice on contact.
+  describe("forced save_lead tool_choice (FIX K)", () => {
+    const saveLeadTool: ToolDefinition = {
+      type: "function",
+      function: {
+        name: "save_lead",
+        description: "Save a lead",
+        parameters: { type: "object", properties: {} },
+      },
+    };
+
+    const SAVE_LEAD_TOOL_CALL: ToolCall = {
+      id: "call-sl",
+      type: "function",
+      function: {
+        name: "save_lead",
+        arguments: JSON.stringify({ first_name: "Jean", email: "jean@exemple.fr", summary: "x" }),
+      },
+    };
+
+    const usage = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
+
+    afterEach(() => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([]);
+    });
+
+    it("forces save_lead tool_choice when contact detected in user message", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([saveLeadTool]);
+      skillExecutor.execute = vi.fn().mockResolvedValue({
+        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
+        skillResult: { success: true, data: {} },
+      });
+
+      mockLLMProvider.complete
+        .mockResolvedValueOnce({
+          id: "c1",
+          content: "",
+          model: "test-model",
+          usage,
+          finishReason: "tool_calls",
+          toolCalls: [SAVE_LEAD_TOOL_CALL],
+        })
+        .mockResolvedValueOnce({
+          id: "c2",
+          content: "Lead enregistre, confirmation.",
+          model: "test-model",
+          usage,
+          finishReason: "stop",
+        });
+
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-force",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      const firstRequest = (mockLLMProvider.complete.mock.calls[0]?.[0] ?? {}) as ProviderRequest;
+      expect(firstRequest.toolChoice).toEqual({
+        type: "function",
+        function: { name: "save_lead" },
+      });
+      expect(result.finalResponse).toBe("Lead enregistre, confirmation.");
+      expect(result.toolCallCount).toBe(1);
+    });
+
+    it("uses auto tool_choice when save_lead already succeeded (FIX F wins)", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([saveLeadTool]);
+      skillExecutor.execute = vi.fn().mockResolvedValue({
+        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
+        skillResult: { success: true, data: {} },
+      });
+
+      mockLLMProvider.complete
+        .mockResolvedValueOnce({
+          id: "c1",
+          content: "",
+          model: "test-model",
+          usage,
+          finishReason: "tool_calls",
+          toolCalls: [SAVE_LEAD_TOOL_CALL],
+        })
+        .mockResolvedValueOnce({
+          id: "c2",
+          content: "Confirmation finale.",
+          model: "test-model",
+          usage,
+          finishReason: "stop",
+        });
+
+      await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-auto-after",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      expect(mockLLMProvider.complete).toHaveBeenCalledTimes(2);
+      const secondRequest = (mockLLMProvider.complete.mock.calls[1]?.[0] ?? {}) as ProviderRequest;
+      expect(secondRequest.toolChoice).toBe("auto");
+      // FIX F: save_lead is no longer offered -> forcing it would 400 NIM.
+      expect(secondRequest.tools ?? []).toHaveLength(0);
+    });
+
+    it("uses auto tool_choice when no contact in user message", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([saveLeadTool]);
+
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-no-contact",
+        userMessage: "Bonjour, je veux un site",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      const firstRequest = (mockLLMProvider.complete.mock.calls[0]?.[0] ?? {}) as ProviderRequest;
+      expect(firstRequest.toolChoice).toBe("auto");
+      expect(result.finalResponse).toBe("Test response");
+    });
+
+    it("audits tool_execution_failure when forced tool_choice is violated", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([saveLeadTool]);
+      const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+      // Contact + save_lead available => forced turn, but the model
+      // answers with plain text (no tool call): the anomaly must be traced.
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-violated",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      expect(auditSpy).toHaveBeenCalledWith(
+        "tool_execution_failure",
+        expect.objectContaining({
+          severity: "high",
+          errorMessage: "forced_tool_choice_violated",
+          eventData: expect.objectContaining({
+            skill_name: "save_lead",
+            guard_triggered: "forced_tool_choice",
+          }),
+        }),
+      );
+      expect(logSpy.mock.calls.some((c) => c[0] === "[Webi] forced_tool_choice_violated")).toBe(
+        true,
+      );
+      // Defense in depth: the visitor still gets the answer (no hard fail).
+      expect(result.finalResponse).toBe("Test response");
+      expect(result.errors).toHaveLength(0);
+
+      auditSpy.mockRestore();
+      logSpy.mockRestore();
+    });
   });
 });

@@ -4,6 +4,7 @@ import { skillExecutor, SkillExecutor } from "../skills";
 import { skillRegistry, getAllToolDefinitions } from "../skills";
 import { eventBus } from "../events";
 import { auditLogger } from "../security/audit-log";
+import { hasContactInfo } from "./contact-detector";
 import type { RAGEngine } from "../rag/rag-engine";
 import {
   AgentContext,
@@ -260,6 +261,31 @@ export class AgentOrchestrator {
         maxTokens: 2000,
         stream,
       };
+
+      // FIX K (LOT 38a quater): NIM can ignore save_lead even when the tool
+      // is offered (H2' — logs showed finishReason:stop, toolCalls:0 while
+      // contact was in the message). Deterministic fix: force tool_choice
+      // for THIS turn only when contact is detected and save_lead is still
+      // available. `saveLeadInTools` already excludes a save_lead that
+      // succeeded (FIX F) -> no forced call on later turns, the model goes
+      // back to "auto" to write its confirmation.
+      const lastUserMessage = options.userMessage;
+      const contactDetected = hasContactInfo(lastUserMessage);
+      const saveLeadInTools = toolsForThisTurn.some((t) => t.function.name === "save_lead");
+      const shouldForceSaveLead = contactDetected && saveLeadInTools;
+
+      if (shouldForceSaveLead) {
+        providerRequest.toolChoice = {
+          type: "function",
+          function: { name: "save_lead" },
+        };
+        console.log("[Webi] tool_choice_forced", {
+          tool: "save_lead",
+          reason: "contact detected in user message",
+        });
+      } else {
+        providerRequest.toolChoice = "auto";
+      }
 
       console.log(
         "[Webi] tools_sent",
@@ -578,6 +604,31 @@ export class AgentOrchestrator {
           // persisting/showing a blank bubble.
           if (!response.content || response.content.trim().length === 0) {
             failGeneration("EMPTY_RESPONSE");
+          }
+
+          // FIX 4 (LOT 38a quater): forced tool_choice was violated — the
+          // model answered with text instead of calling save_lead. Trace it
+          // for diagnostics (defense in depth); the visitor still receives
+          // the answer, the anomaly is auditable a posteriori.
+          if (shouldForceSaveLead && (!response.toolCalls || response.toolCalls.length === 0)) {
+            console.log("[Webi] forced_tool_choice_violated", {
+              finishReason: response.finishReason,
+              hasContent: !!response.content,
+            });
+            await auditLogger.logSecurityEvent("tool_execution_failure", {
+              severity: "high",
+              userId,
+              sessionId,
+              conversationId,
+              requestId,
+              eventData: {
+                skill_name: "save_lead",
+                error: "NIM violated forced tool_choice",
+                guard_triggered: "forced_tool_choice",
+                finishReason: response.finishReason,
+              },
+              errorMessage: "forced_tool_choice_violated",
+            });
           }
 
           const assistantMsg: Message = {

@@ -11,6 +11,7 @@ import {
   ToolCall,
   ToolDefinition,
   ProviderCapabilities,
+  ToolChoice,
 } from "./types";
 import { ProviderError, ProviderErrorCode, mapHttpErrorToProviderError } from "./errors";
 
@@ -50,7 +51,7 @@ interface NvidiaRequest {
   max_tokens?: number;
   stream?: boolean;
   tools?: NvidiaToolDefinition[];
-  tool_choice?: "auto" | "none" | { type: "function"; function: { name: string } };
+  tool_choice?: ToolChoice;
   /** Explicit reasoning toggle for Nemotron reasoning models. Set to false:
    * Webi is a customer-service bot where time-to-first-token matters more
    * than exposed chain-of-thought. Reversible in one line. */
@@ -484,7 +485,9 @@ export class NvidiaProvider implements LLMProvider {
       max_tokens: request.maxTokens,
       stream,
       tools: this.mapTools(request.tools),
-      tool_choice: request.tools?.length ? "auto" : undefined,
+      // LOT 38a quater (FIX 1): honor a forced per-turn tool_choice from the
+      // orchestrator; absent -> "auto" (previous behavior preserved).
+      tool_choice: request.tools?.length ? (request.toolChoice ?? "auto") : undefined,
       ...(thinking ? { chat_template_kwargs: { enable_thinking: false } } : {}),
     };
   }

@@ -2,23 +2,26 @@ import { describe, it, expect } from "vitest";
 import { WEBi_SYSTEM_PROMPT, WEBi_SYSTEM_PROMPT_VERSION } from "../agent/system-prompt";
 
 describe("system prompt", () => {
-  it("is version 1.3.2", () => {
-    expect(WEBi_SYSTEM_PROMPT_VERSION).toBe("1.3.2");
+  it("is version 1.3.3", () => {
+    expect(WEBi_SYSTEM_PROMPT_VERSION).toBe("1.3.3");
   });
 
-  it("contains the LOT 38a bis lead-capture trigger (implicit consent)", () => {
-    expect(WEBi_SYSTEM_PROMPT).toContain("## Capture de Lead (LOT 38a bis)");
-    expect(WEBi_SYSTEM_PROMPT).toContain("RÈGLE ABSOLUE");
+  it("contains the simplified lead-registration block (v1.3.3, LOT 38a quater)", () => {
+    expect(WEBi_SYSTEM_PROMPT).toContain("## Enregistrement de lead");
     expect(WEBi_SYSTEM_PROMPT).toContain("save_lead");
-    expect(WEBi_SYSTEM_PROMPT).toContain("accord implicite");
     expect(WEBi_SYSTEM_PROMPT).toContain("IMMÉDIATEMENT");
-    expect(WEBi_SYSTEM_PROMPT).toContain("Exemple A");
-    expect(WEBi_SYSTEM_PROMPT).toContain("Exemple B");
+    expect(WEBi_SYSTEM_PROMPT).toContain(
+      "Ne dis JAMAIS \"c'est noté\" si tu n'as pas vu la réponse de save_lead.",
+    );
   });
 
-  it("contains the one-shot save_lead guard (v1.3.2, FIX A')", () => {
-    expect(WEBi_SYSTEM_PROMPT).toContain("IMPORTANT — UNE SEULE FOIS");
-    expect(WEBi_SYSTEM_PROMPT).toContain("N'APPELLE PLUS");
+  it("drops the v1.3.2 meta-instructions (FIX F owns the guard in code)", () => {
+    expect(WEBi_SYSTEM_PROMPT).not.toContain("## Capture de Lead (LOT 38a bis)");
+    expect(WEBi_SYSTEM_PROMPT).not.toContain("IMPORTANT — UNE SEULE FOIS");
+    expect(WEBi_SYSTEM_PROMPT).not.toContain("accord implicite");
+    expect(WEBi_SYSTEM_PROMPT).not.toContain("Exemple A");
+    expect(WEBi_SYSTEM_PROMPT).not.toContain("Exemple B");
+    expect(WEBi_SYSTEM_PROMPT).not.toContain("RÈGLE ABSOLUE");
   });
 
   it("no longer contains the explicit-oral-consent trigger (v1.3.0)", () => {

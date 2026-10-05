@@ -231,6 +231,14 @@ export interface CostPerToken {
   output: number;
 }
 
+// LOT 38a quater — how the provider must pick tools for this request.
+// "auto" (default), "none", "required", or a forced single function.
+export type ToolChoice =
+  | "auto"
+  | "none"
+  | "required"
+  | { type: "function"; function: { name: string } };
+
 export interface ProviderRequest {
   model: string;
   messages: Message[];
@@ -239,6 +247,8 @@ export interface ProviderRequest {
   temperature?: number;
   maxTokens?: number;
   stream?: boolean;
+  // LOT 38a quater (FIX K): force a specific tool for this turn only.
+  toolChoice?: ToolChoice;
 }
 
 export interface ProviderResponse {

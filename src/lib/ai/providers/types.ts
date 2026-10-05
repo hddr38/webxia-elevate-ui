@@ -13,6 +13,7 @@ import type {
   EmbeddingProvider,
   EmbedOptions,
   StreamChunk,
+  ToolChoice,
 } from "../contracts";
 
 export type {
@@ -30,6 +31,7 @@ export type {
   EmbeddingProvider,
   EmbedOptions,
   StreamChunk,
+  ToolChoice,
 };
 
 export interface ProviderRegistry {

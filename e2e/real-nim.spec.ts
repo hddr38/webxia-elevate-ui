@@ -125,6 +125,14 @@ test.describe("E2E réel NIM (@real-nim)", () => {
         return matches.length > 0 ? matches.length : null;
       }, 30_000);
       expect(auditCount, "attendu exactement 1 événement lead_created pour ce marqueur").toBe(1);
+
+      // 4) LOT 38a ter — le lead est capturé en base MAIS le jargon interne
+      //    est invisible dans l'UI (whitelist USER_VISIBLE_TOOLS, fail-safe).
+      const chatLog = page.getByRole("log");
+      await expect(chatLog).not.toContainText(/save_lead/i);
+      await expect(chatLog).not.toContainText("SAVE_LEAD");
+      await expect(chatLog).not.toContainText("leadId");
+      await expect(chatLog).not.toContainText("Webi exécute");
     } finally {
       // Cleanup best-effort : la spec écrit en base réelle.
       await rest(`leads?first_name=eq.${marker}`, { method: "DELETE" }).catch(() => undefined);

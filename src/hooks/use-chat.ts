@@ -10,6 +10,7 @@ import { useLocale } from "@/lib/locale-context";
 import { createSseParser } from "@/lib/chat/sse-parser";
 import { chatHistory } from "@/server/functions/chat-history";
 import type { TypedStreamEvent } from "@/lib/ai/contracts";
+import { shouldDisplayTool } from "@/lib/ai/user-visible-tools";
 import type { ChatMessage, UseChatReturn } from "@/components/chat/types";
 
 /** Transcript depth requested on restore (server default = MAX_CONVERSATION_HISTORY). */
@@ -167,6 +168,9 @@ export function useChat(): UseChatReturn {
         }
 
         case "tool_start": {
+          // LOT 38a ter — UI whitelist: internal frames (save_lead, ...)
+          // never reach the transcript nor the ToolStatus indicator.
+          if (!shouldDisplayTool(event.data.toolName)) break;
           setCurrentTool(event.data.toolName);
           // Add tool message
           const toolMsg: ChatMessage = {
@@ -182,6 +186,9 @@ export function useChat(): UseChatReturn {
         }
 
         case "tool_result": {
+          // LOT 38a ter — UI whitelist: no tool bubble was created for a
+          // hidden tool, so there is nothing to update (and no leadId to leak).
+          if (!shouldDisplayTool(event.data.toolName)) break;
           // Update the tool message with result
           set((state) => {
             const messages = [...state.messages];

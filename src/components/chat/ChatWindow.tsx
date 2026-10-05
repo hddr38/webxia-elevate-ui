@@ -533,7 +533,12 @@ export function ChatWindow() {
             className={cn(
               "flex-1 min-h-[44px] max-h-[150px] px-4 py-3",
               "bg-muted border border-input rounded-xl",
-              "text-sm text-foreground placeholder:text-muted-foreground",
+              // 16px sous 768px : iOS Safari zoome automatiquement au focus
+              // d'un input dont la font-size est < 16px. Le focus est pose au
+              // montage (cf. effet isOpen) => zoom des l'ouverture du chat.
+              // Desktop garde text-sm (14px), le zoom ne s'y applique pas.
+              "text-sm max-md:text-base",
+              "text-foreground placeholder:text-muted-foreground",
               "focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
               "resize-none",
             )}

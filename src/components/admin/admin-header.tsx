@@ -1,7 +1,16 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { PenTool, FolderKanban, Brain, LogOut, Menu, ExternalLink, Inbox } from "lucide-react";
+import {
+  PenTool,
+  FolderKanban,
+  Brain,
+  LogOut,
+  Menu,
+  ExternalLink,
+  Inbox,
+  Users,
+} from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/locale-context";
 import { Button } from "@/components/ui/button";
@@ -87,6 +96,19 @@ function AdminLinks({
         <Inbox className={iconClass} aria-hidden="true" />
         {t("admin.nav.messages")}
       </Link>
+      <Link
+        to="/admin/leads"
+        search={{ dateRange: "last30", hasEmail: false, hasPhone: false, page: 1 }}
+        onClick={onNavigate}
+        activeProps={{ className: "bg-secondary text-foreground" }}
+        inactiveProps={{
+          className: "text-muted-foreground hover:bg-secondary hover:text-foreground",
+        }}
+        className={linkClass}
+      >
+        <Users className={iconClass} aria-hidden="true" />
+        {t("admin.leads.title")}
+      </Link>
     </>
   );
 }
@@ -148,7 +170,7 @@ export function AdminHeader() {
             className="hidden min-w-0 items-center gap-1 md:flex"
             aria-label={t("admin.nav.administration")}
           >
-            <span className="hidden items-center gap-1 xl:flex">
+            <span className="hidden items-center gap-1 2xl:flex">
               {navItems.map((item) => (
                 <Link
                   key={item.key}

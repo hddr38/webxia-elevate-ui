@@ -25,6 +25,7 @@ import { Route as JournalSlugRouteImport } from './routes/journal/$slug'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
 import { Route as AdminRealisationsIndexRouteImport } from './routes/admin/realisations/index'
 import { Route as AdminMessagesIndexRouteImport } from './routes/admin/messages/index'
 import { Route as AdminArticlesIndexRouteImport } from './routes/admin/articles/index'
@@ -115,6 +116,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminLeadsRoute = AdminLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminRealisationsIndexRoute = AdminRealisationsIndexRouteImport.update({
   id: '/realisations/',
   path: '/realisations/',
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/mentions-legales': typeof MentionsLegalesRoute
   '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/services': typeof ServicesRoute
+  '/admin/leads': typeof AdminLeadsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/mentions-legales': typeof MentionsLegalesRoute
   '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/services': typeof ServicesRoute
+  '/admin/leads': typeof AdminLeadsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   '/mentions-legales': typeof MentionsLegalesRoute
   '/politique-confidentialite': typeof PolitiqueConfidentialiteRoute
   '/services': typeof ServicesRoute
+  '/admin/leads': typeof AdminLeadsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
@@ -245,6 +254,7 @@ export interface FileRouteTypes {
     | '/mentions-legales'
     | '/politique-confidentialite'
     | '/services'
+    | '/admin/leads'
     | '/api/chat'
     | '/api/health'
     | '/auth/login'
@@ -270,6 +280,7 @@ export interface FileRouteTypes {
     | '/mentions-legales'
     | '/politique-confidentialite'
     | '/services'
+    | '/admin/leads'
     | '/api/chat'
     | '/api/health'
     | '/auth/login'
@@ -296,6 +307,7 @@ export interface FileRouteTypes {
     | '/mentions-legales'
     | '/politique-confidentialite'
     | '/services'
+    | '/admin/leads'
     | '/api/chat'
     | '/api/health'
     | '/auth/login'
@@ -446,6 +458,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/leads': {
+      id: '/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AdminLeadsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/realisations/': {
       id: '/admin/realisations/'
       path: '/realisations'
@@ -506,6 +525,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteRouteChildren {
+  AdminLeadsRoute: typeof AdminLeadsRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminArticlesIdRoute: typeof AdminArticlesIdRoute
   AdminArticlesNewRoute: typeof AdminArticlesNewRoute
@@ -518,6 +538,7 @@ interface AdminRouteRouteChildren {
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminLeadsRoute: AdminLeadsRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminArticlesIdRoute: AdminArticlesIdRoute,
   AdminArticlesNewRoute: AdminArticlesNewRoute,

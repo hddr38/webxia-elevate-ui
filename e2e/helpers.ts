@@ -14,6 +14,14 @@ export async function waitForHydration(page: Page): Promise<void> {
   await expect(page.locator("[data-webi-launcher]")).toBeAttached();
 }
 
+/**
+ * Attend que la page admin soit hydratée (header admin visible).
+ * Les pages admin n'ont pas le lanceur Webi.
+ */
+export async function waitForAdminHydration(page: Page): Promise<void> {
+  await expect(page.locator("header.fixed").first()).toBeVisible();
+}
+
 export async function openChat(page: Page): Promise<void> {
   await waitForHydration(page);
   const launcher = page.locator("[data-webi-launcher]");

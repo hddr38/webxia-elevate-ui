@@ -5,13 +5,14 @@ import {
   useMemoryStats,
   useRealisationsList,
 } from "@/features/admin/queries";
+import { useLeadsCount } from "@/features/admin/leads-queries";
 import { ListErrorBanner } from "@/components/admin/list-error-banner";
 import { StatCard } from "@/components/admin/stat-card";
 import { EmptyState } from "@/components/admin/empty-state";
 import { RecentItem } from "@/components/admin/recent-item";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, FolderKanban, Brain, Plus } from "lucide-react";
+import { FileText, FolderKanban, Brain, Plus, Users } from "lucide-react";
 import { STATUS_LABELS } from "@/lib/constants";
 import { useLocale, type Locale } from "@/lib/locale-context";
 
@@ -95,9 +96,11 @@ function AdminDashboard() {
   const recentArticlesQuery = useArticlesList({ page: 1 });
   const recentRealisationsQuery = useRealisationsList({ page: 1 });
   const memoryStatsQuery = useMemoryStats();
+  const leadsCountQuery = useLeadsCount();
 
   const stats = statsQuery.data;
   const memoryStats = memoryStatsQuery.data;
+  const leadsTotal = leadsCountQuery.data ?? 0;
 
   const recentArticles = (recentArticlesQuery.data?.data ?? []).slice(0, 5);
   const recentRealisations = (recentRealisationsQuery.data?.data ?? []).slice(0, 5);
@@ -184,14 +187,14 @@ function AdminDashboard() {
             }
           />
           <StatCard
-            loading={statsQuery.isLoading}
-            to="/admin/ai-memory"
-            title={t("admin.aiMemory.title")}
-            value={stats?.aiMemory?.total ?? 0}
-            icon={Brain}
+            loading={leadsCountQuery.isLoading}
+            to="/admin/leads"
+            title={t("admin.leads.title")}
+            value={leadsTotal}
+            icon={Users}
             details={
               <span className="tabular-nums">
-                {stats?.aiMemory?.sessions ?? 0} {t("admin.aiMemory.sessions")}
+                {leadsTotal} {t("admin.leads.unit")}
               </span>
             }
           />

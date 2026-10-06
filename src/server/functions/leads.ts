@@ -16,7 +16,7 @@ const DeleteLeadSchema = z.object({
 export type ListLeadsInput = z.infer<typeof ListLeadsSchema>;
 export type DeleteLeadInput = z.infer<typeof DeleteLeadSchema>;
 
-type LeadRow = {
+export type LeadRow = {
   id: string;
   session_id: string;
   conversation_id: string | null;

@@ -164,6 +164,73 @@ test.describe("Lead capture via chat (LOT 38a)", () => {
     await expect(chatLog).not.toContainText("Webi exécute");
   });
 
+  test("FIX A server break: tool frames then confirmation, no text_delta (Phase 2)", async ({
+    page,
+  }) => {
+    // The FIX A path streams message_start + hidden tool frames and then a
+    // message_complete carrying the standard confirmation — with zero
+    // text_delta. The placeholder bubble must hydrate from fullContent.
+    const CONFIRMATION =
+      "Vos coordonnées ont bien été enregistrées. Nous vous recontacterons prochainement.";
+    const body = [
+      sseFrame({
+        type: "message_start",
+        data: { messageId: "msg-fixa-e2e" },
+        conversationId: CONVERSATION_ID,
+      }),
+      sseFrame({
+        type: "tool_start",
+        data: {
+          toolName: "save_lead",
+          toolCallId: "call-1",
+          conversationId: CONVERSATION_ID,
+        },
+      }),
+      sseFrame({
+        type: "tool_result",
+        data: {
+          toolName: "save_lead",
+          toolCallId: "call-1",
+          content: { leadId: "lead-fixa-1", createdAt: "2026-10-06T00:00:00Z" },
+          conversationId: CONVERSATION_ID,
+        },
+      }),
+      sseFrame({
+        type: "message_complete",
+        data: {
+          fullContent: CONFIRMATION,
+          usage: { promptTokens: 12, completionTokens: 6, totalTokens: 18 },
+          conversationId: CONVERSATION_ID,
+        },
+        conversationId: CONVERSATION_ID,
+      }),
+    ].join("");
+
+    void page.route("**/api/chat", (route) => {
+      return route.fulfill({
+        status: 200,
+        contentType: "text/event-stream; charset=utf-8",
+        body,
+      });
+    });
+
+    await page.goto("/");
+    await openChat(page);
+    const chatInput = page.getByPlaceholder(INPUT_PLACEHOLDER);
+    await expect(chatInput).toBeVisible({ timeout: 5000 });
+    await chatInput.fill("Je m'" + "appelle Jean, mon email est jean@example.com");
+    await chatInput.press("Enter");
+
+    // The empty placeholder hydrates from message_complete.fullContent.
+    const chatLog = page.getByRole("log");
+    await expect(chatLog).toContainText(CONFIRMATION);
+
+    // Tool frames stay invisible.
+    await expect(chatLog).not.toContainText(/save_lead/i);
+    await expect(chatLog).not.toContainText("leadId");
+    await expect(chatLog).not.toContainText("Webi exécute");
+  });
+
   test("inline tool markup in text_delta is stripped from UI (LOT 38a quinquies)", async ({
     page,
   }) => {

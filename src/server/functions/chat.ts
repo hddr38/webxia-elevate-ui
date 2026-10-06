@@ -442,6 +442,8 @@ async function runChatRequest(
         onToolResult: (event) => {
           if (event.data.toolName === "save_lead" && event.data.success === true) {
             saveLeadSucceeded = true;
+            // FIX B2 (Phase 2): observable proof the confirmation guards are armed.
+            console.log("[Webi] saveLeadSucceeded_flag", { value: true });
           }
           sendEvent(event);
         },
@@ -472,10 +474,21 @@ async function runChatRequest(
 
       const sanitizedFinalResponse = stripInlineToolCalls(result.finalResponse);
 
+      // FIX B1 (Phase 2) — save_lead succeeded but the final text stripped to
+      // nothing: the visitor must still see the standard confirmation (FIX A
+      // normally guarantees non-empty content; this is the safety belt for
+      // any provider path that returns a blank final after the tool).
+      let finalContent = sanitizedFinalResponse;
+      if (saveLeadSucceeded && (!finalContent || finalContent.trim() === "")) {
+        finalContent =
+          "Vos coordonnées ont bien été enregistrées. " + "Nous vous recontacterons prochainement.";
+        console.log("[Webi] chat_inject_confirmation", { reason: "empty final after save_lead" });
+      }
+
       try {
         await addMessage(convCtx, resolvedConversationId || "new", {
           role: "assistant",
-          content: sanitizedFinalResponse,
+          content: finalContent,
         });
         assistantPersisted = true;
       } catch (persistError) {
@@ -494,7 +507,7 @@ async function runChatRequest(
       sendEvent({
         type: "message_complete",
         data: {
-          fullContent: sanitizedFinalResponse,
+          fullContent: finalContent,
           usage: result.usage,
           toolCalls: result.toolCalls,
           conversationId: resolvedConversationId || "new",

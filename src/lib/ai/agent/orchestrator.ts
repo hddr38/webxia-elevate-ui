@@ -547,6 +547,46 @@ export class AgentOrchestrator {
                 });
               }
             }
+
+            // FIX A (Phase 2) — save_lead succeeded: stop the loop right here
+            // and answer with the server confirmation. The second LLM turn is
+            // the exact window where the Netlify function can be killed
+            // (~26s timeout) leaving the visitor with an empty bubble and no
+            // persisted reply (prod regression, Phase 1 audit).
+            if (toolCall.function.name === "save_lead" && toolResult.success) {
+              console.log("[Webi] break_after_save_lead", {
+                reason: "save_lead succeeded, injecting server confirmation",
+              });
+              await auditLogger.logSecurityEvent("lead_created", {
+                severity: "low",
+                userId,
+                sessionId,
+                conversationId,
+                requestId,
+                eventData: {
+                  skill_name: "save_lead",
+                  source: "orchestrator_break_after_save_lead",
+                  leadId: executionResult.skillResult.data?.leadId,
+                },
+              });
+              eventBus.emit("agent.response.completed", requestId, {
+                durationMs: Date.now() - startTime,
+              });
+              return {
+                finalResponse:
+                  "Vos coordonnées ont bien été enregistrées. " +
+                  "Nous vous recontacterons prochainement.",
+                messages,
+                toolCalls,
+                toolResults,
+                usage: accumulatedUsage,
+                finishReason: "stop",
+                steps,
+                toolCallCount,
+                durationMs: Date.now() - startTime,
+                errors,
+              };
+            }
           }
 
           // FIX G: close the feedback loop — the next LLM call must see this

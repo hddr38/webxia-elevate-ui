@@ -391,6 +391,7 @@ describe("handleChatRequest SSE keep-alive", () => {
 
 type StreamOpts = {
   onStream?: (event: unknown) => void | Promise<void>;
+  onToolResult?: (event: unknown) => void | Promise<void>;
   conversationId: string;
   requestId: string;
 };
@@ -494,5 +495,121 @@ describe("handleChatRequest retries", () => {
     expect(addMessage).toHaveBeenCalledTimes(2);
     expect(vi.mocked(addMessage).mock.calls[0][2]).toMatchObject({ role: "user" });
     expect(vi.mocked(addMessage).mock.calls[1][2]).toMatchObject({ role: "assistant" });
+  });
+});
+
+describe("handleChatRequest save_lead confirmation (Phase 2 FIX B1/B2)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    eventBus.clear();
+  });
+
+  it("injects and persists the confirmation when saveLeadSucceeded and the final content is empty", async () => {
+    vi.mocked(AgentOrchestrator).mockImplementationOnce(
+      () =>
+        ({
+          run: async (opts: StreamOpts) => {
+            // The orchestrator reports the successful save_lead tool result
+            // (flag arm, FIX B2), then returns a finalResponse that stripped
+            // to nothing — the exact shape the FIX A break guarantees.
+            opts.onToolResult?.({
+              type: "tool_result",
+              data: {
+                toolCallId: "call-1",
+                toolName: "save_lead",
+                content: '{"leadId":"lead-b1-1"}',
+                success: true,
+              },
+              timestamp: 1,
+              conversationId: opts.conversationId,
+              requestId: opts.requestId,
+            });
+            return {
+              finalResponse: "",
+              messages: [],
+              toolCalls: [],
+              toolResults: [],
+              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+              finishReason: "stop",
+              steps: 1,
+              toolCallCount: 1,
+              durationMs: 5,
+              errors: [],
+            };
+          },
+        }) as unknown as InstanceType<typeof AgentOrchestrator>,
+    );
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      const response = await handleChatRequest(ctx());
+      const text = await readSse(response);
+
+      // The standard confirmation reaches the stream and the persisted row.
+      expect(text).toContain('"type":"message_complete"');
+      expect(text).toContain("Nous vous recontacterons prochainement.");
+      expect(addMessage).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(addMessage).mock.calls[1][2]).toMatchObject({
+        role: "assistant",
+        content: expect.stringContaining("coordonnées ont bien été enregistrées"),
+      });
+
+      // Both guards are observable (FIX B2 log + FIX B1 injection log).
+      expect(logSpy.mock.calls.some((c) => c[0] === "[Webi] saveLeadSucceeded_flag")).toBe(true);
+      expect(logSpy.mock.calls.some((c) => c[0] === "[Webi] chat_inject_confirmation")).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("does not inject a confirmation when the final content is non-empty after save_lead", async () => {
+    vi.mocked(AgentOrchestrator).mockImplementationOnce(
+      () =>
+        ({
+          run: async (opts: StreamOpts) => {
+            opts.onToolResult?.({
+              type: "tool_result",
+              data: {
+                toolCallId: "call-1",
+                toolName: "save_lead",
+                content: '{"leadId":"lead-b1-2"}',
+                success: true,
+              },
+              timestamp: 1,
+              conversationId: opts.conversationId,
+              requestId: opts.requestId,
+            });
+            return {
+              finalResponse: "Réponse du modèle après outil.",
+              messages: [],
+              toolCalls: [],
+              toolResults: [],
+              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+              finishReason: "stop",
+              steps: 1,
+              toolCallCount: 1,
+              durationMs: 5,
+              errors: [],
+            };
+          },
+        }) as unknown as InstanceType<typeof AgentOrchestrator>,
+    );
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      const response = await handleChatRequest(ctx());
+      const text = await readSse(response);
+
+      expect(text).toContain("Réponse du modèle après outil.");
+      expect(text).not.toContain("Nous vous recontacterons prochainement.");
+      expect(vi.mocked(addMessage).mock.calls[1][2]).toMatchObject({
+        role: "assistant",
+        content: "Réponse du modèle après outil.",
+      });
+      expect(logSpy.mock.calls.some((c) => c[0] === "[Webi] chat_inject_confirmation")).toBe(false);
+      expect(logSpy.mock.calls.some((c) => c[0] === "[Webi] saveLeadSucceeded_flag")).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 });

@@ -389,12 +389,15 @@ describe("AgentOrchestrator", () => {
   });
 
   it("excludes a tool from the next provider request after a successful execution (FIX F)", async () => {
+    // Phase 2 (FIX A): save_lead ends the run at success, so FIX F exclusion
+    // is exercised through a non-lead tool — the second request is the only
+    // place where the exclusion is observable.
     vi.mocked(getAllToolDefinitions).mockReturnValue([
       {
         type: "function",
         function: {
-          name: "save_lead",
-          description: "Save a lead",
+          name: "summarize",
+          description: "Summarize text",
           parameters: { type: "object", properties: {} },
         },
       },
@@ -404,17 +407,13 @@ describe("AgentOrchestrator", () => {
       id: "call-1",
       type: "function",
       function: {
-        name: "save_lead",
-        arguments: JSON.stringify({
-          first_name: "Jean",
-          email: "jean@exemple.fr",
-          summary: "x",
-        }),
+        name: "summarize",
+        arguments: JSON.stringify({ text: "Resume" }),
       },
     };
 
     skillExecutor.execute = vi.fn().mockResolvedValue({
-      result: { toolCallId: "call-1", toolName: "save_lead", content: "{}", success: true },
+      result: { toolCallId: "call-1", toolName: "summarize", content: "{}", success: true },
       skillResult: { success: true, data: {} },
     });
 
@@ -441,7 +440,7 @@ describe("AgentOrchestrator", () => {
         sessionId: "session-1",
         locale: "fr",
         requestId: "req-1",
-        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        userMessage: "Bonjour, resume ce texte",
         conversationHistory: [],
         onToolStart: vi.fn(),
         onToolResult: vi.fn(),
@@ -545,7 +544,7 @@ describe("AgentOrchestrator", () => {
     }
   });
 
-  it("feeds the tool call and its result back to the next LLM request (FIX G)", async () => {
+  it("breaks after save_lead success without waiting for LLM text (Phase 2 FIX A)", async () => {
     vi.mocked(getAllToolDefinitions).mockReturnValue([
       {
         type: "function",
@@ -573,25 +572,23 @@ describe("AgentOrchestrator", () => {
         content: '{"ok":true}',
         success: true,
       },
-      skillResult: { success: true, data: {} },
+      skillResult: { success: true, data: { leadId: "lead-fixa-42" } },
     });
 
-    mockLLMProvider.complete
-      .mockResolvedValueOnce({
-        id: "c1",
-        content: "",
-        model: "test-model",
-        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
-        finishReason: "tool_calls",
-        toolCalls: [toolCall],
-      })
-      .mockResolvedValueOnce({
-        id: "c2",
-        content: "Confirmation après résultat d'outil",
-        model: "test-model",
-        usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
-        finishReason: "stop",
-      });
+    // FIX A: the loop stops right after save_lead, so the provider is only
+    // ever asked once — no second LLM turn exists to be killed in prod.
+    mockLLMProvider.complete.mockResolvedValueOnce({
+      id: "c1",
+      content: "",
+      model: "test-model",
+      usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+      finishReason: "tool_calls",
+      toolCalls: [toolCall],
+    });
+
+    const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const onToolResult = vi.fn();
 
     try {
       const result = await orchestrator.run({
@@ -602,35 +599,57 @@ describe("AgentOrchestrator", () => {
         userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
         conversationHistory: [],
         onToolStart: vi.fn(),
-        onToolResult: vi.fn(),
+        onToolResult,
         onCitation: vi.fn(),
       });
 
-      const secondRequest = mockLLMProvider.complete.mock.calls[1][0];
-      const roles = secondRequest.messages.map((m) => m.role);
+      // No second LLM request is ever issued after a successful save_lead.
+      expect(mockLLMProvider.complete).toHaveBeenCalledTimes(1);
+      expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
+      expect(result.toolResults).toHaveLength(1);
 
-      // Without FIX G the model received the SAME static conversation on
-      // every step (no feedback) and blind-repeated save_lead to MAX_STEPS.
-      expect(secondRequest.messages.some((m) => m.role === "assistant" && !!m.toolCalls)).toBe(
-        true,
+      // The visitor-facing answer is the standard server confirmation.
+      expect(result.finalResponse).toBe(
+        "Vos coordonnées ont bien été enregistrées. Nous vous recontacterons prochainement.",
       );
-      const toolMsg = secondRequest.messages.find((m) => m.role === "tool");
-      expect(toolMsg).toBeDefined();
-      expect(toolMsg?.content).toContain('"ok":true');
-      expect(roles.indexOf("user")).toBeLessThan(roles.indexOf("tool"));
-      expect(result.finalResponse).toBe("Confirmation après résultat d'outil");
+      expect(result.finishReason).toBe("stop");
+
+      // The confirmation path is observable in logs and audit.
+      expect(logSpy.mock.calls.some((c) => c[0] === "[Webi] break_after_save_lead")).toBe(true);
+      expect(auditSpy).toHaveBeenCalledWith(
+        "lead_created",
+        expect.objectContaining({
+          eventData: expect.objectContaining({
+            skill_name: "save_lead",
+            source: "orchestrator_break_after_save_lead",
+            leadId: "lead-fixa-42",
+          }),
+        }),
+      );
+
+      // The chat.ts confirmation guards are armed before the return (FIX B2).
+      expect(onToolResult).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ toolName: "save_lead", success: true }),
+        }),
+      );
     } finally {
+      auditSpy.mockRestore();
+      logSpy.mockRestore();
       vi.mocked(getAllToolDefinitions).mockReturnValue([]);
     }
   });
 
   it("never re-executes a successful tool and ends the turn on the model text (FIX G1/G2)", async () => {
+    // Phase 2 (FIX A): save_lead ends the run at success, so G1/G2 are
+    // exercised through a non-lead tool. A neutral message keeps FIX L
+    // (direct extraction) out of this test's path.
     vi.mocked(getAllToolDefinitions).mockReturnValue([
       {
         type: "function",
         function: {
-          name: "save_lead",
-          description: "Save a lead",
+          name: "summarize",
+          description: "Summarize text",
           parameters: { type: "object", properties: {} },
         },
       },
@@ -640,15 +659,15 @@ describe("AgentOrchestrator", () => {
       id: "call-1",
       type: "function",
       function: {
-        name: "save_lead",
-        arguments: JSON.stringify({ first_name: "Jean", email: "jean@exemple.fr", summary: "x" }),
+        name: "summarize",
+        arguments: JSON.stringify({ text: "Resume ce texte" }),
       },
     };
 
     skillExecutor.execute = vi.fn().mockResolvedValue({
       result: {
         toolCallId: "call-1",
-        toolName: "save_lead",
+        toolName: "summarize",
         content: '{"ok":true}',
         success: true,
       },
@@ -666,7 +685,7 @@ describe("AgentOrchestrator", () => {
       })
       .mockResolvedValueOnce({
         id: "c2",
-        content: "Votre demande est bien enregistrée.",
+        content: "Voici le résumé demandé.",
         model: "test-model",
         usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
         finishReason: "tool_calls",
@@ -679,7 +698,7 @@ describe("AgentOrchestrator", () => {
         sessionId: "session-1",
         locale: "fr",
         requestId: "req-1",
-        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        userMessage: "Bonjour, resume ce texte",
         conversationHistory: [],
         onToolStart: vi.fn(),
         onToolResult: vi.fn(),
@@ -702,7 +721,7 @@ describe("AgentOrchestrator", () => {
       expect(fedBack[0].content).toContain('"ok":true');
 
       // G2: the turn ends on the model text instead of MAX_STEPS.
-      expect(result.finalResponse).toBe("Votre demande est bien enregistrée.");
+      expect(result.finalResponse).toBe("Voici le résumé demandé.");
       expect(result.errors.some((e) => e.code === "MAX_STEPS_EXCEEDED")).toBe(false);
       expect(mockLLMProvider.complete).toHaveBeenCalledTimes(2);
     } finally {
@@ -1678,25 +1697,18 @@ describe("AgentOrchestrator RAG citations", () => {
       vi.mocked(getAllToolDefinitions).mockReturnValue([saveLeadTool]);
       skillExecutor.execute = vi.fn().mockResolvedValue({
         result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
-        skillResult: { success: true, data: {} },
+        skillResult: { success: true, data: { leadId: "lead-fk-1" } },
       });
 
-      mockLLMProvider.complete
-        .mockResolvedValueOnce({
-          id: "c1",
-          content: "",
-          model: "test-model",
-          usage,
-          finishReason: "tool_calls",
-          toolCalls: [SAVE_LEAD_TOOL_CALL],
-        })
-        .mockResolvedValueOnce({
-          id: "c2",
-          content: "Lead enregistre, confirmation.",
-          model: "test-model",
-          usage,
-          finishReason: "stop",
-        });
+      // Phase 2 (FIX A): success ends the run — no second LLM request exists.
+      mockLLMProvider.complete.mockResolvedValueOnce({
+        id: "c1",
+        content: "",
+        model: "test-model",
+        usage,
+        finishReason: "tool_calls",
+        toolCalls: [SAVE_LEAD_TOOL_CALL],
+      });
 
       const result = await orchestrator.run({
         conversationId: "conv-1",
@@ -1715,15 +1727,19 @@ describe("AgentOrchestrator RAG citations", () => {
         type: "function",
         function: { name: "save_lead" },
       });
-      expect(result.finalResponse).toBe("Lead enregistre, confirmation.");
+      expect(mockLLMProvider.complete).toHaveBeenCalledTimes(1);
+      expect(result.finalResponse).toBe(
+        "Vos coordonnées ont bien été enregistrées. Nous vous recontacterons prochainement.",
+      );
       expect(result.toolCallCount).toBe(1);
     });
 
-    it("uses auto tool_choice when save_lead already succeeded (FIX F wins)", async () => {
+    it("does not break when save_lead fails — the run continues to the next LLM request (Phase 2 FIX A)", async () => {
       vi.mocked(getAllToolDefinitions).mockReturnValue([saveLeadTool]);
+      // The skill itself failed: FIX A must NOT return early.
       skillExecutor.execute = vi.fn().mockResolvedValue({
-        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
-        skillResult: { success: true, data: {} },
+        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: false },
+        skillResult: { success: false, error: { code: "SKILL_FAILED", message: "boom" } },
       });
 
       mockLLMProvider.complete
@@ -1737,29 +1753,31 @@ describe("AgentOrchestrator RAG citations", () => {
         })
         .mockResolvedValueOnce({
           id: "c2",
-          content: "Confirmation finale.",
+          content: "Réponse après échec du tool.",
           model: "test-model",
           usage,
           finishReason: "stop",
         });
 
-      await orchestrator.run({
+      const result = await orchestrator.run({
         conversationId: "conv-1",
         sessionId: "session-1",
         locale: "fr",
         requestId: "req-auto-after",
-        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        userMessage: "Bonjour, je veux un site",
         conversationHistory: [],
         onToolStart: vi.fn(),
         onToolResult: vi.fn(),
         onCitation: vi.fn(),
       });
 
+      expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
       expect(mockLLMProvider.complete).toHaveBeenCalledTimes(2);
       const secondRequest = (mockLLMProvider.complete.mock.calls[1]?.[0] ?? {}) as ProviderRequest;
       expect(secondRequest.toolChoice).toBe("auto");
-      // FIX F: save_lead is no longer offered -> forcing it would 400 NIM.
-      expect(secondRequest.tools ?? []).toHaveLength(0);
+      // FIX F: a FAILED tool stays offered so it can be retried.
+      expect(secondRequest.tools ?? []).toHaveLength(1);
+      expect(result.finalResponse).toBe("Réponse après échec du tool.");
     });
 
     it("uses auto tool_choice when no contact in user message", async () => {
@@ -1786,6 +1804,13 @@ describe("AgentOrchestrator RAG citations", () => {
       vi.mocked(getAllToolDefinitions).mockReturnValue([saveLeadTool]);
       const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
       const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+      // FIX L direct extraction runs after the violation (contact message):
+      // give it a deterministic success so this test never inherits the
+      // skillExecutor assignment of the previous test.
+      skillExecutor.execute = vi.fn().mockResolvedValue({
+        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
+        skillResult: { success: true, data: { leadId: "lead-violated-1" } },
+      });
 
       // Contact + save_lead available => forced turn, but the model
       // answers with plain text (no tool call): the anomaly must be traced.
@@ -1845,21 +1870,23 @@ describe("AgentOrchestrator RAG citations", () => {
   describe("server fallback confirmation (LOT 38a quinquies)", () => {
     const usage = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
 
-    const SAVE_LEAD_TOOL: ToolDefinition = {
+    // Phase 2 (FIX A): save_lead ends the run at success, so the fallback
+    // path is exercised through a non-lead tool.
+    const SUMMARIZE_TOOL: ToolDefinition = {
       type: "function",
       function: {
-        name: "save_lead",
-        description: "Save a visitor lead",
+        name: "summarize",
+        description: "Summarize a visitor text",
         parameters: { type: "object", properties: {} },
       },
     };
 
-    const SAVE_LEAD_TOOL_CALL: ToolCall = {
-      id: "call-sl",
+    const SUMMARIZE_TOOL_CALL: ToolCall = {
+      id: "call-sum",
       type: "function",
       function: {
-        name: "save_lead",
-        arguments: JSON.stringify({ first_name: "Jean", email: "jean@exemple.fr", summary: "x" }),
+        name: "summarize",
+        arguments: JSON.stringify({ text: "Resume ce texte" }),
       },
     };
 
@@ -1868,11 +1895,11 @@ describe("AgentOrchestrator RAG citations", () => {
     });
 
     it("returns server fallback confirmation when content empty after successful tool", async () => {
-      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SUMMARIZE_TOOL]);
       const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
       const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
       skillExecutor.execute = vi.fn().mockResolvedValue({
-        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
+        result: { toolCallId: "call-sum", toolName: "summarize", content: "{}", success: true },
         skillResult: { success: true, data: {} },
       });
 
@@ -1885,7 +1912,7 @@ describe("AgentOrchestrator RAG citations", () => {
           model: "test-model",
           usage,
           finishReason: "tool_calls",
-          toolCalls: [SAVE_LEAD_TOOL_CALL],
+          toolCalls: [SUMMARIZE_TOOL_CALL],
         })
         .mockResolvedValueOnce({
           id: "c2",
@@ -1901,7 +1928,7 @@ describe("AgentOrchestrator RAG citations", () => {
         sessionId: "session-1",
         locale: "fr",
         requestId: "req-fallback",
-        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        userMessage: "Bonjour, resume ce texte",
         conversationHistory: [],
         onToolStart: vi.fn(),
         onToolResult: vi.fn(),
@@ -1932,10 +1959,10 @@ describe("AgentOrchestrator RAG citations", () => {
     });
 
     it("does not use fallback when content is non-empty", async () => {
-      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SUMMARIZE_TOOL]);
       const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
       skillExecutor.execute = vi.fn().mockResolvedValue({
-        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
+        result: { toolCallId: "call-sum", toolName: "summarize", content: "{}", success: true },
         skillResult: { success: true, data: {} },
       });
 
@@ -1946,7 +1973,7 @@ describe("AgentOrchestrator RAG citations", () => {
           model: "test-model",
           usage,
           finishReason: "tool_calls",
-          toolCalls: [SAVE_LEAD_TOOL_CALL],
+          toolCalls: [SUMMARIZE_TOOL_CALL],
         })
         .mockResolvedValueOnce({
           id: "c2",
@@ -1962,7 +1989,7 @@ describe("AgentOrchestrator RAG citations", () => {
         sessionId: "session-1",
         locale: "fr",
         requestId: "req-no-fallback",
-        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        userMessage: "Bonjour, resume ce texte",
         conversationHistory: [],
         onToolStart: vi.fn(),
         onToolResult: vi.fn(),
@@ -2091,29 +2118,21 @@ describe("AgentOrchestrator RAG citations", () => {
       vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
       skillExecutor.execute = vi.fn().mockResolvedValue({
         result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
-        skillResult: { success: true, data: {} },
+        skillResult: { success: true, data: { leadId: "lead-noextract-1" } },
       });
 
-      // LLM calls save_lead normally
-      mockLLMProvider.complete
-        .mockResolvedValueOnce({
-          id: "c1",
-          content: "",
-          model: "test-model",
-          usage,
-          finishReason: "tool_calls",
-          toolCalls: [
-            { id: "call-1", type: "function", function: { name: "save_lead", arguments: "{}" } },
-          ],
-        })
-        .mockResolvedValueOnce({
-          id: "c2",
-          content: "Confirmation du modèle.",
-          model: "test-model",
-          usage,
-          finishReason: "stop",
-          toolCalls: [],
-        });
+      // LLM calls save_lead normally. Phase 2 (FIX A): success ends the run
+      // before any second LLM request or direct extraction can run.
+      mockLLMProvider.complete.mockResolvedValueOnce({
+        id: "c1",
+        content: "",
+        model: "test-model",
+        usage,
+        finishReason: "tool_calls",
+        toolCalls: [
+          { id: "call-1", type: "function", function: { name: "save_lead", arguments: "{}" } },
+        ],
+      });
 
       const result = await orchestrator.run({
         conversationId: "conv-1",
@@ -2127,8 +2146,11 @@ describe("AgentOrchestrator RAG citations", () => {
         onCitation: vi.fn(),
       });
 
-      // Normal flow, no direct extraction
-      expect(result.finalResponse).toBe("Confirmation du modèle.");
+      // Normal flow, no direct extraction, no second LLM turn.
+      expect(mockLLMProvider.complete).toHaveBeenCalledTimes(1);
+      expect(result.finalResponse).toBe(
+        "Vos coordonnées ont bien été enregistrées. Nous vous recontacterons prochainement.",
+      );
       // skillExecutor called once for the LLM tool call, not for direct extraction
       expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
     });
@@ -2277,7 +2299,7 @@ describe("AgentOrchestrator RAG citations", () => {
       logSpy.mockRestore();
     });
 
-    it("returns the confirmation when the LLM fails after save_lead already succeeded", async () => {
+    it("returns the confirmation immediately when save_lead succeeds (Phase 2 FIX A supersedes provider failure)", async () => {
       vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
       const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
       const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
@@ -2286,26 +2308,18 @@ describe("AgentOrchestrator RAG citations", () => {
         skillResult: { success: true, data: { leadId: "lead-after-456" } },
       });
 
-      // Turn 1: save_lead succeeds, turn 2 (final confirmation) times out
-      mockLLMProvider.complete
-        .mockResolvedValueOnce({
-          id: "c1",
-          content: "",
-          model: "test-model",
-          usage,
-          finishReason: "tool_calls",
-          toolCalls: [
-            { id: "call-1", type: "function", function: { name: "save_lead", arguments: "{}" } },
-          ],
-        })
-        .mockRejectedValueOnce(
-          new (await import("../providers/errors")).ProviderError(
-            "Request timeout",
-            "TIMEOUT",
-            "test",
-            true,
-          ),
-        );
+      // Turn 1: save_lead succeeds. FIX A returns before turn 2 is ever
+      // issued, so the "LLM fails after save_lead" window no longer exists.
+      mockLLMProvider.complete.mockResolvedValueOnce({
+        id: "c1",
+        content: "",
+        model: "test-model",
+        usage,
+        finishReason: "tool_calls",
+        toolCalls: [
+          { id: "call-1", type: "function", function: { name: "save_lead", arguments: "{}" } },
+        ],
+      });
 
       const result = await orchestrator.run({
         conversationId: "conv-1",
@@ -2323,20 +2337,18 @@ describe("AgentOrchestrator RAG citations", () => {
       expect(result.finalResponse).toContain("coordonnées ont bien été enregistrées");
       expect(result.finalResponse).toContain("recontacterons");
       expect(result.errors).toHaveLength(0);
+      expect(mockLLMProvider.complete).toHaveBeenCalledTimes(1);
 
-      // No second extraction (save_lead already ran)
+      // No second extraction (save_lead already ran) and FIX A path observable.
       expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
-      expect(
-        logSpy.mock.calls.some((c) => c[0] === "[Webi] provider_failure_after_save_lead"),
-      ).toBe(true);
-
+      expect(logSpy.mock.calls.some((c) => c[0] === "[Webi] break_after_save_lead")).toBe(true);
       expect(auditSpy).toHaveBeenCalledWith(
-        "tool_execution_failure",
+        "lead_created",
         expect.objectContaining({
-          severity: "low",
           eventData: expect.objectContaining({
-            source: "provider_failure_after_save_lead",
+            source: "orchestrator_break_after_save_lead",
             skill_name: "save_lead",
+            leadId: "lead-after-456",
           }),
         }),
       );

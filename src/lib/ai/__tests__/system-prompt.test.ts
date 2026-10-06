@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { WEBi_SYSTEM_PROMPT, WEBi_SYSTEM_PROMPT_VERSION } from "../agent/system-prompt";
 
 describe("system prompt", () => {
-  it("is version 1.3.3", () => {
-    expect(WEBi_SYSTEM_PROMPT_VERSION).toBe("1.3.3");
+  it("is version 1.3.4", () => {
+    expect(WEBi_SYSTEM_PROMPT_VERSION).toBe("1.3.4");
   });
 
   it("contains the simplified lead-registration block (v1.3.3, LOT 38a quater)", () => {
@@ -13,6 +13,12 @@ describe("system prompt", () => {
     expect(WEBi_SYSTEM_PROMPT).toContain(
       "Ne dis JAMAIS \"c'est noté\" si tu n'as pas vu la réponse de save_lead.",
     );
+  });
+
+  it("forbids visitor-facing jargon (v1.3.4, LOT 38a quinquies)", () => {
+    expect(WEBi_SYSTEM_PROMPT).toContain('N\'utilise JAMAIS les mots "lead"');
+    expect(WEBi_SYSTEM_PROMPT).toContain("Je note vos coordonnées");
+    expect(WEBi_SYSTEM_PROMPT).toContain("Je vais vous recontacter");
   });
 
   it("drops the v1.3.2 meta-instructions (FIX F owns the guard in code)", () => {

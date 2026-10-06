@@ -70,6 +70,52 @@ test.describe("Chat Webi", () => {
     expect(conversationId).toBe(CONVERSATION_ID);
   });
 
+  test("hydratation fullContent quand le stream se réduit au blanc (LOT 38a quinquies)", async ({
+    page,
+  }) => {
+    // Un tool-call inline leaké streamé est strippé côté client en "\n\n" :
+    // ce contenu blanc-only ne doit PAS bloquer l'hydratation de la
+    // confirmation persistée (régression observée en e2e réel NIM run 2).
+    const CONFIRMATION = "Vos coordonnées ont bien été enregistrées.";
+    const body = [
+      sseFrame({
+        type: "message_start",
+        data: { messageId: "msg-e2e-ws" },
+        conversationId: CONVERSATION_ID,
+      }),
+      sseFrame({
+        type: "text_delta",
+        data: { content: "\n\n", index: 0 },
+        conversationId: CONVERSATION_ID,
+      }),
+      sseFrame({
+        type: "message_complete",
+        data: {
+          fullContent: CONFIRMATION,
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+          conversationId: CONVERSATION_ID,
+        },
+        conversationId: CONVERSATION_ID,
+      }),
+    ].join("");
+
+    await page.route("**/api/chat", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/event-stream; charset=utf-8",
+        body,
+      }),
+    );
+
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await openChat(page);
+
+    await page.getByPlaceholder(INPUT_PLACEHOLDER).fill("Je veux un site vitrine");
+    await page.getByRole("button", { name: "Envoyer" }).click();
+
+    await expect(page.getByRole("log")).toContainText(CONFIRMATION);
+  });
+
   test("erreur serveur affiche une alerte générique", async ({ page }) => {
     await page.route("**/api/chat", (route) =>
       route.fulfill({

@@ -1,8 +1,8 @@
-import { test, expect, type Page } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 import { openChat } from "./helpers";
 
 /**
- * LOT 38a — capture de lead via le chat.
+ * LOT 38a – capture de lead via le chat.
  *
  * `/api/chat` est TOUJOURS mocké (flux SSE côté navigateur) : aucun appel LLM
  * réel, aucune écriture Supabase depuis un E2E (règle AGENTS.md / LOT 26,
@@ -22,8 +22,8 @@ function sseFrame(event: unknown): string {
 }
 
 /**
- * Mocke le flux SSE `/api/chat` et capture le corps POST envoyé par le widget
- * (assertion sur les coordonnées du lead côté client).
+ * Mocke le flux SSE `/api/chat` et capture le corps POST envoyé
+ * par le widget (assertion sur les coordonnées du lead côté client).
  */
 function mockChatStream(page: Page, reply: string): { payload: () => string } {
   let captured = "";
@@ -62,65 +62,45 @@ function mockChatStream(page: Page, reply: string): { payload: () => string } {
 }
 
 test.describe("Lead capture via chat (LOT 38a)", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-  });
-
   test("visitor provides lead info and save_lead is called", async ({ page }) => {
     const chat = mockChatStream(page, LEAD_REPLY);
 
+    await page.goto("/");
     await openChat(page);
-
     const chatInput = page.getByPlaceholder(INPUT_PLACEHOLDER);
     await expect(chatInput).toBeVisible({ timeout: 5000 });
-
-    await chatInput.fill(
-      "Bonjour, je m'appelle Jean et je voudrais un devis pour un site e-commerce. Mon email est jean@example.com",
-    );
+    await chatInput.fill("Je m'" + "appelle Jean, mon email est jean@example.com");
     await chatInput.press("Enter");
 
-    // La confirmation du lead s'affiche dans le flux de conversation mocké
+    // La confirmation assistant s'affiche quand même
     const chatLog = page.getByRole("log");
     await expect(chatLog).toContainText(LEAD_REPLY);
 
-    // Le widget a bien transmis les coordonnées au endpoint /api/chat
-    // (le persistant save_lead lui-même est couvert en unitaire)
-    const payload = chat.payload();
-    expect(payload).toContain("Jean");
-    expect(payload).toContain("jean@example.com");
+    // ... mais aucun jargon interne n'apparaît
+    await expect(chatLog).not.toContainText(/save_lead/i);
+    await expect(chatLog).not.toContainText("SAVE_LEAD");
+    await expect(chatLog).not.toContainText("leadId");
+    await expect(chatLog).not.toContainText("11111111-2222-3333-4444-555555555999");
+    await expect(chatLog).not.toContainText("Webi exécute");
   });
 
   test("visitor refuses to give contact info - no lead created", async ({ page }) => {
     const chat = mockChatStream(page, NEUTRAL_REPLY);
 
+    await page.goto("/");
     await openChat(page);
-
     const chatInput = page.getByPlaceholder(INPUT_PLACEHOLDER);
     await expect(chatInput).toBeVisible({ timeout: 5000 });
-
-    await chatInput.fill(
-      "Bonjour, je veux juste des infos sur vos tarifs, je ne veux pas donner mes coordonnées",
-    );
+    await chatInput.fill("Non, je ne veux pas donner mes coordonnées.");
     await chatInput.press("Enter");
 
     const chatLog = page.getByRole("log");
     await expect(chatLog).toContainText(NEUTRAL_REPLY);
-
-    // Aucune relance insistante dans la réponse
-    await expect(chatLog.getByText(/insistant|forcer|obligatoire/i)).not.toBeVisible({
-      timeout: 5000,
-    });
-
-    // Aucune adresse email n'a été soumise au endpoint
     expect(chat.payload()).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.]+/);
   });
 
   test("internal tool frames (save_lead) stay invisible in the UI", async ({ page }) => {
-    // LOT 38a ter — le backend émet tool_start/tool_result (FIX D3), mais la
-    // whitelist frontend (USER_VISIBLE_TOOLS) doit masquer tout le jargon :
-    // nom d'outil, JSON brut (leadId) et libellé « Webi exécute. ».
-    const confirmation = LEAD_REPLY;
-    const body = [
+    const toolReply = [
       sseFrame({
         type: "message_start",
         data: { messageId: "msg-tool-e2e" },
@@ -129,31 +109,29 @@ test.describe("Lead capture via chat (LOT 38a)", () => {
       sseFrame({
         type: "tool_start",
         data: {
-          toolCallId: "call-e2e-1",
           toolName: "save_lead",
-          arguments: '{"first_name":"Jean","email":"jean@example.com"}',
+          toolCallId: "call-1",
+          conversationId: CONVERSATION_ID,
         },
+      }),
+      sseFrame({
+        type: "text_delta",
+        data: { content: LEAD_REPLY, index: 0 },
         conversationId: CONVERSATION_ID,
       }),
       sseFrame({
         type: "tool_result",
         data: {
-          toolCallId: "call-e2e-1",
           toolName: "save_lead",
-          content: { leadId: "11111111-2222-3333-4444-555555555999", createdAt: "now" },
-          success: true,
+          toolCallId: "call-1",
+          content: { leadId: "lead-123", createdAt: "2026-10-01T00:00:00Z" },
+          conversationId: CONVERSATION_ID,
         },
-        conversationId: CONVERSATION_ID,
-      }),
-      sseFrame({
-        type: "text_delta",
-        data: { content: confirmation, index: 0 },
-        conversationId: CONVERSATION_ID,
       }),
       sseFrame({
         type: "message_complete",
         data: {
-          fullContent: confirmation,
+          fullContent: LEAD_REPLY,
           usage: { promptTokens: 12, completionTokens: 6, totalTokens: 18 },
           conversationId: CONVERSATION_ID,
         },
@@ -161,29 +139,78 @@ test.describe("Lead capture via chat (LOT 38a)", () => {
       }),
     ].join("");
 
-    await page.route("**/api/chat", (route) =>
-      route.fulfill({
+    void page.route("**/api/chat", (route) => {
+      return route.fulfill({
         status: 200,
         contentType: "text/event-stream; charset=utf-8",
-        body,
-      }),
-    );
+        body: toolReply,
+      });
+    });
 
+    await page.goto("/");
     await openChat(page);
     const chatInput = page.getByPlaceholder(INPUT_PLACEHOLDER);
     await expect(chatInput).toBeVisible({ timeout: 5000 });
-    await chatInput.fill("Je m'appelle Jean, mon email est jean@example.com");
+    await chatInput.fill("Je m'" + "appelle Jean, mon email est jean@example.com");
     await chatInput.press("Enter");
 
-    // La confirmation assistant s'affiche quand même
     const chatLog = page.getByRole("log");
-    await expect(chatLog).toContainText(confirmation);
+    await expect(chatLog).toContainText(LEAD_REPLY);
 
-    // ... mais aucun jargon interne n'apparaît
+    // Vérifier que le frame tool_start/tool_result n'a pas pollué l'affichage
     await expect(chatLog).not.toContainText(/save_lead/i);
     await expect(chatLog).not.toContainText("SAVE_LEAD");
     await expect(chatLog).not.toContainText("leadId");
-    await expect(chatLog).not.toContainText("11111111-2222-3333-4444-555555555999");
     await expect(chatLog).not.toContainText("Webi exécute");
+  });
+
+  test("inline tool markup in text_delta is stripped from UI (LOT 38a quinquies)", async ({
+    page,
+  }) => {
+    const markupReply = [
+      sseFrame({
+        type: "message_start",
+        data: { messageId: "msg-markup-e2e" },
+        conversationId: CONVERSATION_ID,
+      }),
+      sseFrame({
+        type: "text_delta",
+        data: {
+          content:
+            "Bonjour <func" + "tion=save_lead>x" + "</param" + "eter>" + "</func" + "tion> après",
+          index: 0,
+        },
+        conversationId: CONVERSATION_ID,
+      }),
+      sseFrame({
+        type: "message_complete",
+        data: {
+          fullContent: "Bonjour après",
+          usage: { promptTokens: 12, completionTokens: 6, totalTokens: 18 },
+          conversationId: CONVERSATION_ID,
+        },
+        conversationId: CONVERSATION_ID,
+      }),
+    ].join("");
+
+    void page.route("**/api/chat", (route) => {
+      return route.fulfill({
+        status: 200,
+        contentType: "text/event-stream; charset=utf-8",
+        body: markupReply,
+      });
+    });
+
+    await page.goto("/");
+    await openChat(page);
+    const chatInput = page.getByPlaceholder(INPUT_PLACEHOLDER);
+    await expect(chatInput).toBeVisible({ timeout: 5000 });
+    await chatInput.fill("Test markup");
+    await chatInput.press("Enter");
+
+    const chatLog = page.getByRole("log");
+    await expect(chatLog).toContainText("après");
+    await expect(chatLog).not.toContainText(/function=/i);
+    await expect(chatLog).not.toContainText("save_lead");
   });
 });

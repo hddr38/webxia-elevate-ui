@@ -22,6 +22,9 @@ export interface SaveLeadInput extends SkillInput {
 export interface SaveLeadOutput extends SkillOutput {
   leadId: string;
   createdAt: string;
+  // LOT 38a quinquies: true when an existing lead was returned instead of a
+  // new insert (same session + same email/phone within the 24h window).
+  deduplicated?: boolean;
 }
 
 export class SaveLeadSkill implements Skill<SaveLeadInput, SaveLeadOutput> {
@@ -109,6 +112,43 @@ export class SaveLeadSkill implements Skill<SaveLeadInput, SaveLeadOutput> {
     try {
       const supabase = this.getAdminClient();
 
+      // FIX (LOT 38a quinquies): 24h dedup — a visitor re-sending the same
+      // coordinates in the same session must not create N rows. successful-
+      // ToolNames resets per run, so only the DB can enforce this. Match on
+      // email OR phone (whichever is provided) within the 24h window.
+      const dedupCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const orConditions = [
+        options.email ? `email.eq.${options.email}` : null,
+        options.phone ? `phone.eq.${options.phone}` : null,
+      ]
+        .filter(Boolean)
+        .join(",");
+
+      if (orConditions) {
+        const { data: existing } = await supabase
+          .from("leads")
+          .select("id, created_at")
+          .eq("session_id", context.sessionId)
+          .gte("created_at", dedupCutoff)
+          .or(orConditions)
+          .limit(1)
+          .maybeSingle();
+
+        if (existing) {
+          console.log("[Webi] save_lead_dedup", { existing_id: existing.id });
+          return {
+            success: true,
+            data: {
+              leadId: existing.id,
+              createdAt: existing.created_at,
+              deduplicated: true,
+            },
+            followUp:
+              "Existing lead returned (deduplicated, 24h window). Confirm to the visitor that their details are already recorded.",
+          };
+        }
+      }
+
       const insertData = {
         session_id: context.sessionId,
         conversation_id: context.conversationId,
@@ -139,6 +179,9 @@ export class SaveLeadSkill implements Skill<SaveLeadInput, SaveLeadOutput> {
         eventData: {
           leadId: lead.id,
           firstName: options.first_name,
+          // LOT 38a quinquies: email is the deterministic correlation key —
+          // first_name is free-text LLM input and may be shortened ("Nim").
+          email: options.email ?? null,
           hasEmail: !!options.email,
           hasPhone: !!options.phone,
         },

@@ -5,6 +5,8 @@ import { skillRegistry, getAllToolDefinitions } from "../skills";
 import { eventBus } from "../events";
 import { auditLogger } from "../security/audit-log";
 import { hasContactInfo } from "./contact-detector";
+import { stripInlineToolCalls } from "./strip-inline-tool-calls";
+import { extractLeadFromMessage } from "./lead-extractor";
 import type { RAGEngine } from "../rag/rag-engine";
 import {
   AgentContext,
@@ -320,6 +322,12 @@ export class AgentOrchestrator {
           response = await this.llmProvider.complete(providerRequest);
         }
 
+        // LOT 38a quinquies (Option 2): sanitize leaked inline tool calls
+        // from response content before history accumulation and persistence.
+        if (response.content) {
+          response.content = stripInlineToolCalls(response.content);
+        }
+
         // Accumulate usage
         accumulatedUsage.promptTokens += response.usage.promptTokens;
         accumulatedUsage.completionTokens += response.usage.completionTokens;
@@ -600,6 +608,85 @@ export class AgentOrchestrator {
           // Continue loop for next LLM call with tool results
           continue;
         } else {
+          // FIX (LOT 38a quinquies): server fallback confirmation when
+          // content is empty after strip but a tool succeeded — visitor
+          // must receive a confirmation, not an EMPTY_RESPONSE error.
+          const hasSuccessfulTool = successfulToolNames.size > 0;
+          if ((!response.content || response.content.trim().length === 0) && hasSuccessfulTool) {
+            console.log("[Webi] server_fallback_confirmation", {
+              reason: "empty content after tool success",
+              successfulTools: [...successfulToolNames],
+            });
+            response.content =
+              "Vos coordonnées ont bien été enregistrées. " +
+              "Nous vous recontacterons prochainement.";
+            await auditLogger.logSecurityEvent("tool_execution_failure", {
+              severity: "low",
+              userId,
+              sessionId,
+              conversationId,
+              requestId,
+              eventData: {
+                skill_name: [...successfulToolNames][0] ?? "unknown",
+                error: "empty content after tool success",
+                server_fallback: "confirmation_message",
+                successful_tools: [...successfulToolNames],
+              },
+              errorMessage: "server_fallback_confirmation",
+            });
+          }
+
+          // FIX L (LOT 38a quinquies): server direct extraction when LLM
+          // ignores forced save_lead — extract from user message and call
+          // skill directly. Runs only if contact detected AND save_lead
+          // hasn't been executed yet in this run.
+          const contactDetected = hasContactInfo(options.userMessage);
+          const saveLeadCalled = successfulToolNames.has("save_lead");
+          if (contactDetected && !saveLeadCalled) {
+            console.log("[Webi] server_direct_extract", {
+              reason: "LLM did not call save_lead despite contact",
+            });
+            const extracted = extractLeadFromMessage(options.userMessage);
+            if (extracted) {
+              const directContext = {
+                conversationId,
+                sessionId,
+                userId,
+                locale: options.locale,
+                requestId,
+                metadata: {},
+              };
+              const directResult = await skillExecutor.execute("save_lead", directContext, {
+                first_name: extracted.firstName,
+                email: extracted.email ?? null,
+                phone: extracted.phone ?? null,
+                summary: options.userMessage.slice(0, 500) || "Contact capturé automatiquement",
+              });
+              if (directResult.skillResult.success) {
+                successfulToolNames.add("save_lead");
+                response.content =
+                  "Vos coordonnées ont bien été enregistrées. " +
+                  "Nous vous recontacterons prochainement.";
+                await auditLogger.logSecurityEvent("lead_created", {
+                  severity: "low",
+                  userId,
+                  sessionId,
+                  conversationId,
+                  requestId,
+                  eventData: {
+                    skill_name: "save_lead",
+                    source: "server_direct_extract",
+                    leadId: directResult.skillResult.data?.leadId,
+                    firstName: extracted.firstName,
+                    email: extracted.email ?? null,
+                    hasEmail: !!extracted.email,
+                    hasPhone: !!extracted.phone,
+                  },
+                });
+              }
+            }
+          }
+
           // Final response — an empty one is not a response: fail instead of
           // persisting/showing a blank bubble.
           if (!response.content || response.content.trim().length === 0) {
@@ -663,6 +750,115 @@ export class AgentOrchestrator {
         // cause — never remap to a provider error, never fall through to the
         // end-of-loop path.
         if (isGenerationFailure(error)) throw error;
+
+        // FIX (LOT 38a quinquies) — provider failed AFTER save_lead already
+        // succeeded this run: the lead is safe in the DB, so the visitor must
+        // get the standard confirmation, never a GENERATION_FAILED error
+        // (mirrors the empty-content fallback after a successful tool).
+        if (successfulToolNames.has("save_lead")) {
+          const providerFailureMessage =
+            error instanceof Error ? error.message : "unknown provider failure";
+          console.log("[Webi] provider_failure_after_save_lead", {
+            error: providerFailureMessage,
+          });
+          await auditLogger.logSecurityEvent("tool_execution_failure", {
+            severity: "low",
+            userId,
+            sessionId,
+            conversationId,
+            requestId,
+            eventData: {
+              skill_name: "save_lead",
+              error: providerFailureMessage,
+              source: "provider_failure_after_save_lead",
+            },
+            errorMessage: "provider_failure_after_save_lead",
+          });
+          eventBus.emit("agent.response.completed", requestId, {
+            durationMs: Date.now() - startTime,
+          });
+          return {
+            finalResponse:
+              "Vos coordonnées ont bien été enregistrées. " +
+              "Nous vous recontacterons prochainement.",
+            messages,
+            toolCalls,
+            toolResults,
+            usage: accumulatedUsage,
+            finishReason: "stop",
+            steps,
+            toolCallCount,
+            durationMs: Date.now() - startTime,
+            errors,
+          };
+        }
+
+        // FIX (LOT 38a quinquies) — LLM failure fallback: when the provider
+        // call dies while the visitor supplied contact details and save_lead
+        // never ran in this run, extract server-side and answer with the
+        // standard confirmation instead of surfacing an error to the visitor.
+        if (hasContactInfo(options.userMessage) && !successfulToolNames.has("save_lead")) {
+          const failedExtract = extractLeadFromMessage(options.userMessage);
+          if (failedExtract) {
+            const fallbackResult = await skillExecutor.execute(
+              "save_lead",
+              {
+                conversationId,
+                sessionId,
+                userId,
+                locale: options.locale,
+                requestId,
+                metadata: {},
+              },
+              {
+                first_name: failedExtract.firstName,
+                email: failedExtract.email ?? null,
+                phone: failedExtract.phone ?? null,
+                summary: options.userMessage.slice(0, 500) || "Contact capturé automatiquement",
+              },
+            );
+            if (fallbackResult.skillResult.success) {
+              successfulToolNames.add("save_lead");
+              console.log("[Webi] server_direct_extract_on_llm_failure", {
+                leadId: fallbackResult.skillResult.data?.leadId,
+              });
+              await auditLogger.logSecurityEvent("lead_created", {
+                severity: "low",
+                userId,
+                sessionId,
+                conversationId,
+                requestId,
+                eventData: {
+                  skill_name: "save_lead",
+                  source: "server_direct_extract_on_llm_failure",
+                  leadId: fallbackResult.skillResult.data?.leadId,
+                  firstName: failedExtract.firstName,
+                  email: failedExtract.email ?? null,
+                  hasEmail: !!failedExtract.email,
+                  hasPhone: !!failedExtract.phone,
+                  llmError: error instanceof Error ? error.message : "unknown",
+                },
+              });
+              eventBus.emit("agent.response.completed", requestId, {
+                durationMs: Date.now() - startTime,
+              });
+              return {
+                finalResponse:
+                  "Vos coordonnées ont bien été enregistrées. " +
+                  "Nous vous recontacterons prochainement.",
+                messages,
+                toolCalls,
+                toolResults,
+                usage: accumulatedUsage,
+                finishReason: "stop",
+                steps,
+                toolCallCount,
+                durationMs: Date.now() - startTime,
+                errors,
+              };
+            }
+          }
+        }
 
         const llmDuration = Date.now() - llmStartTime;
 

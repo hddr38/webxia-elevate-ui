@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { SaveLeadSkill, createSaveLeadSkill } from "../skills/save-lead";
 import { SkillContext, ToolPermission } from "../skills/types";
 import { auditLogger } from "../security/audit-log";
@@ -25,20 +25,34 @@ function createMockSkillContext(overrides: Partial<SkillContext> = {}): SkillCon
 }
 
 function createMockSupabaseAdmin() {
-  const mockInsert = vi.fn().mockReturnThis();
-  const mockSelect = vi.fn().mockReturnThis();
   const mockSingle = vi.fn();
-  const mockFrom = vi.fn().mockReturnValue({
-    insert: mockInsert,
-    select: mockSelect,
-    single: mockSingle,
-  });
+  const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+
+  // One chainable builder shared by both paths of execute():
+  //   dedup : from().select().eq().gte().or().limit().maybeSingle()
+  //   insert: from().insert().select().single()
+  const chain = {} as Record<string, unknown>;
+  chain.select = vi.fn().mockReturnThis();
+  chain.eq = vi.fn().mockReturnThis();
+  chain.gte = vi.fn().mockReturnThis();
+  chain.or = vi.fn().mockReturnThis();
+  chain.limit = vi.fn().mockReturnThis();
+  chain.insert = vi.fn().mockReturnThis();
+  chain.single = mockSingle;
+  chain.maybeSingle = mockMaybeSingle;
+
+  const mockFrom = vi.fn().mockReturnValue(chain);
 
   return {
     from: mockFrom,
-    mockInsert,
-    mockSelect,
+    mockInsert: chain.insert as ReturnType<typeof vi.fn>,
+    mockSelect: chain.select as ReturnType<typeof vi.fn>,
+    mockEq: chain.eq as ReturnType<typeof vi.fn>,
+    mockGte: chain.gte as ReturnType<typeof vi.fn>,
+    mockOr: chain.or as ReturnType<typeof vi.fn>,
+    mockLimit: chain.limit as ReturnType<typeof vi.fn>,
     mockSingle,
+    mockMaybeSingle,
     mockFrom,
   };
 }
@@ -300,5 +314,142 @@ describe("SaveLeadSkill", () => {
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe("EXECUTION_FAILED");
     expect(auditLogger.logToolExecutionFailure).toHaveBeenCalled();
+  });
+});
+
+describe("SaveLeadSkill deduplication (LOT 38a quinquies)", () => {
+  let skill: SaveLeadSkill;
+  let mockSupabase: ReturnType<typeof createMockSupabaseAdmin>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSupabase = createMockSupabaseAdmin();
+    vi.mocked(getSupabaseAdmin).mockReturnValue(
+      mockSupabase as unknown as ReturnType<typeof getSupabaseAdmin>,
+    );
+
+    skill = createSaveLeadSkill(() => getSupabaseAdmin());
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("dedupes a lead with same email+session within 24h", async () => {
+    mockSupabase.mockMaybeSingle.mockResolvedValue({
+      data: { id: "lead-existing", created_at: "2026-10-05T10:00:00Z" },
+      error: null,
+    });
+
+    const context = createMockSkillContext({ sessionId: "session-1" });
+    const result = await skill.execute(context, {
+      first_name: "Marie",
+      email: "marie@example.com",
+      summary: "Visitor re-sends the same coordinates in the same session.",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.leadId).toBe("lead-existing");
+    expect(result.data?.createdAt).toBe("2026-10-05T10:00:00Z");
+    expect(result.data?.deduplicated).toBe(true);
+
+    expect(mockSupabase.mockEq).toHaveBeenCalledWith("session_id", "session-1");
+    expect(mockSupabase.mockOr).toHaveBeenCalledWith("email.eq.marie@example.com");
+    expect(mockSupabase.mockMaybeSingle).toHaveBeenCalled();
+
+    expect(mockSupabase.mockInsert).not.toHaveBeenCalled();
+    expect(auditLogger.logSecurityEvent).not.toHaveBeenCalledWith(
+      "lead_created",
+      expect.anything(),
+    );
+  });
+
+  it("dedupes a lead with same phone+session within 24h", async () => {
+    mockSupabase.mockMaybeSingle.mockResolvedValue({
+      data: { id: "lead-existing-phone", created_at: "2026-10-05T09:00:00Z" },
+      error: null,
+    });
+
+    const context = createMockSkillContext({ sessionId: "session-phone" });
+    const result = await skill.execute(context, {
+      first_name: "Marie",
+      phone: "0123456789",
+      summary: "Visitor re-sends the same phone number in the same session.",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.leadId).toBe("lead-existing-phone");
+    expect(result.data?.deduplicated).toBe(true);
+
+    expect(mockSupabase.mockOr).toHaveBeenCalledWith("phone.eq.0123456789");
+    expect(mockSupabase.mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("creates a new lead when email differs", async () => {
+    // Dedup query returns no row (different email => no match in DB).
+    mockSupabase.mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+    mockSupabase.mockSingle.mockResolvedValue({
+      data: { id: "lead-new", created_at: "2026-10-05T11:00:00Z" },
+      error: null,
+    });
+
+    const context = createMockSkillContext({ sessionId: "session-1" });
+    const result = await skill.execute(context, {
+      first_name: "Jean",
+      email: "jean.other@example.com",
+      summary: "Different email in the same session must create a new lead.",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.leadId).toBe("lead-new");
+    expect(result.data?.deduplicated).toBeUndefined();
+    expect(mockSupabase.mockOr).toHaveBeenCalledWith("email.eq.jean.other@example.com");
+    expect(mockSupabase.mockInsert).toHaveBeenCalled();
+    expect(auditLogger.logSecurityEvent).toHaveBeenCalledWith("lead_created", expect.anything());
+  });
+
+  it("creates a new lead when session differs", async () => {
+    // Dedup query is scoped by session_id => another session never matches.
+    mockSupabase.mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+    mockSupabase.mockSingle.mockResolvedValue({
+      data: { id: "lead-other-session", created_at: "2026-10-05T11:00:00Z" },
+      error: null,
+    });
+
+    const context = createMockSkillContext({ sessionId: "session-other" });
+    const result = await skill.execute(context, {
+      first_name: "Marie",
+      email: "marie@example.com",
+      summary: "Same coordinates but a different session must create a new lead.",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.leadId).toBe("lead-other-session");
+    expect(mockSupabase.mockEq).toHaveBeenCalledWith("session_id", "session-other");
+    expect(mockSupabase.mockInsert).toHaveBeenCalled();
+  });
+
+  it("creates a new lead after 24h window (dedup expired)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-05T12:00:00.000Z"));
+
+    // No row within the last 24h => insert proceeds.
+    mockSupabase.mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+    mockSupabase.mockSingle.mockResolvedValue({
+      data: { id: "lead-later", created_at: "2026-10-05T12:00:00Z" },
+      error: null,
+    });
+
+    const context = createMockSkillContext({ sessionId: "session-1" });
+    const result = await skill.execute(context, {
+      first_name: "Marie",
+      email: "marie@example.com",
+      summary: "Coordinates sent more than 24h ago must not deduplicate.",
+    });
+
+    expect(result.success).toBe(true);
+    expect(mockSupabase.mockGte).toHaveBeenCalledWith("created_at", "2026-10-04T12:00:00.000Z");
+    expect(result.data?.leadId).toBe("lead-later");
+    expect(mockSupabase.mockInsert).toHaveBeenCalled();
   });
 });

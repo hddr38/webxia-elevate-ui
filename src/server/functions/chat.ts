@@ -7,6 +7,7 @@ import {
   getOrCreateConversation,
 } from "@/lib/ai/conversation/conversation-service";
 import { AgentOrchestrator, AgentRunResult } from "@/lib/ai/agent/orchestrator";
+import { stripInlineToolCalls } from "@/lib/ai/agent/strip-inline-tool-calls";
 import { ModelRouter } from "@/lib/ai/providers/model-router";
 import { NvidiaProvider } from "@/lib/ai/providers/nvidia";
 import { RAGEngine } from "@/lib/ai/rag/rag-engine";
@@ -287,6 +288,10 @@ async function runChatRequest(
   /** Content forwarded to the client as `text_delta` — kept for LOT 23. */
   let partialContent = "";
   let assistantPersisted = false;
+  // Set as soon as save_lead reports success: a late failure (deadline
+  // abort, provider crash) must then answer with the confirmation instead
+  // of an error — the lead is already safe in the DB (LOT 38a quinquies).
+  let saveLeadSucceeded = false;
 
   /**
    * Producer-side backpressure: the agent loop parks here while written frames
@@ -434,7 +439,12 @@ async function runChatRequest(
           await awaitDrain();
         },
         onToolStart: (event) => sendEvent(event),
-        onToolResult: (event) => sendEvent(event),
+        onToolResult: (event) => {
+          if (event.data.toolName === "save_lead" && event.data.success === true) {
+            saveLeadSucceeded = true;
+          }
+          sendEvent(event);
+        },
         onCitation: (event) => sendEvent(event),
         authContext: {
           userId,
@@ -460,10 +470,12 @@ async function runChatRequest(
         }),
       ]);
 
+      const sanitizedFinalResponse = stripInlineToolCalls(result.finalResponse);
+
       try {
         await addMessage(convCtx, resolvedConversationId || "new", {
           role: "assistant",
-          content: result.finalResponse,
+          content: sanitizedFinalResponse,
         });
         assistantPersisted = true;
       } catch (persistError) {
@@ -482,7 +494,7 @@ async function runChatRequest(
       sendEvent({
         type: "message_complete",
         data: {
-          fullContent: result.finalResponse,
+          fullContent: sanitizedFinalResponse,
           usage: result.usage,
           toolCalls: result.toolCalls,
           conversationId: resolvedConversationId || "new",
@@ -498,36 +510,84 @@ async function runChatRequest(
         // provider stops generating (and billing) for a dead request.
         nvidiaProvider.abort();
       }
-      const errorCode: AgentErrorCode =
-        error instanceof Error && "code" in error
-          ? (error as { code: AgentErrorCode }).code
-          : "INTERNAL_ERROR";
-      const recoverable =
-        error instanceof Error && "recoverable" in error
-          ? (error as { recoverable: boolean }).recoverable
-          : false;
+      // LOT 38a quinquies — save_lead already persisted the lead this run: a
+      // late failure (deadline abort or provider crash after the tool) must
+      // not surface an error to the visitor. Persist and stream the standard
+      // confirmation exactly like a normal response.
+      if (saveLeadSucceeded && !assistantPersisted) {
+        const confirmation =
+          "Vos coordonnées ont bien été enregistrées. " + "Nous vous recontacterons prochainement.";
+        try {
+          await addMessage(convCtx, resolvedConversationId || "new", {
+            role: "assistant",
+            content: confirmation,
+          });
+          assistantPersisted = true;
+          eventBus.emit("agent.error", requestId, {
+            stage: "chat",
+            message: `chat_failure_after_save_lead: ${
+              error instanceof Error ? error.message : "unknown"
+            }`,
+          });
+          eventBus.emit("agent.response.completed", requestId, {
+            durationMs: Date.now() - startTime,
+          });
+          sendEvent({
+            type: "message_complete",
+            data: {
+              fullContent: confirmation,
+              usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+              toolCalls: [],
+              conversationId: resolvedConversationId || "new",
+            },
+            timestamp: Date.now(),
+            conversationId: resolvedConversationId || "new",
+            requestId,
+            durationMs: Date.now() - startTime,
+          });
+        } catch (persistError) {
+          eventBus.emit("agent.error", requestId, {
+            stage: "chat",
+            message:
+              persistError instanceof Error ? persistError.message : "Confirmation persist failed",
+          });
+        }
+      }
 
-      sendEvent({
-        type: "error",
-        data: {
-          code: errorCode,
-          message: error instanceof Error ? error.message : "Unknown error",
-          recoverable,
-        },
-        timestamp: Date.now(),
-        conversationId: resolvedConversationId || "new",
-        requestId,
-      });
+      if (!assistantPersisted) {
+        const errorCode: AgentErrorCode =
+          error instanceof Error && "code" in error
+            ? (error as { code: AgentErrorCode }).code
+            : "INTERNAL_ERROR";
+        const recoverable =
+          error instanceof Error && "recoverable" in error
+            ? (error as { recoverable: boolean }).recoverable
+            : false;
+
+        sendEvent({
+          type: "error",
+          data: {
+            code: errorCode,
+            message: error instanceof Error ? error.message : "Unknown error",
+            recoverable,
+          },
+          timestamp: Date.now(),
+          conversationId: resolvedConversationId || "new",
+          requestId,
+        });
+      }
 
       // LOT 23 — a stream cut by the deadline or by a client disconnect must
       // not lose what the user already read. Strictly gated on a lifecycle
       // abort: a GENERATION_FAILED (LOT 10) still never writes an assistant row.
-      if (lifecycle.signal.aborted && !assistantPersisted && partialContent.trim().length > 0) {
+      // Use trim:false to preserve trailing spaces from partial streaming content.
+      const sanitizedPartial = stripInlineToolCalls(partialContent, { trim: false });
+      if (lifecycle.signal.aborted && !assistantPersisted && sanitizedPartial.trim().length > 0) {
         assistantPersisted = true;
         try {
           await addMessage(convCtx, resolvedConversationId || "new", {
             role: "assistant",
-            content: partialContent,
+            content: sanitizedPartial,
           });
         } catch (persistError) {
           eventBus.emit("agent.error", requestId, {

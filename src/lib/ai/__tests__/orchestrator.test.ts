@@ -483,19 +483,25 @@ describe("AgentOrchestrator", () => {
       },
     };
 
-    skillExecutor.execute = vi.fn().mockResolvedValue({
-      result: {
-        toolCallId: "call-1",
-        toolName: "save_lead",
-        content: JSON.stringify({ error: "boom" }),
-        success: false,
-        error: "boom",
-      },
-      skillResult: {
-        success: false,
-        error: { code: "EXECUTION_FAILED", message: "boom", recoverable: true },
-      },
-    });
+    skillExecutor.execute = vi
+      .fn()
+      .mockResolvedValueOnce({
+        result: {
+          toolCallId: "call-1",
+          toolName: "save_lead",
+          content: JSON.stringify({ error: "boom" }),
+          success: false,
+          error: "boom",
+        },
+        skillResult: {
+          success: false,
+          error: { code: "EXECUTION_FAILED", message: "boom", recoverable: true },
+        },
+      })
+      .mockResolvedValueOnce({
+        result: { toolCallId: "call-2", toolName: "save_lead", content: "{}", success: true },
+        skillResult: { success: true, data: {} },
+      });
 
     mockLLMProvider.complete
       .mockResolvedValueOnce({
@@ -527,8 +533,10 @@ describe("AgentOrchestrator", () => {
         onCitation: vi.fn(),
       });
 
-      expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
+      // First call fails, second succeeds (retry via server direct extraction)
+      expect(skillExecutor.execute).toHaveBeenCalledTimes(2);
       expect(result.toolResults[0].success).toBe(false);
+      expect(result.finalResponse).toContain("coordonnées ont bien été enregistrées");
 
       const secondRequest = mockLLMProvider.complete.mock.calls[1][0];
       expect(secondRequest.tools?.some((t) => t.function.name === "save_lead")).toBe(true);
@@ -1781,6 +1789,7 @@ describe("AgentOrchestrator RAG citations", () => {
 
       // Contact + save_lead available => forced turn, but the model
       // answers with plain text (no tool call): the anomaly must be traced.
+      // Server direct extraction should kick in and save the lead.
       const result = await orchestrator.run({
         conversationId: "conv-1",
         sessionId: "session-1",
@@ -1793,6 +1802,7 @@ describe("AgentOrchestrator RAG citations", () => {
         onCitation: vi.fn(),
       });
 
+      // Forced tool_choice violation still audited
       expect(auditSpy).toHaveBeenCalledWith(
         "tool_execution_failure",
         expect.objectContaining({
@@ -1807,12 +1817,570 @@ describe("AgentOrchestrator RAG citations", () => {
       expect(logSpy.mock.calls.some((c) => c[0] === "[Webi] forced_tool_choice_violated")).toBe(
         true,
       );
-      // Defense in depth: the visitor still gets the answer (no hard fail).
-      expect(result.finalResponse).toBe("Test response");
+
+      // Server direct extraction kicks in and generates confirmation
+      expect(result.finalResponse).toContain("coordonnées ont bien été enregistrées");
+      expect(result.finalResponse).toContain("recontacterons");
+
+      // Lead created audit also emitted (source: server_direct_extract)
+      expect(auditSpy).toHaveBeenCalledWith(
+        "lead_created",
+        expect.objectContaining({
+          severity: "low",
+          eventData: expect.objectContaining({
+            source: "server_direct_extract",
+            firstName: "Jean",
+            hasEmail: true,
+          }),
+        }),
+      );
+
       expect(result.errors).toHaveLength(0);
 
       auditSpy.mockRestore();
       logSpy.mockRestore();
+    });
+  });
+
+  describe("server fallback confirmation (LOT 38a quinquies)", () => {
+    const usage = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
+
+    const SAVE_LEAD_TOOL: ToolDefinition = {
+      type: "function",
+      function: {
+        name: "save_lead",
+        description: "Save a visitor lead",
+        parameters: { type: "object", properties: {} },
+      },
+    };
+
+    const SAVE_LEAD_TOOL_CALL: ToolCall = {
+      id: "call-sl",
+      type: "function",
+      function: {
+        name: "save_lead",
+        arguments: JSON.stringify({ first_name: "Jean", email: "jean@exemple.fr", summary: "x" }),
+      },
+    };
+
+    afterEach(() => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([]);
+    });
+
+    it("returns server fallback confirmation when content empty after successful tool", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+      skillExecutor.execute = vi.fn().mockResolvedValue({
+        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
+        skillResult: { success: true, data: {} },
+      });
+
+      // Turn 1: forced tool call, content empty after strip
+      // Turn 2: model returns empty (simulates fallback model emitting only markup stripped to empty)
+      mockLLMProvider.complete
+        .mockResolvedValueOnce({
+          id: "c1",
+          content: "", // will be stripped to empty by our fix
+          model: "test-model",
+          usage,
+          finishReason: "tool_calls",
+          toolCalls: [SAVE_LEAD_TOOL_CALL],
+        })
+        .mockResolvedValueOnce({
+          id: "c2",
+          content: "",
+          model: "test-model",
+          usage,
+          finishReason: "stop",
+          toolCalls: [],
+        });
+
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-fallback",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      // Server fallback confirmation generated
+      expect(result.finalResponse).toContain("coordonnées ont bien été enregistrées");
+      expect(result.finalResponse).toContain("recontacterons");
+
+      // Audit emitted for fallback
+      expect(auditSpy).toHaveBeenCalledWith(
+        "tool_execution_failure",
+        expect.objectContaining({
+          severity: "low",
+          errorMessage: "server_fallback_confirmation",
+          eventData: expect.objectContaining({
+            server_fallback: "confirmation_message",
+          }),
+        }),
+      );
+      expect(logSpy.mock.calls.some((c) => c[0] === "[Webi] server_fallback_confirmation")).toBe(
+        true,
+      );
+
+      auditSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it("does not use fallback when content is non-empty", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+      skillExecutor.execute = vi.fn().mockResolvedValue({
+        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
+        skillResult: { success: true, data: {} },
+      });
+
+      mockLLMProvider.complete
+        .mockResolvedValueOnce({
+          id: "c1",
+          content: "",
+          model: "test-model",
+          usage,
+          finishReason: "tool_calls",
+          toolCalls: [SAVE_LEAD_TOOL_CALL],
+        })
+        .mockResolvedValueOnce({
+          id: "c2",
+          content: "Confirmation personnalisée du modèle.",
+          model: "test-model",
+          usage,
+          finishReason: "stop",
+          toolCalls: [],
+        });
+
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-no-fallback",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      // Model's own confirmation preserved
+      expect(result.finalResponse).toBe("Confirmation personnalisée du modèle.");
+      // No fallback audit
+      expect(auditSpy).not.toHaveBeenCalledWith(
+        "tool_execution_failure",
+        expect.objectContaining({ errorMessage: "server_fallback_confirmation" }),
+      );
+
+      auditSpy.mockRestore();
+    });
+
+    it("does not use fallback when no tool succeeded", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([]);
+      // Model returns empty without any tool call
+      mockLLMProvider.complete.mockResolvedValueOnce({
+        id: "c1",
+        content: "",
+        model: "test-model",
+        usage,
+        finishReason: "stop",
+        toolCalls: [],
+      });
+
+      await expect(
+        orchestrator.run({
+          conversationId: "conv-1",
+          sessionId: "session-1",
+          locale: "fr",
+          requestId: "req-empty-no-tool",
+          userMessage: "Bonjour",
+          conversationHistory: [],
+          onToolStart: vi.fn(),
+          onToolResult: vi.fn(),
+          onCitation: vi.fn(),
+        }),
+      ).rejects.toThrow("LLM generation failed");
+    });
+  });
+
+  describe("server direct extraction (LOT 38a quinquies FIX L)", () => {
+    const usage = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
+
+    const SAVE_LEAD_TOOL: ToolDefinition = {
+      type: "function",
+      function: {
+        name: "save_lead",
+        description: "Save a visitor lead",
+        parameters: { type: "object", properties: {} },
+      },
+    };
+
+    afterEach(() => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([]);
+    });
+
+    it("uses server direct extraction when LLM ignores save_lead", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+      skillExecutor.execute = vi.fn().mockResolvedValue({
+        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
+        skillResult: { success: true, data: { leadId: "lead-direct-123" } },
+      });
+
+      // LLM returns no tool call, just text (ignores forced tool_choice)
+      mockLLMProvider.complete.mockResolvedValueOnce({
+        id: "c1",
+        content: "Merci pour votre message.",
+        model: "test-model",
+        usage,
+        finishReason: "stop",
+        toolCalls: [],
+      });
+
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-direct-extract",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      // Server direct extraction triggered
+      expect(logSpy.mock.calls.some((c) => c[0] === "[Webi] server_direct_extract")).toBe(true);
+      expect(skillExecutor.execute).toHaveBeenCalledWith(
+        "save_lead",
+        expect.objectContaining({ conversationId: "conv-1", sessionId: "session-1" }),
+        expect.objectContaining({
+          first_name: "Jean",
+          email: "jean@exemple.fr",
+        }),
+      );
+
+      // Confirmation generated
+      expect(result.finalResponse).toContain("coordonnées ont bien été enregistrées");
+      expect(result.finalResponse).toContain("recontacterons");
+
+      // Audit emitted for lead_created (not fallback)
+      expect(auditSpy).toHaveBeenCalledWith(
+        "lead_created",
+        expect.objectContaining({
+          severity: "low",
+          eventData: expect.objectContaining({
+            source: "server_direct_extract",
+            firstName: "Jean",
+            hasEmail: true,
+          }),
+        }),
+      );
+
+      auditSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it("does not extract when LLM already called save_lead", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      skillExecutor.execute = vi.fn().mockResolvedValue({
+        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
+        skillResult: { success: true, data: {} },
+      });
+
+      // LLM calls save_lead normally
+      mockLLMProvider.complete
+        .mockResolvedValueOnce({
+          id: "c1",
+          content: "",
+          model: "test-model",
+          usage,
+          finishReason: "tool_calls",
+          toolCalls: [
+            { id: "call-1", type: "function", function: { name: "save_lead", arguments: "{}" } },
+          ],
+        })
+        .mockResolvedValueOnce({
+          id: "c2",
+          content: "Confirmation du modèle.",
+          model: "test-model",
+          usage,
+          finishReason: "stop",
+          toolCalls: [],
+        });
+
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-no-extract",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      // Normal flow, no direct extraction
+      expect(result.finalResponse).toBe("Confirmation du modèle.");
+      // skillExecutor called once for the LLM tool call, not for direct extraction
+      expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not extract when no contact detected", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+
+      mockLLMProvider.complete.mockResolvedValueOnce({
+        id: "c1",
+        content: "Pas de contact ici.",
+        model: "test-model",
+        usage,
+        finishReason: "stop",
+        toolCalls: [],
+      });
+
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-no-contact",
+        userMessage: "Bonjour, je veux un site",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      // No contact info in user message, LLM response returned normally
+      expect(result.finalResponse).toBe("Pas de contact ici.");
+      // No server direct extraction (no contact info)
+      expect(auditSpy).not.toHaveBeenCalledWith(
+        "lead_created",
+        expect.objectContaining({ source: "server_direct_extract" }),
+      );
+
+      auditSpy.mockRestore();
+    });
+
+    it("does not extract when user message has no extractable contact", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+
+      mockLLMProvider.complete.mockResolvedValueOnce({
+        id: "c1",
+        content: "Je ne comprends pas.",
+        model: "test-model",
+        usage,
+        finishReason: "stop",
+        toolCalls: [],
+      });
+
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-no-extractable",
+        userMessage: "Contactez-moi plus tard", // no email/phone/name
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      // No extractable contact info, LLM response returned normally
+      expect(result.finalResponse).toBe("Je ne comprends pas.");
+      expect(auditSpy).not.toHaveBeenCalledWith(
+        "lead_created",
+        expect.objectContaining({ source: "server_direct_extract" }),
+      );
+
+      auditSpy.mockRestore();
+    });
+  });
+
+  describe("LLM failure fallback (LOT 38a quinquies)", () => {
+    const usage = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
+
+    const SAVE_LEAD_TOOL: ToolDefinition = {
+      type: "function",
+      function: {
+        name: "save_lead",
+        description: "Save a visitor lead",
+        parameters: { type: "object", properties: {} },
+      },
+    };
+
+    afterEach(() => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([]);
+    });
+
+    it("extracts server-side and confirms when the LLM call times out on a contact message", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+      skillExecutor.execute = vi.fn().mockResolvedValue({
+        result: { toolCallId: "call-fb", toolName: "save_lead", content: "{}", success: true },
+        skillResult: { success: true, data: { leadId: "lead-fb-123" } },
+      });
+
+      const { ProviderError } = await import("../providers/errors");
+      mockLLMProvider.complete.mockRejectedValueOnce(
+        new ProviderError("Timeout", "TIMEOUT", "test", true),
+      );
+
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-llm-timeout-contact",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      // Direct extraction ran and the visitor got the standard confirmation
+      expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
+      expect(skillExecutor.execute).toHaveBeenCalledWith(
+        "save_lead",
+        expect.objectContaining({ conversationId: "conv-1", sessionId: "session-1" }),
+        expect.objectContaining({ first_name: "Jean", email: "jean@exemple.fr" }),
+      );
+      expect(result.finalResponse).toContain("coordonnées ont bien été enregistrées");
+      expect(result.finalResponse).toContain("recontacterons");
+      expect(result.errors).toHaveLength(0);
+      expect(
+        logSpy.mock.calls.some((c) => c[0] === "[Webi] server_direct_extract_on_llm_failure"),
+      ).toBe(true);
+
+      expect(auditSpy).toHaveBeenCalledWith(
+        "lead_created",
+        expect.objectContaining({
+          severity: "low",
+          eventData: expect.objectContaining({
+            source: "server_direct_extract_on_llm_failure",
+            firstName: "Jean",
+            hasEmail: true,
+          }),
+        }),
+      );
+
+      auditSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it("returns the confirmation when the LLM fails after save_lead already succeeded", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+      skillExecutor.execute = vi.fn().mockResolvedValue({
+        result: { toolCallId: "call-sl", toolName: "save_lead", content: "{}", success: true },
+        skillResult: { success: true, data: { leadId: "lead-after-456" } },
+      });
+
+      // Turn 1: save_lead succeeds, turn 2 (final confirmation) times out
+      mockLLMProvider.complete
+        .mockResolvedValueOnce({
+          id: "c1",
+          content: "",
+          model: "test-model",
+          usage,
+          finishReason: "tool_calls",
+          toolCalls: [
+            { id: "call-1", type: "function", function: { name: "save_lead", arguments: "{}" } },
+          ],
+        })
+        .mockRejectedValueOnce(
+          new (await import("../providers/errors")).ProviderError(
+            "Request timeout",
+            "TIMEOUT",
+            "test",
+            true,
+          ),
+        );
+
+      const result = await orchestrator.run({
+        conversationId: "conv-1",
+        sessionId: "session-1",
+        locale: "fr",
+        requestId: "req-timeout-after-save",
+        userMessage: "Je m'appelle Jean, mon email est jean@exemple.fr",
+        conversationHistory: [],
+        onToolStart: vi.fn(),
+        onToolResult: vi.fn(),
+        onCitation: vi.fn(),
+      });
+
+      // The lead is safe: the visitor gets the confirmation, not an error
+      expect(result.finalResponse).toContain("coordonnées ont bien été enregistrées");
+      expect(result.finalResponse).toContain("recontacterons");
+      expect(result.errors).toHaveLength(0);
+
+      // No second extraction (save_lead already ran)
+      expect(skillExecutor.execute).toHaveBeenCalledTimes(1);
+      expect(
+        logSpy.mock.calls.some((c) => c[0] === "[Webi] provider_failure_after_save_lead"),
+      ).toBe(true);
+
+      expect(auditSpy).toHaveBeenCalledWith(
+        "tool_execution_failure",
+        expect.objectContaining({
+          severity: "low",
+          eventData: expect.objectContaining({
+            source: "provider_failure_after_save_lead",
+            skill_name: "save_lead",
+          }),
+        }),
+      );
+
+      auditSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it("propagates the LLM failure when no contact is detected", async () => {
+      vi.mocked(getAllToolDefinitions).mockReturnValue([SAVE_LEAD_TOOL]);
+      const auditSpy = vi.spyOn(auditLogger, "logSecurityEvent").mockResolvedValue(undefined);
+      skillExecutor.execute = vi.fn();
+
+      const { ProviderError } = await import("../providers/errors");
+      mockLLMProvider.complete.mockRejectedValueOnce(
+        new ProviderError("Timeout", "TIMEOUT", "test", true),
+      );
+
+      await expect(
+        orchestrator.run({
+          conversationId: "conv-1",
+          sessionId: "session-1",
+          locale: "fr",
+          requestId: "req-llm-timeout-no-contact",
+          userMessage: "Bonjour, je veux un site",
+          conversationHistory: [],
+          onToolStart: vi.fn(),
+          onToolResult: vi.fn(),
+          onCitation: vi.fn(),
+        }),
+      ).rejects.toThrow("LLM generation failed");
+
+      // No server-side lead recovery without contact details
+      expect(skillExecutor.execute).not.toHaveBeenCalled();
+      expect(auditSpy).not.toHaveBeenCalledWith(
+        "lead_created",
+        expect.objectContaining({
+          eventData: expect.objectContaining({
+            source: "server_direct_extract_on_llm_failure",
+          }),
+        }),
+      );
+
+      auditSpy.mockRestore();
     });
   });
 });

@@ -11,6 +11,7 @@ import { createSseParser } from "@/lib/chat/sse-parser";
 import { chatHistory } from "@/server/functions/chat-history";
 import type { TypedStreamEvent } from "@/lib/ai/contracts";
 import { shouldDisplayTool } from "@/lib/ai/user-visible-tools";
+import { stripInlineToolCalls } from "@/lib/ai/agent/strip-inline-tool-calls";
 import type { ChatMessage, UseChatReturn } from "@/components/chat/types";
 
 /** Transcript depth requested on restore (server default = MAX_CONVERSATION_HISTORY). */
@@ -163,7 +164,11 @@ export function useChat(): UseChatReturn {
 
         case "text_delta": {
           const content = event.data.content;
-          updateLastAssistantMessage((prev) => prev + content);
+          // LOT 38a quinquies (Option 2): strip inline tool calls client-side
+          // with trim:false to avoid collapsing trailing spaces during streaming.
+          updateLastAssistantMessage((prev) =>
+            stripInlineToolCalls(prev + content, { trim: false }),
+          );
           break;
         }
 
@@ -229,7 +234,9 @@ export function useChat(): UseChatReturn {
           // Never leave an empty bubble: when the stream carried no text
           // (LLM failure with server-side fallback), the full content only
           // exists here. Hydrate only an empty assistant message — streamed
-          // text is never overwritten.
+          // text is never overwritten. Whitespace-only counts as empty: a
+          // leaked inline tool call strips down to "\n\n" during streaming
+          // (real NIM run, LOT 38a quinquies) and must not block hydration.
           if (event.data.fullContent) {
             const fullContent = event.data.fullContent;
             set((state) => {
@@ -237,7 +244,7 @@ export function useChat(): UseChatReturn {
               const lastAssistantIdx = messages.findLastIndex((m) => m.role === "assistant");
               if (lastAssistantIdx < 0) return state;
               const last = messages[lastAssistantIdx];
-              if (!last.content) {
+              if (!last.content || last.content.trim().length === 0) {
                 messages[lastAssistantIdx] = { ...last, content: fullContent };
               }
               return { messages };

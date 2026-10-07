@@ -64,6 +64,11 @@ const ParticleField: FC<ParticleFieldProps> = ({
     let particles: Particle[] = [];
     let raf = 0;
     let running = true;
+    // QW-1 — gating state: the loop only advances while the hero section is
+    // on screen AND the tab is visible. `ticking` tracks a scheduled rAF so
+    // resume paths never double-schedule.
+    let inView = true;
+    let ticking = false;
 
     const target = { x: 0, y: 0 };
     const smooth = { x: 0, y: 0 };
@@ -148,7 +153,9 @@ const ParticleField: FC<ParticleFieldProps> = ({
     }
 
     const tick = () => {
-      if (!running) return;
+      ticking = false;
+      // QW-1 — stop scheduling while offscreen or tab-hidden (CPU cost ≈ 0).
+      if (!running || !inView || document.hidden) return;
       const t = (Date.now() - startTime) * 0.001;
       if (isAutoMode) {
         target.x = Math.sin(t * 0.3) * 110 + Math.sin(t * 0.17) * 55;
@@ -162,12 +169,21 @@ const ParticleField: FC<ParticleFieldProps> = ({
         smooth.y = baseY + Math.cos(t * 1.2) * 11 * strength;
         drawFrame(smooth.x, smooth.y);
         raf = requestAnimationFrame(tick);
+        ticking = true;
         return;
       }
       smooth.x += (target.x - smooth.x) * 0.08;
       smooth.y += (target.y - smooth.y) * 0.08;
       drawFrame(smooth.x, smooth.y);
       raf = requestAnimationFrame(tick);
+      ticking = true;
+    };
+
+    const kick = () => {
+      if (running && inView && !document.hidden && !ticking) {
+        raf = requestAnimationFrame(tick);
+        ticking = true;
+      }
     };
 
     const handleMove = (clientX: number, clientY: number) => {
@@ -207,12 +223,31 @@ const ParticleField: FC<ParticleFieldProps> = ({
     const observer = new ResizeObserver(sizeCanvas);
     if (canvas.parentElement) observer.observe(canvas.parentElement);
 
-    raf = requestAnimationFrame(tick);
+    // QW-1 — pause the loop while the hero section is offscreen; resume on
+    // return. Combined with the tab-visibility gate below: CPU cost ≈ 0
+    // whenever the canvas is not visible.
+    const gateObserver = new IntersectionObserver(
+      (entries) => {
+        inView = entries[0]?.isIntersecting ?? true;
+        if (inView) kick();
+      },
+      { threshold: 0 },
+    );
+    gateObserver.observe(canvas.closest("section") ?? canvas);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) kick();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    kick();
 
     return () => {
       running = false;
       cancelAnimationFrame(raf);
       observer.disconnect();
+      gateObserver.disconnect();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       if (staticTimer) clearTimeout(staticTimer);
       if (autoTimer) clearTimeout(autoTimer);
       interactiveTarget.removeEventListener("pointermove", onPointerMove as EventListener);

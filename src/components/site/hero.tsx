@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -11,29 +12,46 @@ import { ExpertiseMarquee } from "@/components/site/expertise-marquee";
 export function Hero() {
   const { t } = useLocale();
   const { theme } = useTheme();
+  // LOT 39 P3 (QW-7) — canvas monte cote client uniquement (bug B-3).
+  // Le SSR servait toujours MatrixRain (theme initial "dark") puis
+  // l'hydratation basculait vers ParticleField sur device clair
+  // (demontage + remontage = double initialisation). Ici le SSR ne rend
+  // aucun <canvas> ; le premier commit client non plus (mounted=false),
+  // donc pas de mismatch d'hydratation. Les wrappers gardent dimensions
+  // et position exactes (absolute inset-0, canvas decoratif) → CLS = 0.
+  // Les setState des effets passifs sont batche (mounted + theme resolu),
+  // le canvas monte UNE fois, directement dans la bonne variante.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <section className="relative isolate overflow-hidden pt-28 pb-12 md:pb-16">
       {/* Background */}
       {theme === "dark" ? (
         <>
-          <MatrixRain
-            className="absolute inset-0 -z-10 opacity-60"
-            characters="01"
-            fontSize={16}
-            fadeOpacity={0.08}
-            speed={0.9}
-          />
+          {mounted && (
+            <MatrixRain
+              className="absolute inset-0 -z-10 opacity-60"
+              characters="01"
+              fontSize={16}
+              fadeOpacity={0.08}
+              speed={0.9}
+            />
+          )}
           {/* Readability veil: keeps the centered title legible over the rain */}
           <div className="absolute inset-0 -z-10 bg-background/70 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_45%,black,transparent)]" />
         </>
       ) : (
         <div className="absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-grid opacity-30 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
-          <ParticleField
-            className="absolute inset-0 opacity-70 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_35%,black,transparent)]"
-            particleCount={13}
-          />
+          {mounted && (
+            <ParticleField
+              className="absolute inset-0 opacity-70 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_35%,black,transparent)]"
+              particleCount={13}
+            />
+          )}
         </div>
       )}
       <div className="absolute inset-0 -z-10 bg-radial-fade" />

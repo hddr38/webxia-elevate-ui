@@ -40,4 +40,181 @@ test.describe("Accueil", () => {
 
     await expect(page.getByRole("log")).toContainText("Commencez une conversation avec Webi");
   });
+
+  test("LOT 39 P2 — le HTML servi a la section Avant/Apres visible (0 opacity:0)", async ({
+    page,
+  }) => {
+    // HTML brut servi par le SSR, sans hydration : la 2e <section> est
+    // ProblemSolution (apres le hero). Avant QW-2, 13 noeuds y etaient en
+    // style="opacity:0" (bug B-1).
+    const response = await page.request.get("/");
+    expect(response.status()).toBe(200);
+    const html = await response.text();
+
+    const parts = html.split("<section");
+    expect(parts.length).toBeGreaterThan(2);
+    // Contenu de la 2e section jusqu'au debut de la 3e (aucune <section>
+    // imbriquee dans ProblemSolution).
+    const section2 = parts[2].split("<section")[0];
+    // Identite de la section (echoue bruyamment si l'ordre change).
+    expect(section2).toContain("Avant / Après");
+    // B-1 : aucun noeud masque par framer-motion dans le HTML servi.
+    expect(section2).not.toContain("opacity:0");
+    expect(section2).not.toContain("opacity: 0");
+  });
+
+  test("LOT 39 P2 — ProblemSolution visible immediatement au scroll (< 500 ms)", async ({
+    page,
+  }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+
+    const section = page.locator("section").nth(1);
+    await expect(section).toContainText("Avant / Après");
+
+    // Scroll instantane (outrepasse le scroll-behavior: smooth du CSS).
+    const t0 = Date.now();
+    await page.evaluate(() => {
+      document
+        .querySelectorAll("section")[1]
+        ?.scrollIntoView({ behavior: "instant", block: "start" });
+    });
+    const opacity = await section.evaluate((el) => getComputedStyle(el).opacity);
+    const elapsed = Date.now() - t0;
+
+    // QW-2 : visible des le SSR, donc opacity:1 des l'arrivee du scroll.
+    expect(opacity).toBe("1");
+    expect(elapsed).toBeLessThan(500);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("LOT 39 P3 — theme dark pre-peint (localStorage dark, JS bloque)", async ({ page }) => {
+    // JS bloques : aucun useEffect ne tourne. La classe .dark ne peut venir
+    // QUE du script inline pre-paint (QW-6, bug B-2).
+    await page.addInitScript(() => {
+      window.localStorage.setItem("webxia-theme", "dark");
+    });
+    const jsHandler = (route: import("@playwright/test").Route) => route.abort();
+    await page.route("**/*.js", jsHandler);
+    await page.goto("/");
+    expect(await page.evaluate(() => document.documentElement.className)).toContain("dark");
+    expect(await page.evaluate(() => document.documentElement.style.colorScheme)).toBe("dark");
+    await page.unroute("**/*.js", jsHandler);
+  });
+
+  test("LOT 39 P3 — theme light pre-peint (localStorage light, JS bloque)", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("webxia-theme", "light");
+    });
+    const jsHandler = (route: import("@playwright/test").Route) => route.abort();
+    await page.route("**/*.js", jsHandler);
+    await page.goto("/");
+    expect(await page.evaluate(() => document.documentElement.className)).not.toContain("dark");
+    expect(await page.evaluate(() => document.documentElement.style.colorScheme)).toBe("light");
+    await page.unroute("**/*.js", jsHandler);
+  });
+
+  test("LOT 39 P3 — theme systeme dark pre-peint (sans localStorage, JS bloque)", async ({
+    page,
+    context,
+  }) => {
+    await context.addInitScript(() => {
+      window.localStorage.removeItem("webxia-theme");
+    });
+    await page.emulateMedia({ colorScheme: "dark" });
+    const jsHandler = (route: import("@playwright/test").Route) => route.abort();
+    await page.route("**/*.js", jsHandler);
+    await page.goto("/");
+    expect(await page.evaluate(() => document.documentElement.className)).toContain("dark");
+    await page.unroute("**/*.js", jsHandler);
+  });
+
+  test("LOT 39 P3 — script pre-paint DANS le head, avant le body (octets servis)", async ({
+    page,
+  }) => {
+    // Constate : React 19 hisse les <link> stylesheet avant tout <script>
+    // inline dans les octets servis, quel que soit l'ordre JSX — la position
+    // "avant stylesheet" est inatteignable depuis un composant. La garantie
+    // anti-flash tient quand meme : script parser-insere DANS le <head>, il
+    // s'execute pendant le parsing, avant tout contenu du body, donc avant
+    // le premier paint (meme stylesheet en cache). Preuve comportementale :
+    // les 3 tests theme ci-dessus (JS bloque).
+    const response = await page.request.get("/");
+    expect(response.status()).toBe(200);
+    const html = await response.text();
+    const scriptPos = html.indexOf("webxia-theme");
+    const headClose = html.indexOf("</head>");
+    const bodyOpen = html.indexOf("<body");
+    expect(scriptPos).toBeGreaterThan(-1);
+    expect(headClose).toBeGreaterThan(-1);
+    expect(bodyOpen).toBeGreaterThan(-1);
+    expect(scriptPos).toBeLessThan(headClose);
+    expect(scriptPos).toBeLessThan(bodyOpen);
+  });
+
+  test("LOT 39 P3 — 0 canvas sans JS, 1 seul canvas apres hydratation (bonne variante)", async ({
+    page,
+  }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.addInitScript(() => {
+      window.localStorage.setItem("webxia-theme", "light");
+    });
+
+    // Phase A — SSR pur (JS bloque) : aucun <canvas> dans le hero (QW-7).
+    const jsHandler = (route: import("@playwright/test").Route) => route.abort();
+    await page.route("**/*.js", jsHandler);
+    await page.goto("/");
+    expect(await page.locator("section canvas").count()).toBe(0);
+    await page.unroute("**/*.js", jsHandler);
+
+    // Phase B — hydratation : EXACTEMENT 1 canvas, directement la variante
+    // claire (pas de demontage MatrixRain → ParticleField, bug B-3).
+    await page.reload();
+    await waitForHydration(page);
+    await expect(page.locator("section canvas")).toHaveCount(1);
+    await expect(page.locator("section canvas").first()).toHaveClass(/opacity-70/);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("LOT 39 P3 — CLS mobile ≈ 0 sur la home (placeholder hero stable)", async ({ page }) => {
+    // Stabilite hero (deterministe, liee a QW-7) : le rect de la section ne
+    // bouge pas entre avant/apres montage du canvas.
+    // CLS page (indicatif) : < 0.05. Le 0 strict flake sous workers
+    // paralleles (0.0144 observe, sources hors hero : fonts/images sous
+    // contention — pre-existant, non lie au placeholder).
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript(() => {
+      (window as unknown as { __cls: number }).__cls = 0;
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) {
+          const shift = e as PerformanceEntry & { hadRecentInput?: boolean; value?: number };
+          if (!shift.hadRecentInput) {
+            (window as unknown as { __cls: number }).__cls += shift.value ?? 0;
+          }
+        }
+      }).observe({ type: "layout-shift", buffered: true });
+    });
+    await page.goto("/");
+    await waitForHydration(page);
+    const heroRect = (el: HTMLElement) => {
+      const r = el.getBoundingClientRect();
+      return { top: Math.round(r.top), h: Math.round(r.height) };
+    };
+    const before = await page.locator("section").first().evaluate(heroRect);
+    // Traverse tout pour declencher les regions IO paresseuses.
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(500);
+    const after = await page.locator("section").first().evaluate(heroRect);
+    // QW-7 : geometrie hero inchangee (canvas absolute, placeholder stable).
+    expect(after).toEqual(before);
+    const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+    expect(cls).toBeLessThan(0.05);
+  });
 });

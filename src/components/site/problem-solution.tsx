@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
@@ -12,6 +13,61 @@ const reveal = (position: number) => ({
   delay: position * 0.08,
   ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
 });
+
+// LOT 39 P2 (QW-3) — l'oscillation decorative infinie (x, repeat: Infinity)
+// etait pilotee par `animate` en permanence, meme hors champ et meme en
+// display:none sur mobile (cout main thread continu). Elle est desormais
+// gatee par l'IntersectionObserver de framer-motion (useInView, once:false)
+// : hors champ → x statique, aucune frame JS ; en champ → boucle relancee.
+// Un element en display:none est rapporte non-intersecting par l'IO, donc
+// la fleche masquee (desktop sur mobile et inversement) ne coute rien.
+// Option A du lot (animation-play-state CSS) exigerait des @keyframes dans
+// styles.css, hors perimetre : meme objectif, zero changement visuel.
+function OscillatingArrow({
+  xKeyframes,
+  viewportMargin,
+  wrapperClassName,
+  motionClassName,
+  iconClassName,
+}: {
+  xKeyframes: [number, number, number];
+  viewportMargin: "-100px" | "-50px";
+  wrapperClassName: string;
+  motionClassName: string;
+  iconClassName: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: false, margin: viewportMargin });
+  return (
+    <div className={wrapperClassName}>
+      <motion.div
+        ref={ref}
+        // LOT 39 P2 (QW-2) — visible des le SSR comme le hero (LOT 33).
+        initial={false}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true, margin: viewportMargin }}
+        animate={inView ? { x: xKeyframes } : { x: 0 }}
+        transition={
+          inView
+            ? {
+                // LOT 34 — entree assagie (0,35 s, position 2) ; l'oscillation
+                // decorative garde sa propre transition (x, infinie).
+                ...reveal(2),
+                x: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+              }
+            : // Subtilite framer-motion : garder repeat:Infinity dans la
+              // transition maintient la boucle en vie meme quand la cible
+              // devient statique. Hors champ : transition finie courte vers
+              // le repos (x:0), puis aucune frame.
+              { duration: 0.3 }
+        }
+        className={motionClassName}
+      >
+        <ArrowRight className={iconClassName} />
+      </motion.div>
+    </div>
+  );
+}
 
 export function ProblemSolution() {
   const { t } = useLocale();
@@ -35,7 +91,7 @@ export function ProblemSolution() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
+          initial={false}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={reveal(0)}
@@ -56,7 +112,7 @@ export function ProblemSolution() {
         <div className="relative grid gap-6 sm:gap-8 md:grid-cols-[1fr_auto_1fr] items-stretch">
           {/* Challenges column */}
           <motion.article
-            initial={{ opacity: 0, y: 8 }}
+            initial={false}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={reveal(1)}
@@ -74,7 +130,7 @@ export function ProblemSolution() {
               {challenges.map((challenge, i) => (
                 <motion.li
                   key={i}
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={false}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
                   transition={{ duration: 0.35, delay: 0.1 + i * 0.08 }}
@@ -98,44 +154,26 @@ export function ProblemSolution() {
           </motion.article>
 
           {/* Center arrow — desktop only */}
-          <div className="hidden md:flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, margin: "-100px" }}
-              animate={{ x: [0, 10, 5] }}
-              transition={{
-                // LOT 34 — entree assagie (0,35 s, position 2) ; l'oscillation
-                // decorative garde sa propre transition (x, infinie).
-                ...reveal(2),
-                x: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
-              }}
-              className="text-brand/30"
-            >
-              <ArrowRight className="size-12" />
-            </motion.div>
-          </div>
+          <OscillatingArrow
+            xKeyframes={[0, 10, 5]}
+            viewportMargin="-100px"
+            wrapperClassName="hidden md:flex items-center justify-center"
+            motionClassName="text-brand/30"
+            iconClassName="size-12"
+          />
 
           {/* Arrow mobile */}
-          <div className="flex md:hidden items-center justify-center py-2">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, margin: "-50px" }}
-              animate={{ x: [0, -6, 0] }}
-              transition={{
-                ...reveal(2),
-                x: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
-              }}
-              className="text-brand/30 rotate-90"
-            >
-              <ArrowRight className="size-10" />
-            </motion.div>
-          </div>
+          <OscillatingArrow
+            xKeyframes={[0, -6, 0]}
+            viewportMargin="-50px"
+            wrapperClassName="flex md:hidden items-center justify-center py-2"
+            motionClassName="text-brand/30 rotate-90"
+            iconClassName="size-10"
+          />
 
           {/* Solutions column */}
           <motion.article
-            initial={{ opacity: 0, y: 8 }}
+            initial={false}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={reveal(3)}
@@ -153,7 +191,7 @@ export function ProblemSolution() {
               {solutions.map((solution, i) => (
                 <motion.li
                   key={i}
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={false}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
                   transition={{ duration: 0.35, delay: 0.2 + i * 0.08 }}

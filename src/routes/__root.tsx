@@ -129,10 +129,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+// LOT 39 P3 (QW-6) — theme resolu AVANT le premier paint (bug B-2).
+// Le <html> servi n'a aucune classe : ThemeProvider ne pose .dark que dans
+// useEffect (apres hydratation) → flash clair→sombre. Ce script inline tourne
+// pendant le parsing du <head>, avant tout contenu du body et avant React,
+// donc avant le premier paint (le paint exige du contenu parse ; le script
+// bloque le parsing avant le body, meme avec une stylesheet en cache).
+// Logique STRICTEMENT coherente avec ThemeProvider (theme-context.tsx) :
+// meme cle localStorage "webxia-theme", meme priorite
+// localStorage → matchMedia → defaut "dark".
+// CSP : script-src autorise deja 'unsafe-inline' (verrou LOT 9, inchange).
+export const THEME_INIT_SCRIPT =
+  'try{var t=localStorage.getItem("webxia-theme")||(window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")||"dark";if(t==="dark")document.documentElement.classList.add("dark");document.documentElement.style.colorScheme=t==="dark"?"dark":"light"}catch(e){}';
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
       <head>
+        {/* QW-6 : premier enfant du <head> JSX. Constate (octets servis) :
+            React 19 hisse les <link>/<meta> avant tout <script> inline et
+            deplace un <script> enfant direct de <html> en debut de <body> —
+            la position "avant stylesheet" est inatteignable depuis un
+            composant. Ici le script reste DANS le head : classique
+            parser-insere, il s'execute pendant le parsing du head, avant
+            tout contenu du body, donc avant le premier paint (meme
+            stylesheet en cache). Garantie prouvee par les tests E2E theme
+            (JS bloque : aucun useEffect ne tourne). Voir rapport LOT 39 P3. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>

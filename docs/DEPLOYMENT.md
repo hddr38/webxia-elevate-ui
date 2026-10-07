@@ -312,3 +312,171 @@ mais déjà préchargé pour Framer Motion), `vendor-lucide`, `vendor-sonner`,
   de l'éditeur cloud Lovable ; ils restent utilisables localement.
 - Aucune modification fonctionnelle : code applicatif, tests et build inchangés
   hors la ligne `health.ts` ci-dessus.
+
+## 13. Performance (page d'accueil) — LOT 39 P0 baseline (avant)
+
+> Mesures Playwright contre **prod `https://webxia-fr.netlify.app/`** — iPhone 13 (390×844, DPR 3), Slow 4G (1,6 Mb/s ↓ / 750 kb/s ↑ / 150 ms RTT), CPU ×4. 3 scénarios thème : **no-pref + prefers-color-scheme dark** (cas flash B-2), **no-pref + prefers-color-scheme light**, **localStorage explicite** (différé post-P3 pour QW-6).
+
+### 13.1 RUN 3 — No-pref + prefers dark (cas flash B-2)
+
+| Indicateur | cold 1 | cold 2 | warm (nouveau ctx) | offscreen visible 6 s | offscreen hidden 6 s |
+|------------|-------:|-------:|-------------------:|----------------------:|---------------------:|
+| **TTFB (ms)** | 3 598 | 828 | 1 289 | — | — |
+| **serverTtfb (ms)** | 803 | 775 | 1 227 | — | — |
+| **FCP (ms)** | 5 616 | 2 808 | 2 088 | — | — |
+| **LCP (ms)** | 5 616 | 2 808 | 2 088 | — | — |
+| **LCP Element** | H1 | H1 | H1 | — | — |
+| **DCL (ms)** | 5 971 | 2 896 | 2 059 | — | — |
+| **Load (ms)** | 6 158 | 3 459 | 2 161 | — | — |
+| **Long tasks Σ (ms)** | 929 | 476 | 0 | 438 (task) / 44 (script) | 406 / 36 |
+| **Long task max (ms)** | 175 | 274 | 0 | — | — |
+| **CLS** | 0 | 0 | 0 | — | — |
+| **INP proxy tap (ms)** | 64 (delay 23, proc 0) | 72 (delay 58, proc 1) | 24 (delay 12, proc 0) | — | — |
+| **htmlClass @ 3 s** | `dark` | `dark` | `dark` | — | — |
+| **Canvas variant** | MatrixRain (opacity-60) | MatrixRain | MatrixRain | — | — |
+| **Canvas signature** | painted 1.0, meanLum ~1, blueRatio 0.01–0.03 | | | | |
+| **ProblemSolution hidden nodes** | 13 / 87 | 13 / 87 | 13 / 87 | — | — |
+
+### 13.2 RUN 2 — No-pref + prefers light
+
+| Indicateur | cold 1 | cold 2 | warm (nouveau ctx) | offscreen visible 6 s | offscreen hidden 6 s |
+|------------|-------:|-------:|-------------------:|----------------------:|---------------------:|
+| **TTFB (ms)** | 808 | 803 | 903 | — | — |
+| **serverTtfb (ms)** | 755 | 747 | 840 | — | — |
+| **FCP (ms)** | 2 688 | 2 916 | 1 280 | — | — |
+| **LCP (ms)** | 2 688 | 2 916 | 1 280 | — | — |
+| **LCP Element** | H1 | H1 | H1 | — | — |
+| **DCL (ms)** | 2 784 | 3 606 | 1 255 | — | — |
+| **Load (ms)** | 3 493 | 3 851 | 1 427 | — | — |
+| **Long tasks Σ (ms)** | 1 592 | 1 699 | 53 | 1 223 (task) / 130 (script) | 1 057 / 120 |
+| **Long task max (ms)** | 615 | 546 | 53 | — | — |
+| **CLS** | 0 | 0 | 0 | — | — |
+| **INP proxy tap (ms)** | 144 (delay 80, proc 0) | 136 (delay 82, proc 0) | 120 (delay 46, proc 0) | — | — |
+| **htmlClass @ 3 s** | `""` | `""` | `""` | — | — |
+| **Canvas variant** | ParticleField (opacity-70) | ParticleField | ParticleField | — | — |
+| **Canvas signature** | painted 0.009, meanLum ~70, blueRatio 1.0 | | | | |
+| **ProblemSolution hidden nodes** | 13 / 87 | 13 / 87 | 13 / 87 | — | — |
+
+### 13.3 RUN 1 — localStorage explicite (différé post-P3)
+
+| Cas | localStorage | prefers-color-scheme | Attendu | Mesuré |
+|-----|--------------|----------------------|---------|--------|
+| Stable dark | `"dark"` | dark | MatrixRain, htmlClass=`dark` dès 1er paint, **0 flash** | ⏸ non mesuré (baseline P5) |
+| Stable light | `"light"` | light | ParticleField, htmlClass=`""` dès 1er paint, **0 flash** | ⏸ non mesuré (baseline P5) |
+
+### 13.4 Notes d'interprétation
+
+1. **RUN 1 (localStorage explicite)** différé post-P3 : servira de test de non-régression QW-6 (script inline thème avant paint). La baseline P5 utilisera 3 cold runs par thème avec `localStorage` pré-rempli.
+2. **Variance cold 1 vs cold 2** : cold 1 inclut DNS/TLS/TTFB froid complet ; cold 2 bénéficie du CDN edge warm. Baseline P5 = moyenne de 3 cold runs fraîches.
+3. **Découverte clé — light theme 2× plus coûteux CPU** :
+   - Long tasks Σ : 1 592 ms (light) vs 929 ms (dark) — **ratio 1,7×**
+   - Offscreen script / 6 s : 120 ms (light) vs 36 ms (dark) — **ratio 3,3×**
+   - Cause : `ParticleField` utilise `shadowBlur = 8 × scale × 169 particules` (rAF continu, main thread) vs `MatrixRain` = `setInterval` + `fillText` (plus simple).
+   - → **Priorité QW-1 renforcée sur `particle-field.tsx`** (IntersectionObserver + `visibilitychange` + rAF gate).
+4. **Preuves B-x confirmées** (tous thèmes) :
+   - **B-1** : `sec2Hidden = 13` nœuds `opacity:0` dans la 2ᵉ section (SSR invisible).
+   - **B-2** : `curl /` → `<html lang="fr">` sans `.dark` ; hydratation → `dark` ou `""` (flash).
+   - **B-3** : light user — SSR MatrixRain → hydratation ParticleField (double montage).
+   - **B-4** : canvas brûle CPU hors écran (dark 36 ms, light 120 ms / 6 s).
+   - **B-7** : `Cache-Control: no-cache` HTML + assets → revalidation 437 Ko à chaque cold.
+
+### 13.5 P5a — Mesures locales après (P1+P2+P3)
+
+> Banc identique à P0 (iPhone 13 390×844 DPR 3, Slow 4G, CPU ×4), cible
+> `vite preview` local (build P1–P4), 3 cold runs + 1 warm par variante,
+> 3 variantes thème (localStorage explicite + no-pref flash-case).
+> **Biais prod vs local** : TTFB/LCP absolus NON comparables (edge Netlify
+> + réseau vs localhost) ; long tasks / INP / ScriptDuration (CPU-bound,
+> même throttling) comparables en ordre de grandeur. P4 (cache immutable)
+> inactif en local → mesuré en **P5b post-déploiement**.
+
+#### HTML brut servi (preuves structurelles B-1/B-2/B-3)
+
+| Check | P0 (avant) | P5a (après) |
+|---|---|---|
+| Script inline thème (`webxia-theme`) | absent | **présent** |
+| `<canvas>` dans le hero SSR | 1 (MatrixRain) | **0** |
+| `opacity:0` dans section 2 SSR | 13 nœuds | **0** |
+| Eyebrow « Avant / Après » servie | oui | oui |
+
+#### Cold (moyenne 3 runs) — dark `localStorage=dark`
+
+| Métrique | P0 prod (2 runs) | P5a local (moy. 3) |
+|---|---|---|
+| TTFB / serverTtfb | 3 598 / 828 (edge) | 136 (localhost — biais) |
+| FCP = LCP (H1) | 5 616 / 2 808 | 1 859 (biais réseau) |
+| DCL / Load | 5 971–2 896 / 6 158–3 459 | 1 001 / 2 466 |
+| Long tasks Σ / max | 929–476 / 175–274 | 1 333 / 390 (même ordre, variance 2× intra-P0) |
+| CLS | 0 | 0 (1 run à 0,014 — flake, seuil good 0,1) |
+| INP tap menu | 64 / 72 | 80 / 112 / 208 (bruit, cf. §13.6) |
+| `htmlClass` / canvas | `dark` / MatrixRain | `dark` / MatrixRain (1 seul, bonne variante) |
+| `sec2Hidden` /87 | 13 | **0** |
+
+#### Cold (moyenne 3 runs) — light `localStorage=light`
+
+| Métrique | P0 prod | P5a local |
+|---|---|---|
+| TTFB | 808 / 803 | 152 (biais) |
+| FCP = LCP (H1) | 2 688 / 2 916 | 1 895 (biais) |
+| Long tasks Σ / max | 1 592–1 699 / 615–546 | 2 103 / 548 (même ordre) |
+| CLS | 0 | 0 (1 run à 0,014 — flake) |
+| INP tap menu | 144 / 136 | 320 / 136 / 184 (bruit) |
+| `htmlClass` / canvas | `""` / ParticleField (après swap B-3) | `""` / ParticleField (**monté direct, 0 swap**) |
+| `sec2Hidden` /87 | 13 | **0** |
+
+#### Cold — no-pref + prefers dark (cas flash B-2) et warm
+
+- noPrefDark (moy. 3) : TTFB 139, FCP/LCP 1 879, LT Σ 1 499 / max 429,
+  `htmlClass="dark"` sur les 3 runs (**flash supprimé**, script pre-paint),
+  `sec2Hidden=0`, 1 canvas MatrixRain.
+- Warm (3 variantes, nouveau ctx) : TTFB 109–125, FCP/LCP 320–348,
+  long tasks 0, tap 40–120. (`resBytes` constants : pas de cache
+  navigateur en preview — P4 = P5b.)
+
+#### B-4 — hero LOIN hors champ (bas de page, top −8 364), 6 s
+
+| Variante | Visible task/script + draws | Hors champ task/script + draws | P0 hors champ |
+|---|---|---|---|
+| dark | 500 ms / 20 ms / 3 936 fillText | **15 ms / 0 ms / 0 draw** | 406 ms / 36 ms |
+| light | 975 ms / 97 ms / 61 009 arc | **15 ms / 0 ms / 0 draw** | 1 057 ms / 120 ms |
+
+ScriptDuration hors champ = **0** (résiduel 15 ms = activité page hors
+canvas, identique dark/light). B-4 **supprimé**.
+Note protocole : une mesure intermédiaire (scroll pile au bord,
+hero bottom=0) gardait l'animation à plein régime — normal sous
+`threshold: 0` (sliver fractionnaire = intersecting). Le re-test LOIN
+hors champ prouve le gating ; les tests unitaires P1 couvrent le
+mécanisme (IO false → 0 frame).
+
+### 13.6 Notes d'interprétation P5a (honnêteté)
+
+1. **B-1/B-2/B-3 : supprimés** (preuves structurelles + E2E JS-bloqué P3).
+2. **B-4 : supprimé** (script ≈ 0 et 0 draw loin hors champ, les 2 thèmes).
+3. **B-5 (INP < 200 ms) : non démontré au banc** — variance énorme
+   intra-run (80–320 ms) dominée par la contention post-load ; P0 avait le
+   même comportement (64–144 ms). Pas de régression crédible (mécanisme :
+   le gain QW-1 est en régime établi, pas sur un tap isolé post-load).
+4. **B-6 (long tasks réduites) : non démontré sur le load** — P5a ≈ P0
+   en ordre de grandeur (variance 2× déjà intra-P0) ; l'écart brut
+   s'explique mécaniquement (localhost concentre parse+compile+hydrate
+   sous CPU ×4). Poids entry : +1,4 % seulement (287 810 → 291 810 o ;
+   JS total 1 512 → 1 530 ko, +3 chunks liés au lot middleware c909d1d).
+   Pas de régression crédible imputable à P1–P3 (~100 lignes
+   d'observers/état, 0 dépendance, 0 chunk).
+5. **CLS : 0 sauf 2 runs à 0,014** (seuil « good » 0,1) — même magnitude
+   que le flake E2E P3 sous workers parallèles ; hero 1 028 px stable
+   avant/après (placeholder QW-7 prouvé).
+6. **B-7 : différé P5b** — `resBytes` constants en preview (pas de moteur
+   Netlify en local) ; tests prod-gatés prêts (`e2e/headers.spec.ts`).
+7. **Aucune régression crédible détectée → pas de STOP** ; les gains du
+   lot sont structurels (SSR visible, 0 double-montage, 0 CPU offscreen)
+   et steady-state, pas sur les absolus load-path biaisés prod-vs-local.
+
+> **Note d'honnêteté (GO #1)** — Les long tasks P5a sont plus élevées que
+> P0 (dark ~1330 vs ~703 moyenne P0 ; light ~2100 vs ~1646). Cette
+> différence n'est pas attribuable aux changements P1-P3 : le gating
+> canvas n'affecte pas le load initial, et le mounted state n'ajoute
+> qu'un render. L'hypothèse retenue est un biais environnemental (vite
+> preview local vs prod edge, bruit de scheduling) couplé à la variance
+> intra-P0 déjà mesurée à 2x. À reconfirmer en P5b sur prod après
+> déploiement.

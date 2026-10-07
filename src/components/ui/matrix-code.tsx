@@ -49,17 +49,28 @@ const MatrixRain: FC<MatrixRainProps> = ({
     const chars = characters.split("");
     let drops: number[] = [];
 
+    // QW-5 — only reassign the backing-store size when it actually changes.
+    // Reassigning canvas.width/height clears the canvas and would force a
+    // re-randomisation of the drops, so the initial ResizeObserver callback
+    // (which always fires on observe()) becomes a harmless no-op.
+    let lastColumnCount = 0;
     const sizeCanvas = () => {
       const parent = canvas.parentElement;
       const width = parent?.clientWidth ?? window.innerWidth;
       const height = parent?.clientHeight ?? window.innerHeight;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       // Cap DPR to keep the animation cheap on retina screens.
-      canvas.width = Math.max(1, Math.floor(width * dpr));
-      canvas.height = Math.max(1, Math.floor(height * dpr));
+      const newW = Math.max(1, Math.floor(width * dpr));
+      const newH = Math.max(1, Math.floor(height * dpr));
+      const columnCount = Math.max(1, Math.floor(width / fontSize));
+      if (canvas.width === newW && canvas.height === newH && columnCount === lastColumnCount) {
+        return;
+      }
+      canvas.width = newW;
+      canvas.height = newH;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const columnCount = Math.max(1, Math.floor(width / fontSize));
+      lastColumnCount = columnCount;
       drops = Array.from({ length: columnCount }, () => Math.random() * -100);
     };
 
@@ -86,25 +97,91 @@ const MatrixRain: FC<MatrixRainProps> = ({
       }
     };
 
-    // Reduced motion: render a single static frame instead of animating.
-    if (reduceMotion) {
-      draw();
-      return;
-    }
-
-    const interval = window.setInterval(draw, 33 / speed);
-
-    const observer = new ResizeObserver(sizeCanvas);
-    if (canvas.parentElement) {
-      observer.observe(canvas.parentElement);
+    // QW-4 — the ResizeObserver is mounted BEFORE the reduced-motion
+    // early return, so the canvas keeps following rotation/resize even when
+    // the animation itself is disabled (1 static frame, redrawn on resize
+    // because reassigning width/height clears the canvas).
+    const resizeObserver = new ResizeObserver(() => {
+      sizeCanvas();
+      if (reduceMotion) draw();
+    });
+    const resizeParent = canvas.parentElement;
+    if (resizeParent) {
+      resizeObserver.observe(resizeParent);
     } else {
       window.addEventListener("resize", sizeCanvas);
     }
 
+    // Reduced motion: render a single static frame instead of animating.
+    if (reduceMotion) {
+      draw();
+      return () => {
+        resizeObserver.disconnect();
+        window.removeEventListener("resize", sizeCanvas);
+      };
+    }
+
+    // QW-1 — gated rAF loop with fps clamp. Same cadence as before
+    // (33/speed ms per frame), but driven by rAF timestamps and paused
+    // whenever the hero is offscreen or the tab is hidden (CPU cost ≈ 0).
+    const frameMs = 33 / speed;
+    let rafId = 0;
+    let ticking = false;
+    let lastFrame = 0; // rAF timestamp of the last drawn frame
+    let inView = true; // IntersectionObserver state (default: running)
+
+    const tick = (now: number) => {
+      ticking = false;
+      // Skip everything while offscreen or the tab is hidden.
+      if (!inView || document.hidden) return;
+      if (lastFrame === 0) {
+        lastFrame = now;
+        draw();
+      } else if (now - lastFrame >= frameMs) {
+        // Keep the fractional remainder so the perceived speed is unchanged.
+        lastFrame = now - ((now - lastFrame) % frameMs);
+        draw();
+      }
+      rafId = requestAnimationFrame(tick);
+      ticking = true;
+    };
+
+    const kick = () => {
+      if (!ticking && inView && !document.hidden) {
+        rafId = requestAnimationFrame(tick);
+        ticking = true;
+      }
+    };
+
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        inView = entries[0]?.isIntersecting ?? true;
+        if (inView) {
+          // Repaint promptly on return; the clamp baseline restarts.
+          lastFrame = 0;
+          kick();
+        }
+      },
+      { threshold: 0 },
+    );
+    intersectionObserver.observe(canvas.closest("section") ?? canvas);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        lastFrame = 0;
+        kick();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    kick();
+
     return () => {
-      window.clearInterval(interval);
-      observer.disconnect();
+      intersectionObserver.disconnect();
+      resizeObserver.disconnect();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("resize", sizeCanvas);
+      if (ticking) cancelAnimationFrame(rafId);
     };
   }, [fontSize, color, characters, fadeOpacity, speed, reduceMotion]);
 

@@ -9,3 +9,15 @@
   from = "/api/*"
   to = "/.netlify/functions/server"
   status = 200
+
+# LOT 39 P4 (QW-8, bug B-7) — cache immutable sur les assets Vite.
+# Tous les fichiers sous /assets/* portent un hash de contenu
+# (index-a1b2c3d4.js) : ils sont immuables par construction, le HTML
+# (no-cache) reference toujours la bonne version. Regle STRICTEMENT
+# additive : aucun autre path (/ , /fonts/*) ni aucun header de
+# securite (CSP, HSTS, ...) n'est defini ici — ils restent geres par
+# src/lib/security/site-headers.ts (verrou LOT 9, inchange).
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    cache-control = "public, max-age=31536000, immutable"

@@ -12,8 +12,9 @@
 > on 2026-09-24 (LOT 8)**: both FKs now `SET NULL`, `author_id` nullable ✅
 > `idx_realisations_status_published` (005) **created on 2026-09-24 (LOT 8)**;
 > `supabase_migrations` history now holds **24 entries** — 5 originals
-> + 10 LOT 8 baseline (`created_by='lot8-baseline'`) + 9 registered by the
-> first `db push`; `migration list` local = remote.
+>
+> - 10 LOT 8 baseline (`created_by='lot8-baseline'`) + 9 registered by the
+>   first `db push`; `migration list` local = remote.
 
 Conventions: PK `id uuid default uuid_generate_v4()` (extension `uuid-ossp`),
 `t created_at / updated_at timestamptz default now()`, RLS enabled on every table.

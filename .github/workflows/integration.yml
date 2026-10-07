@@ -1,0 +1,38 @@
+name: Integration
+
+# LOT 39 — test @integration (wiring server function réel, session admin mintée).
+# Hors PR : secrets sensibles + coût. Skip gracieux (warning) si secrets absents.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Check secrets
+        id: check
+        run: |
+          if [ -z "${{ secrets.VITE_SUPABASE_URL }}" ] || [ -z "${{ secrets.VITE_SUPABASE_ANON_KEY }}" ] || [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Secrets Supabase absents — test @integration skippé. Configurer VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (repo → Settings → Secrets and variables → Actions). Voir AGENTS.md."
+          else
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run integration tests
+        if: steps.check.outputs.missing == 'false'
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx playwright test --project=integration --reporter=line

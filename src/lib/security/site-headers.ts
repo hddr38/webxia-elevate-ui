@@ -64,3 +64,61 @@ export function applySiteSecurityHeaders(
     headers,
   });
 }
+
+/**
+ * Forge le header protocol TSS x-tsr-serverfn sur les requêtes /_serverFn/*
+ * (LOT 39, D2 révisé). Sans ce header, TSS renvoie le payload brut qui est
+ * perdu dans la chaîne middleware → ERR_NO_RESPONSE → 500 HTML. Le client TSS
+ * l'envoie toujours ; on normalise ici les appels externes. Auth (401/403) et
+ * CSRF restent en amont et sont indépendants de ce header.
+ */
+export function ensureServerFnProtocolHeader(request: Request): void {
+  const { pathname } = new URL(request.url);
+  if (pathname.startsWith("/_serverFn/") && request.headers.get("x-tsr-serverfn") !== "true") {
+    request.headers.set("x-tsr-serverfn", "true");
+  }
+}
+
+/**
+ * Durcit le résultat d'une request middleware sans jamais crasher (LOT 39).
+ * - Response → headers site (rebuild si les headers sont immuables).
+ * - Objet { response } → headers écrits in place, même référence retournée.
+ * - result.response absent / illisible → retour inchangé (TSS sérialise lui-même).
+ * - null, undefined, primitives, Error → retournés tels quels, jamais transformés.
+ */
+export function hardenMiddlewareResult<T>(result: T, options: SiteHeaderOptions = {}): T {
+  if (result instanceof Response) {
+    try {
+      writeSiteHeaders(result.headers, options);
+      return result;
+    } catch {
+      return applySiteSecurityHeaders(result, options) as T;
+    }
+  }
+
+  if (result === null || typeof result !== "object") {
+    return result;
+  }
+
+  const target = result as { response?: unknown };
+  const response = target.response;
+  if (response === null || typeof response !== "object") {
+    return result;
+  }
+
+  const headers = (response as { headers?: unknown }).headers;
+  if (!(headers instanceof Headers)) {
+    return result;
+  }
+
+  try {
+    writeSiteHeaders(headers, options);
+  } catch {
+    try {
+      target.response = applySiteSecurityHeaders(response as Response, options);
+    } catch {
+      return result;
+    }
+  }
+  return result;
+}

@@ -233,10 +233,40 @@ Limits: `maxAgentSteps`, `maxToolCalls`, `globalTimeoutMs`, `maxContextTokens`, 
 
 ## Testing Rules
 
-- **No real LLM calls** in automated tests — mock providers
+- **No real LLM calls** in automated tests - mock providers
 - Test: provider resolution, generation, streaming, tool calls, timeouts, retries, error mapping
 - Test: conversation, memory, RAG, skills, event bus, authorization
 - Run `npm run lint` and `npm run build` (includes typecheck) before commit
+
+### Tests d'intégration (@integration)
+
+Le test `e2e/admin-leads-integration.spec.ts` vérifie le vrai wiring
+server function → DB (sans mock). Il attrape les bugs d'auth / middleware
+qui échappent aux tests mockés (ex. LOT 38c : assertAdmin cassé, jamais
+détecté par les unit/E2E mockés).
+
+Exécution locale :
+
+```
+npx playwright test --project=integration
+```
+
+Exécution CI : automatique sur push main via `.github/workflows/integration.yml`
+(nécessite les secrets Supabase configurés, voir ci-dessous).
+
+Secrets GitHub requis (repo → Settings → Secrets and variables → Actions) :
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Sans ces secrets, le workflow est skippé avec un warning.
+
+### Règle : wiring server function testé une fois
+
+Tout nouveau server function qui lit/écrit la DB doit avoir au moins
+un test `@integration` vérifiant le wiring réel. Les mocks ne suffisent
+pas à détecter une auth redondante ou un middleware mal configuré.
 
 ---
 

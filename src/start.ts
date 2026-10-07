@@ -3,7 +3,12 @@ import { createStart, createMiddleware, createCsrfMiddleware } from "@tanstack/r
 import { renderErrorPage } from "./lib/error-page";
 import { getSessionUser } from "./lib/auth/session";
 import { extractAccessToken } from "./lib/utils";
-import { applySiteSecurityHeaders, writeSiteHeaders } from "./lib/security/site-headers";
+import {
+  applySiteSecurityHeaders,
+  ensureServerFnProtocolHeader,
+  hardenMiddlewareResult,
+  writeSiteHeaders,
+} from "./lib/security/site-headers";
 
 // Track application start time for uptime
 declare global {
@@ -40,25 +45,19 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 
 // Site-wide security headers on every response (HTML documents included).
 // Runs outermost so redirects, 403s and the 500 error page are covered too.
-const securityHeadersMiddleware = createMiddleware({ type: "request" }).server(async ({ next }) => {
-  try {
-    const result = await next();
-    if (result instanceof Response) {
-      return hardenResponse(result);
-    }
+const securityHeadersMiddleware = createMiddleware({ type: "request" }).server(
+  async ({ request, next }) => {
+    ensureServerFnProtocolHeader(request);
     try {
-      writeSiteHeaders(result.response.headers, siteHeaderOptions);
-    } catch {
-      result.response = applySiteSecurityHeaders(result.response, siteHeaderOptions);
+      return hardenMiddlewareResult(await next(), siteHeaderOptions);
+    } catch (error) {
+      if (error instanceof Response) {
+        throw hardenResponse(error);
+      }
+      throw error;
     }
-    return result;
-  } catch (error) {
-    if (error instanceof Response) {
-      throw hardenResponse(error);
-    }
-    throw error;
-  }
-});
+  },
+);
 
 // Server-side /admin guard. The route-level adminMiddleware never runs for
 // document requests (routeTree nests /admin/* as root children, so the

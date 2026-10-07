@@ -28,24 +28,7 @@ export type LeadRow = {
   created_at: string;
 };
 
-async function assertAdmin(): Promise<void> {
-  const admin = getSupabaseAdmin();
-  const { data: user, error } = await admin.auth.getUser();
-  if (error || !user.user) {
-    throw new Response("Unauthorized", { status: 401 });
-  }
-  const { data: adminUser, error: adminError } = await admin
-    .from("admin_users")
-    .select("id")
-    .eq("user_id", user.user.id)
-    .maybeSingle();
-  if (adminError || !adminUser) {
-    throw new Response("Forbidden: Admin access required", { status: 403 });
-  }
-}
-
 export async function handleListLeads(data: ListLeadsInput) {
-  await assertAdmin();
   const supabase = getSupabaseAdmin();
 
   const page = data.page ?? 1;
@@ -74,7 +57,6 @@ export async function handleListLeads(data: ListLeadsInput) {
 }
 
 export async function handleDeleteLead(data: DeleteLeadInput): Promise<{ success: true }> {
-  await assertAdmin();
   const supabase = getSupabaseAdmin();
 
   const { error } = await supabase.from("leads").delete().eq("id", data.id);

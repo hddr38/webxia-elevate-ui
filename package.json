@@ -12,7 +12,7 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project=chromium",
     "preview:e2e": "vite preview --port 4173 --strictPort",
     "test:watch": "vitest"
   },

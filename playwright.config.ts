@@ -17,9 +17,6 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  // LOT 38a bis — @real-nim (E2E NIM/Supabase réels) hors run standard :
-  // 14/14 exact sans variable ; activer avec E2E_REAL_NIM=1 npm run test:e2e
-  testIgnore: process.env.E2E_REAL_NIM ? [] : ["e2e/real-nim.spec.ts"],
   // LOT 38a — plafond 2 workers (aligné CI) : au-delà, 4 Chromium + screencast
   // dépassent la mémoire disponible (16 GB) et le renderer crash
   // ("Target crashed") — exécution parallèle bornée = déterministe (LOT 28).
@@ -32,7 +29,25 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      // LOT 38a bis — @real-nim (E2E NIM/Supabase réels) hors run standard :
+      // 14/14 exact sans variable ; activer avec E2E_REAL_NIM=1 npm run test:e2e
+      // LOT 38c — @integration (server fn réel, session mintée) : projet dédié,
+      // exécution manuelle via `npx playwright test --project=integration`
+      testIgnore: [
+        ...(process.env.E2E_REAL_NIM ? [] : ["e2e/real-nim.spec.ts"]),
+        "e2e/admin-leads-integration.spec.ts",
+      ],
+    },
+    {
+      name: "integration",
+      testMatch: "e2e/admin-leads-integration.spec.ts",
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
   webServer: {
     command: "npm run build && npm run preview:e2e",
     url: BASE_URL,

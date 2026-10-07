@@ -66,62 +66,85 @@ function thrownBy(fn: () => unknown): unknown {
   }
 }
 
+const MOCK_LEADS = [
+  {
+    id: "lead-1",
+    session_id: "sess-1",
+    conversation_id: "conv-1",
+    first_name: "Jean",
+    email: "jean@example.com",
+    phone: null,
+    summary: "Wants a quote",
+    metadata: {},
+    created_at: "2026-10-01T10:00:00Z",
+  },
+  {
+    id: "lead-2",
+    session_id: "sess-2",
+    conversation_id: null,
+    first_name: "Marie",
+    email: null,
+    phone: "0123456789",
+    summary: "Needs SEO audit",
+    metadata: {},
+    created_at: "2026-10-01T09:00:00Z",
+  },
+];
+
 describe("leads server functions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("handleListLeads", () => {
-    it("throws 401 when user not authenticated", async () => {
-      createMockClient([{ data: { user: null }, error: { message: "Unauthorized" } }]);
+    it("handleListLeads does NOT call auth.getUser (uses middleware only)", async () => {
+      const authGetUser = vi.fn().mockRejectedValue(new Error("Auth session missing!"));
+      vi.mocked(getSupabaseAdmin).mockReturnValue({
+        from: (table: string) => {
+          const chain: Record<string, unknown> = {};
+          for (const method of CHAIN_METHODS) {
+            chain[method] = () => chain;
+          }
+          chain.then = (resolve: (value: unknown) => void, reject: (reason: unknown) => void) => {
+            Promise.resolve({ data: MOCK_LEADS.slice(0, 1), error: null, count: 1 }).then(
+              resolve,
+              reject,
+            );
+          };
+          expect(table).toBe("leads");
+          return chain;
+        },
+        auth: { getUser: authGetUser },
+      } as unknown as ReturnType<typeof getSupabaseAdmin>);
 
-      await expect(handleListLeads({ page: 1, limit: 20 })).rejects.toMatchObject({
-        status: 401,
-      });
+      const result = await handleListLeads({ page: 1, limit: 20 });
+
+      expect(authGetUser).not.toHaveBeenCalled();
+      expect(result.total).toBe(1);
+      expect(result.data).toHaveLength(1);
     });
 
-    it("throws 403 when user is not admin", async () => {
-      createMockClient([
-        { data: { user: { id: "user-1" } }, error: null }, // auth.getUser
-        { data: null, error: null }, // admin_users maybeSingle
-      ]);
+    it("handleListLeads does not query admin_users (authorization handled by adminMiddleware)", async () => {
+      const { chains } = createMockClient([{ data: [], error: null, count: 0 }]);
 
-      await expect(handleListLeads({ page: 1, limit: 20 })).rejects.toMatchObject({
-        status: 403,
-      });
+      await handleListLeads({ page: 1, limit: 20 });
+
+      expect(chains.map((c) => c.table)).toEqual(["leads"]);
+    });
+
+    it("handleListLeads succeeds when auth.getUser would reject", async () => {
+      const { authGetUser } = createMockClient([{ data: [], error: null, count: 0 }]);
+      authGetUser.mockRejectedValue(new Error("Auth session missing!"));
+
+      const result = await handleListLeads({ page: 1, limit: 20 });
+
+      expect(authGetUser).not.toHaveBeenCalled();
+      expect(result.total).toBe(0);
+      expect(result.data).toEqual([]);
     });
 
     it("returns leads list with pagination for admin", async () => {
-      const mockLeads = [
-        {
-          id: "lead-1",
-          session_id: "sess-1",
-          conversation_id: "conv-1",
-          first_name: "Jean",
-          email: "jean@example.com",
-          phone: null,
-          summary: "Wants a quote",
-          metadata: {},
-          created_at: "2026-10-01T10:00:00Z",
-        },
-        {
-          id: "lead-2",
-          session_id: "sess-2",
-          conversation_id: null,
-          first_name: "Marie",
-          email: null,
-          phone: "0123456789",
-          summary: "Needs SEO audit",
-          metadata: {},
-          created_at: "2026-10-01T09:00:00Z",
-        },
-      ];
-
-      createMockClient([
-        { data: { user: { id: "admin-1" } }, error: null }, // auth.getUser
-        { data: { id: "admin-1" }, error: null }, // admin_users maybeSingle
-        { data: mockLeads, error: null, count: 2 }, // leads query
-      ]);
+      createMockClient([{ data: MOCK_LEADS, error: null, count: 2 }]);
 
       const result = await handleListLeads({ page: 1, limit: 20 });
 
@@ -135,11 +158,7 @@ describe("leads server functions", () => {
     });
 
     it("handles pagination correctly", async () => {
-      createMockClient([
-        { data: { user: { id: "admin-1" } }, error: null }, // auth.getUser
-        { data: { id: "admin-1" }, error: null }, // admin_users maybeSingle
-        { data: [], error: null, count: 50 }, // leads query
-      ]);
+      createMockClient([{ data: [], error: null, count: 50 }]);
 
       const result = await handleListLeads({ page: 3, limit: 10 });
 
@@ -150,42 +169,57 @@ describe("leads server functions", () => {
     });
 
     it("throws on Supabase error", async () => {
-      createMockClient([
-        { data: { user: { id: "admin-1" } }, error: null }, // auth.getUser
-        { data: { id: "admin-1" }, error: null }, // admin_users maybeSingle
-        { data: null, error: { message: "Database error" }, count: 0 }, // leads query
-      ]);
+      createMockClient([{ data: null, error: { message: "Database error" }, count: 0 }]);
 
       await expect(handleListLeads({ page: 1, limit: 20 })).rejects.toThrow("Database error");
     });
   });
 
   describe("handleDeleteLead", () => {
-    it("throws 401 when user not authenticated", async () => {
-      createMockClient([{ data: { user: null }, error: { message: "Unauthorized" } }]);
+    it("handleDeleteLead does NOT call auth.getUser (uses middleware only)", async () => {
+      const authGetUser = vi.fn().mockRejectedValue(new Error("Auth session missing!"));
+      vi.mocked(getSupabaseAdmin).mockReturnValue({
+        from: (table: string) => {
+          const chain: Record<string, unknown> = {};
+          for (const method of CHAIN_METHODS) {
+            chain[method] = () => chain;
+          }
+          chain.then = (resolve: (value: unknown) => void, reject: (reason: unknown) => void) => {
+            Promise.resolve({ error: null }).then(resolve, reject);
+          };
+          expect(table).toBe("leads");
+          return chain;
+        },
+        auth: { getUser: authGetUser },
+      } as unknown as ReturnType<typeof getSupabaseAdmin>);
 
-      await expect(handleDeleteLead({ id: "lead-1" })).rejects.toMatchObject({
-        status: 401,
-      });
+      const result = await handleDeleteLead({ id: "lead-123" });
+
+      expect(authGetUser).not.toHaveBeenCalled();
+      expect(result).toEqual({ success: true });
     });
 
-    it("throws 403 when user is not admin", async () => {
-      createMockClient([
-        { data: { user: { id: "user-1" } }, error: null }, // auth.getUser
-        { data: null, error: null }, // admin_users maybeSingle
-      ]);
+    it("handleDeleteLead does not query admin_users (authorization handled by adminMiddleware)", async () => {
+      const { chains } = createMockClient([{ error: null }]);
 
-      await expect(handleDeleteLead({ id: "lead-1" })).rejects.toMatchObject({
-        status: 403,
-      });
+      const result = await handleDeleteLead({ id: "lead-123" });
+
+      expect(result).toEqual({ success: true });
+      expect(chains.map((c) => c.table)).toEqual(["leads"]);
+    });
+
+    it("handleDeleteLead succeeds when auth.getUser would reject", async () => {
+      const { authGetUser } = createMockClient([{ error: null }]);
+      authGetUser.mockRejectedValue(new Error("Auth session missing!"));
+
+      const result = await handleDeleteLead({ id: "lead-123" });
+
+      expect(authGetUser).not.toHaveBeenCalled();
+      expect(result).toEqual({ success: true });
     });
 
     it("deletes lead successfully for admin", async () => {
-      createMockClient([
-        { data: { user: { id: "admin-1" } }, error: null }, // auth.getUser
-        { data: { id: "admin-1" }, error: null }, // admin_users maybeSingle
-        { error: null }, // delete
-      ]);
+      createMockClient([{ error: null }]);
 
       const result = await handleDeleteLead({ id: "lead-123" });
 
@@ -193,11 +227,7 @@ describe("leads server functions", () => {
     });
 
     it("is idempotent (no error if lead not found)", async () => {
-      createMockClient([
-        { data: { user: { id: "admin-1" } }, error: null }, // auth.getUser
-        { data: { id: "admin-1" }, error: null }, // admin_users maybeSingle
-        { error: null }, // delete
-      ]);
+      createMockClient([{ error: null }]);
 
       const result = await handleDeleteLead({ id: "non-existent-lead" });
 
@@ -205,11 +235,7 @@ describe("leads server functions", () => {
     });
 
     it("throws on Supabase error", async () => {
-      createMockClient([
-        { data: { user: { id: "admin-1" } }, error: null }, // auth.getUser
-        { data: { id: "admin-1" }, error: null }, // admin_users maybeSingle
-        { error: { message: "Delete failed" } }, // delete
-      ]);
+      createMockClient([{ error: { message: "Delete failed" } }]);
 
       await expect(handleDeleteLead({ id: "lead-1" })).rejects.toThrow("Delete failed");
     });

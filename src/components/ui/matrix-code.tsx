@@ -153,16 +153,19 @@ const MatrixRain: FC<MatrixRainProps> = ({
       }
     };
 
+    let inViewTimeout: number | NodeJS.Timeout = 0;
     const intersectionObserver = new IntersectionObserver(
       (entries) => {
-        inView = entries[0]?.isIntersecting ?? true;
-        if (inView) {
-          // Repaint promptly on return; the clamp baseline restarts.
-          lastFrame = 0;
-          kick();
-        }
+        const shouldBeInView = entries[0]?.isIntersecting ?? true;
+        clearTimeout(inViewTimeout);
+        inViewTimeout = setTimeout(() => {
+          inView = shouldBeInView;
+          if (inView) {
+            kick();
+          }
+        }, 150);
       },
-      { threshold: 0 },
+      { threshold: 0, rootMargin: "200px" },
     );
     intersectionObserver.observe(canvas.closest("section") ?? canvas);
 
@@ -182,6 +185,7 @@ const MatrixRain: FC<MatrixRainProps> = ({
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("resize", sizeCanvas);
       if (ticking) cancelAnimationFrame(rafId);
+      clearTimeout(inViewTimeout);
     };
   }, [fontSize, color, characters, fadeOpacity, speed, reduceMotion]);
 

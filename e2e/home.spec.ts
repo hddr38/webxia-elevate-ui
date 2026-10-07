@@ -217,4 +217,42 @@ test.describe("Accueil", () => {
     const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
     expect(cls).toBeLessThan(0.05);
   });
+
+  test("LOT 40 — gate canvas sur scroll lent et boutons hero repondent apres scroll", async ({
+    page,
+  }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+
+    // Simuler un scroll lent en steps (10 steps de 10% de la hauteur de la page).
+    const totalHeight = await page.evaluate(() => document.body.scrollHeight);
+    const stepHeight = totalHeight / 10;
+    for (let i = 1; i <= 10; i++) {
+      await page.evaluate((y) => window.scrollTo(0, y), i * stepHeight);
+      await page.waitForTimeout(100); // Pause entre les steps pour simuler un scroll lent
+    }
+
+    // Après le scroll lent, vérifier qu'il n'y a pas d'erreurs JS.
+    expect(pageErrors).toEqual([]);
+
+    // Vérifier que les boutons du hero sont toujours visibles et cliquables.
+    const heroButton = page.getByRole("button", { name: "Discutez avec Webi" });
+    await expect(heroButton).toBeVisible();
+    await expect(heroButton).toBeEnabled();
+
+    // Cliquer sur le bouton pour s'assurer qu'il fonctionne.
+    await heroButton.click();
+    await expect(page.getByRole("log")).toContainText("Commencez une conversation avec Webi");
+
+    // Vérifier que toutes les sections sont visibles sans scroll forcé (déjà couvert par d'autres tests, mais on peut le refaire ici).
+    // On fait un rapide contrôle : le nombre de sections visibles devrait être raisonnable.
+    const sections = await page.locator("section").count();
+    expect(sections).toBeGreaterThanOrEqual(5); // Hero, ProblemSolution, Expertises, WhyChooseUs, CTAStrip (et éventuellement la section des réalisations si présente)
+
+    // Aucune erreur JS pendant le test.
+    expect(pageErrors).toEqual([]);
+  });
 });

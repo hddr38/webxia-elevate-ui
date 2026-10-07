@@ -226,12 +226,19 @@ const ParticleField: FC<ParticleFieldProps> = ({
     // QW-1 — pause the loop while the hero section is offscreen; resume on
     // return. Combined with the tab-visibility gate below: CPU cost ≈ 0
     // whenever the canvas is not visible.
+    let gateObserverTimeout: number | NodeJS.Timeout = 0;
     const gateObserver = new IntersectionObserver(
       (entries) => {
-        inView = entries[0]?.isIntersecting ?? true;
-        if (inView) kick();
+        const shouldBeInView = entries[0]?.isIntersecting ?? true;
+        clearTimeout(gateObserverTimeout);
+        gateObserverTimeout = setTimeout(() => {
+          inView = shouldBeInView;
+          if (inView) {
+            kick();
+          }
+        }, 150);
       },
-      { threshold: 0 },
+      { threshold: 0, rootMargin: "200px" },
     );
     gateObserver.observe(canvas.closest("section") ?? canvas);
 
@@ -250,6 +257,7 @@ const ParticleField: FC<ParticleFieldProps> = ({
       document.removeEventListener("visibilitychange", onVisibilityChange);
       if (staticTimer) clearTimeout(staticTimer);
       if (autoTimer) clearTimeout(autoTimer);
+      clearTimeout(gateObserverTimeout);
       interactiveTarget.removeEventListener("pointermove", onPointerMove as EventListener);
       interactiveTarget.removeEventListener("touchmove", onTouchMove as EventListener);
     };

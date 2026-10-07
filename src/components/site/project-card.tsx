@@ -11,7 +11,7 @@ export function ProjectCard({ project, index = 0 }: { project: Project; index?: 
   const { t } = useLocale();
   return (
     <motion.article
-      initial={{ opacity: 0, y: 24 }}
+      initial={false}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
@@ -143,7 +143,7 @@ export function DbRealisationCard({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 24 }}
+      initial={false}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}

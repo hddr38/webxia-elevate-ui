@@ -319,50 +319,50 @@ mais déjà préchargé pour Framer Motion), `vendor-lucide`, `vendor-sonner`,
 
 ### 13.1 RUN 3 — No-pref + prefers dark (cas flash B-2)
 
-| Indicateur | cold 1 | cold 2 | warm (nouveau ctx) | offscreen visible 6 s | offscreen hidden 6 s |
-|------------|-------:|-------:|-------------------:|----------------------:|---------------------:|
-| **TTFB (ms)** | 3 598 | 828 | 1 289 | — | — |
-| **serverTtfb (ms)** | 803 | 775 | 1 227 | — | — |
-| **FCP (ms)** | 5 616 | 2 808 | 2 088 | — | — |
-| **LCP (ms)** | 5 616 | 2 808 | 2 088 | — | — |
-| **LCP Element** | H1 | H1 | H1 | — | — |
-| **DCL (ms)** | 5 971 | 2 896 | 2 059 | — | — |
-| **Load (ms)** | 6 158 | 3 459 | 2 161 | — | — |
-| **Long tasks Σ (ms)** | 929 | 476 | 0 | 438 (task) / 44 (script) | 406 / 36 |
-| **Long task max (ms)** | 175 | 274 | 0 | — | — |
-| **CLS** | 0 | 0 | 0 | — | — |
-| **INP proxy tap (ms)** | 64 (delay 23, proc 0) | 72 (delay 58, proc 1) | 24 (delay 12, proc 0) | — | — |
-| **htmlClass @ 3 s** | `dark` | `dark` | `dark` | — | — |
-| **Canvas variant** | MatrixRain (opacity-60) | MatrixRain | MatrixRain | — | — |
-| **Canvas signature** | painted 1.0, meanLum ~1, blueRatio 0.01–0.03 | | | | |
-| **ProblemSolution hidden nodes** | 13 / 87 | 13 / 87 | 13 / 87 | — | — |
+| Indicateur                       |                                       cold 1 |                cold 2 |    warm (nouveau ctx) |    offscreen visible 6 s | offscreen hidden 6 s |
+| -------------------------------- | -------------------------------------------: | --------------------: | --------------------: | -----------------------: | -------------------: |
+| **TTFB (ms)**                    |                                        3 598 |                   828 |                 1 289 |                        — |                    — |
+| **serverTtfb (ms)**              |                                          803 |                   775 |                 1 227 |                        — |                    — |
+| **FCP (ms)**                     |                                        5 616 |                 2 808 |                 2 088 |                        — |                    — |
+| **LCP (ms)**                     |                                        5 616 |                 2 808 |                 2 088 |                        — |                    — |
+| **LCP Element**                  |                                           H1 |                    H1 |                    H1 |                        — |                    — |
+| **DCL (ms)**                     |                                        5 971 |                 2 896 |                 2 059 |                        — |                    — |
+| **Load (ms)**                    |                                        6 158 |                 3 459 |                 2 161 |                        — |                    — |
+| **Long tasks Σ (ms)**            |                                          929 |                   476 |                     0 | 438 (task) / 44 (script) |             406 / 36 |
+| **Long task max (ms)**           |                                          175 |                   274 |                     0 |                        — |                    — |
+| **CLS**                          |                                            0 |                     0 |                     0 |                        — |                    — |
+| **INP proxy tap (ms)**           |                        64 (delay 23, proc 0) | 72 (delay 58, proc 1) | 24 (delay 12, proc 0) |                        — |                    — |
+| **htmlClass @ 3 s**              |                                       `dark` |                `dark` |                `dark` |                        — |                    — |
+| **Canvas variant**               |                      MatrixRain (opacity-60) |            MatrixRain |            MatrixRain |                        — |                    — |
+| **Canvas signature**             | painted 1.0, meanLum ~1, blueRatio 0.01–0.03 |                       |                       |                          |                      |
+| **ProblemSolution hidden nodes** |                                      13 / 87 |               13 / 87 |               13 / 87 |                        — |                    — |
 
 ### 13.2 RUN 2 — No-pref + prefers light
 
-| Indicateur | cold 1 | cold 2 | warm (nouveau ctx) | offscreen visible 6 s | offscreen hidden 6 s |
-|------------|-------:|-------:|-------------------:|----------------------:|---------------------:|
-| **TTFB (ms)** | 808 | 803 | 903 | — | — |
-| **serverTtfb (ms)** | 755 | 747 | 840 | — | — |
-| **FCP (ms)** | 2 688 | 2 916 | 1 280 | — | — |
-| **LCP (ms)** | 2 688 | 2 916 | 1 280 | — | — |
-| **LCP Element** | H1 | H1 | H1 | — | — |
-| **DCL (ms)** | 2 784 | 3 606 | 1 255 | — | — |
-| **Load (ms)** | 3 493 | 3 851 | 1 427 | — | — |
-| **Long tasks Σ (ms)** | 1 592 | 1 699 | 53 | 1 223 (task) / 130 (script) | 1 057 / 120 |
-| **Long task max (ms)** | 615 | 546 | 53 | — | — |
-| **CLS** | 0 | 0 | 0 | — | — |
-| **INP proxy tap (ms)** | 144 (delay 80, proc 0) | 136 (delay 82, proc 0) | 120 (delay 46, proc 0) | — | — |
-| **htmlClass @ 3 s** | `""` | `""` | `""` | — | — |
-| **Canvas variant** | ParticleField (opacity-70) | ParticleField | ParticleField | — | — |
-| **Canvas signature** | painted 0.009, meanLum ~70, blueRatio 1.0 | | | | |
-| **ProblemSolution hidden nodes** | 13 / 87 | 13 / 87 | 13 / 87 | — | — |
+| Indicateur                       |                                    cold 1 |                 cold 2 |     warm (nouveau ctx) |       offscreen visible 6 s | offscreen hidden 6 s |
+| -------------------------------- | ----------------------------------------: | ---------------------: | ---------------------: | --------------------------: | -------------------: |
+| **TTFB (ms)**                    |                                       808 |                    803 |                    903 |                           — |                    — |
+| **serverTtfb (ms)**              |                                       755 |                    747 |                    840 |                           — |                    — |
+| **FCP (ms)**                     |                                     2 688 |                  2 916 |                  1 280 |                           — |                    — |
+| **LCP (ms)**                     |                                     2 688 |                  2 916 |                  1 280 |                           — |                    — |
+| **LCP Element**                  |                                        H1 |                     H1 |                     H1 |                           — |                    — |
+| **DCL (ms)**                     |                                     2 784 |                  3 606 |                  1 255 |                           — |                    — |
+| **Load (ms)**                    |                                     3 493 |                  3 851 |                  1 427 |                           — |                    — |
+| **Long tasks Σ (ms)**            |                                     1 592 |                  1 699 |                     53 | 1 223 (task) / 130 (script) |          1 057 / 120 |
+| **Long task max (ms)**           |                                       615 |                    546 |                     53 |                           — |                    — |
+| **CLS**                          |                                         0 |                      0 |                      0 |                           — |                    — |
+| **INP proxy tap (ms)**           |                    144 (delay 80, proc 0) | 136 (delay 82, proc 0) | 120 (delay 46, proc 0) |                           — |                    — |
+| **htmlClass @ 3 s**              |                                      `""` |                   `""` |                   `""` |                           — |                    — |
+| **Canvas variant**               |                ParticleField (opacity-70) |          ParticleField |          ParticleField |                           — |                    — |
+| **Canvas signature**             | painted 0.009, meanLum ~70, blueRatio 1.0 |                        |                        |                             |                      |
+| **ProblemSolution hidden nodes** |                                   13 / 87 |                13 / 87 |                13 / 87 |                           — |                    — |
 
 ### 13.3 RUN 1 — localStorage explicite (différé post-P3)
 
-| Cas | localStorage | prefers-color-scheme | Attendu | Mesuré |
-|-----|--------------|----------------------|---------|--------|
-| Stable dark | `"dark"` | dark | MatrixRain, htmlClass=`dark` dès 1er paint, **0 flash** | ⏸ non mesuré (baseline P5) |
-| Stable light | `"light"` | light | ParticleField, htmlClass=`""` dès 1er paint, **0 flash** | ⏸ non mesuré (baseline P5) |
+| Cas          | localStorage | prefers-color-scheme | Attendu                                                  | Mesuré                     |
+| ------------ | ------------ | -------------------- | -------------------------------------------------------- | -------------------------- |
+| Stable dark  | `"dark"`     | dark                 | MatrixRain, htmlClass=`dark` dès 1er paint, **0 flash**  | ⏸ non mesuré (baseline P5) |
+| Stable light | `"light"`    | light                | ParticleField, htmlClass=`""` dès 1er paint, **0 flash** | ⏸ non mesuré (baseline P5) |
 
 ### 13.4 Notes d'interprétation
 
@@ -386,43 +386,44 @@ mais déjà préchargé pour Framer Motion), `vendor-lucide`, `vendor-sonner`,
 > `vite preview` local (build P1–P4), 3 cold runs + 1 warm par variante,
 > 3 variantes thème (localStorage explicite + no-pref flash-case).
 > **Biais prod vs local** : TTFB/LCP absolus NON comparables (edge Netlify
-> + réseau vs localhost) ; long tasks / INP / ScriptDuration (CPU-bound,
-> même throttling) comparables en ordre de grandeur. P4 (cache immutable)
-> inactif en local → mesuré en **P5b post-déploiement**.
+>
+> - réseau vs localhost) ; long tasks / INP / ScriptDuration (CPU-bound,
+>   même throttling) comparables en ordre de grandeur. P4 (cache immutable)
+>   inactif en local → mesuré en **P5b post-déploiement**.
 
 #### HTML brut servi (preuves structurelles B-1/B-2/B-3)
 
-| Check | P0 (avant) | P5a (après) |
-|---|---|---|
-| Script inline thème (`webxia-theme`) | absent | **présent** |
-| `<canvas>` dans le hero SSR | 1 (MatrixRain) | **0** |
-| `opacity:0` dans section 2 SSR | 13 nœuds | **0** |
-| Eyebrow « Avant / Après » servie | oui | oui |
+| Check                                | P0 (avant)     | P5a (après) |
+| ------------------------------------ | -------------- | ----------- |
+| Script inline thème (`webxia-theme`) | absent         | **présent** |
+| `<canvas>` dans le hero SSR          | 1 (MatrixRain) | **0**       |
+| `opacity:0` dans section 2 SSR       | 13 nœuds       | **0**       |
+| Eyebrow « Avant / Après » servie     | oui            | oui         |
 
 #### Cold (moyenne 3 runs) — dark `localStorage=dark`
 
-| Métrique | P0 prod (2 runs) | P5a local (moy. 3) |
-|---|---|---|
-| TTFB / serverTtfb | 3 598 / 828 (edge) | 136 (localhost — biais) |
-| FCP = LCP (H1) | 5 616 / 2 808 | 1 859 (biais réseau) |
-| DCL / Load | 5 971–2 896 / 6 158–3 459 | 1 001 / 2 466 |
-| Long tasks Σ / max | 929–476 / 175–274 | 1 333 / 390 (même ordre, variance 2× intra-P0) |
-| CLS | 0 | 0 (1 run à 0,014 — flake, seuil good 0,1) |
-| INP tap menu | 64 / 72 | 80 / 112 / 208 (bruit, cf. §13.6) |
-| `htmlClass` / canvas | `dark` / MatrixRain | `dark` / MatrixRain (1 seul, bonne variante) |
-| `sec2Hidden` /87 | 13 | **0** |
+| Métrique             | P0 prod (2 runs)          | P5a local (moy. 3)                             |
+| -------------------- | ------------------------- | ---------------------------------------------- |
+| TTFB / serverTtfb    | 3 598 / 828 (edge)        | 136 (localhost — biais)                        |
+| FCP = LCP (H1)       | 5 616 / 2 808             | 1 859 (biais réseau)                           |
+| DCL / Load           | 5 971–2 896 / 6 158–3 459 | 1 001 / 2 466                                  |
+| Long tasks Σ / max   | 929–476 / 175–274         | 1 333 / 390 (même ordre, variance 2× intra-P0) |
+| CLS                  | 0                         | 0 (1 run à 0,014 — flake, seuil good 0,1)      |
+| INP tap menu         | 64 / 72                   | 80 / 112 / 208 (bruit, cf. §13.6)              |
+| `htmlClass` / canvas | `dark` / MatrixRain       | `dark` / MatrixRain (1 seul, bonne variante)   |
+| `sec2Hidden` /87     | 13                        | **0**                                          |
 
 #### Cold (moyenne 3 runs) — light `localStorage=light`
 
-| Métrique | P0 prod | P5a local |
-|---|---|---|
-| TTFB | 808 / 803 | 152 (biais) |
-| FCP = LCP (H1) | 2 688 / 2 916 | 1 895 (biais) |
-| Long tasks Σ / max | 1 592–1 699 / 615–546 | 2 103 / 548 (même ordre) |
-| CLS | 0 | 0 (1 run à 0,014 — flake) |
-| INP tap menu | 144 / 136 | 320 / 136 / 184 (bruit) |
+| Métrique             | P0 prod                               | P5a local                                       |
+| -------------------- | ------------------------------------- | ----------------------------------------------- |
+| TTFB                 | 808 / 803                             | 152 (biais)                                     |
+| FCP = LCP (H1)       | 2 688 / 2 916                         | 1 895 (biais)                                   |
+| Long tasks Σ / max   | 1 592–1 699 / 615–546                 | 2 103 / 548 (même ordre)                        |
+| CLS                  | 0                                     | 0 (1 run à 0,014 — flake)                       |
+| INP tap menu         | 144 / 136                             | 320 / 136 / 184 (bruit)                         |
 | `htmlClass` / canvas | `""` / ParticleField (après swap B-3) | `""` / ParticleField (**monté direct, 0 swap**) |
-| `sec2Hidden` /87 | 13 | **0** |
+| `sec2Hidden` /87     | 13                                    | **0**                                           |
 
 #### Cold — no-pref + prefers dark (cas flash B-2) et warm
 
@@ -435,10 +436,10 @@ mais déjà préchargé pour Framer Motion), `vendor-lucide`, `vendor-sonner`,
 
 #### B-4 — hero LOIN hors champ (bas de page, top −8 364), 6 s
 
-| Variante | Visible task/script + draws | Hors champ task/script + draws | P0 hors champ |
-|---|---|---|---|
-| dark | 500 ms / 20 ms / 3 936 fillText | **15 ms / 0 ms / 0 draw** | 406 ms / 36 ms |
-| light | 975 ms / 97 ms / 61 009 arc | **15 ms / 0 ms / 0 draw** | 1 057 ms / 120 ms |
+| Variante | Visible task/script + draws     | Hors champ task/script + draws | P0 hors champ     |
+| -------- | ------------------------------- | ------------------------------ | ----------------- |
+| dark     | 500 ms / 20 ms / 3 936 fillText | **15 ms / 0 ms / 0 draw**      | 406 ms / 36 ms    |
+| light    | 975 ms / 97 ms / 61 009 arc     | **15 ms / 0 ms / 0 draw**      | 1 057 ms / 120 ms |
 
 ScriptDuration hors champ = **0** (résiduel 15 ms = activité page hors
 canvas, identique dark/light). B-4 **supprimé**.
@@ -480,3 +481,88 @@ mécanisme (IO false → 0 frame).
 > preview local vs prod edge, bruit de scheduling) couplé à la variance
 > intra-P0 déjà mesurée à 2x. À reconfirmer en P5b sur prod après
 > déploiement.
+
+### 13.8 LOT 40 — Hotfix mobile Safari (regressions LOT 39)
+
+Après le déploiement de LOT 39 (commit c3ac090), deux régressions critiques
+ont été observées sur iPhone 12 / Safari en production :
+
+- **S1** : l'animation matrix du hero apparaît beaucoup plus lentement
+  qu'avant (canvas client-only = invisible jusqu'à l'hydratation ~5s).
+- **S2/S3** : après scroll ou overscroll en haut, les boutons du hero ne
+  répondent plus au tap ; le canvas "bloque" et fait buguer le scroll.
+- **S4** : toutes les sections après la hero sont vides et ne s'affichent
+  qu'en scrollant tout en bas. ProblemSolution est corrigée (P2), mais
+  les autres sections ne le sont PAS.
+
+#### Correctifs appliqués
+
+1. **Revert QW-7 (hero.tsx)** : suppression de l'état `mounted` et du
+   gate client-only introduit en P3. Le rendu SSR redevient :
+   - Branche thème par défaut (dark → MatrixRain, light → ParticleField)
+   - Le `<canvas>` est présent dans le HTML SSR (vide, meanAlpha=0)
+     → Le délai perçu de 5s sur mobile est éliminé.
+     _Justification_ : le canvas SSR vide ne coûte rien (mesure P0
+     meanAlpha=0 pctPainted=1%), mais son absence cause un délai de
+     hydration. Le revert vers la version P1 (canvas présent + gating IO)
+     suffit, sans remettre en cause le double montage (RC-4/B-3) car le
+     rendu SSR et l'hydratation sont maintenant cohérents.
+
+2. **Fix QW-1 (matrix-code.tsx + particle-field.tsx)** : amélioration du
+   gating IO pour éviter le flicker et le blocage du scroll sur Safari iOS.
+   - **IntersectionObserver** : ajout de `rootMargin: "200px"` pour que la
+     zone soit considérée "en champ" 200px avant son entrée réelle, ce qui
+     évite le flicker au scroll lent.
+   - **Debounce sur le callback IO** : délai de 150 ms avant d'appliquer
+     la transition start/stop (évite le spam de toggles en scroll rapide).
+   - **Gestion de la reprise** : pas de `lastFrame=0` ou de `kick()` à
+     chaque reprise ; on reprend proprement en conservant le dernier état
+     visuel.
+   - **Style tactile** : ajout de `touch-action: pan-y` sur la `<section>`
+     hero pour garantir que le scroll vertical n'est pas capté par le
+     canvas.
+     → Ces changements sont invisibles à l'œil : même apparence, même
+     vitesse, même densité.
+
+3. **Étendre QW-2 à toutes les sections** : application du pattern
+   `initial={false}` (LOT 33/39) à toutes les sections importées par
+   `src/routes/index.tsx`, sauf Hero et ProblemSolution déjà traitées.
+   - Sections modifiées : Expertises, WhyChooseUs, ProjectCard
+     (et DbRealisationCard, CTAStrip via ProjectCard).
+   - Recherche des `initial={{opacity: 0, ...}}` ou `initial={{opacity:0}}`
+     et remplacement par `initial={false}`.
+   - Conservation de `whileInView`, `viewport`, `transition` tels quels.
+     → Toutes les sections sont désormais visibles immédiatement au SSR,
+     éliminant le problème S4.
+
+#### Résultats attendus
+
+- Animation matrix visible < 1 s après le 1er paint sur mobile.
+- Tap sur les boutons hero après scroll : réponse < 500 ms.
+- Toutes les sections visibles sans scroll forcé.
+- Scroll fluide, pas de freeze.
+- Apparence identique (sauf la réintroduction du canvas dans le HTML SSR,
+  invisible de toute façon car vide).
+
+#### Gates obligatoires
+
+- `npm run lint` → 0 erreur
+- `npm run typecheck` → 0 erreur
+- `npm test` → 607 + nouveaux verts
+- `npm run test:e2e` → 33 + nouveaux verts (+ 4 prod-gates skipped)
+
+#### Livrable LOT 40
+
+1. Diff hero.tsx (revert QW-7)
+2. Diff matrix-code.tsx + particle-field.tsx (fix IO)
+3. Liste des sections modifiees (QW-2 etendu) avec diff
+4. Tests ajoutes (nom + assertion)
+5. Gates resultats
+6. Captures device reel iPhone 12 Safari (4 verifs ci-dessus)
+7. Mesures : time-to-animation-visible, time-to-tap-reponse,
+   etat sections au 1er paint
+8. Attente GO #1 commit
+
+#### Message de commit propose (ASCII) :
+
+fix(home): LOT 40 hotfix mobile safari - revert canvas SSR, IO rootMargin, etend SSR visible

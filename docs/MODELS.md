@@ -42,11 +42,11 @@ directement sur le modèle fallback, sans re-payer le timeout primaire.
 **Fenêtres de timeout** (obligatoirement croisées, sinon le lifecycle tue
 la requête avant que le fallback puisse se déclencher) :
 
-| Qui                    | Valeur    | Source                   |
-| ---------------------- | --------- | ------------------------ |
-| TTFB LLM (primaire)    | **45 s**  | `llmConfig` dans chat.ts |
-| TTFB embeddings        | 120 s     | `nvidiaConfig` chat.ts   |
-| Lifecycle requête      | 110 s     | `CHAT_REQUEST_TIMEOUT_MS` (`.env`) — défaut 60 s si absent |
+| Qui                 | Valeur   | Source                                                     |
+| ------------------- | -------- | ---------------------------------------------------------- |
+| TTFB LLM (primaire) | **45 s** | `llmConfig` dans chat.ts                                   |
+| TTFB embeddings     | 120 s    | `nvidiaConfig` chat.ts                                     |
+| Lifecycle requête   | 110 s    | `CHAT_REQUEST_TIMEOUT_MS` (`.env`) — défaut 60 s si absent |
 
 **Observabilité** : `[Webi] FALLBACK <provider>/<primaire> → <fallback> (<REASON>)`
 en `console.warn` — raison = code de l'erreur ou `EMPTY_STREAM`.

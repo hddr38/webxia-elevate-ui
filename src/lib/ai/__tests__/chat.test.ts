@@ -8,11 +8,6 @@ import type {
   ProviderResponse,
   StreamChunk,
   ToolCall,
-  SkillContext,
-  RAGQueryResult,
-  RetrieveOptions,
-  RetrieveResult,
-  RAGContext,
 } from "../contracts";
 import type { RAGEngine } from "../rag";
 
@@ -65,8 +60,6 @@ vi.mock("../skills", () => {
     getSkillsByPermission: vi.fn().mockReturnValue([]),
   };
 });
-
-import { skillRegistry, skillExecutor } from "../skills";
 
 type MockLLMProvider = LLMProvider & {
   initialize: Mock<(config: ProviderConfig) => Promise<void>>;

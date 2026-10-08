@@ -5,25 +5,15 @@ import {
   skillRegistry,
   registerSkill,
   unregisterSkill,
-  getSkill,
-  listSkills,
   hasSkill,
   getAllToolDefinitions,
-  getSkillsByPermission,
 } from "../skills/registry";
 import { SkillExecutor } from "../skills/executor";
 import { auditLogger } from "../security/audit-log";
 import { SkillValidator, createSkillSchema, SkillValidationError } from "../skills/validator";
 import { SearchKnowledgeSkill, createSearchKnowledgeSkill } from "../skills/search-knowledge";
 import { SummarizeSkill, createSummarizeSkill } from "../skills/summarize";
-import {
-  Skill,
-  SkillContext,
-  SkillInput,
-  SkillOutput,
-  ToolPermission,
-  ToolDefinition,
-} from "../skills/types";
+import { Skill, SkillContext, SkillInput, ToolPermission, ToolDefinition } from "../skills/types";
 import type { RAGEngine } from "../rag";
 import type { LLMProvider } from "../providers";
 

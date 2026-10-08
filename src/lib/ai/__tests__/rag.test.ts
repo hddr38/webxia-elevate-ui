@@ -3,13 +3,7 @@ import { Retriever } from "../rag/retriever";
 import type { RetrieveResult } from "../rag/retriever";
 import { ContextBuilder } from "../rag/context-builder";
 import { RAGEngine } from "../rag/rag-engine";
-import type {
-  VectorStore,
-  SearchOptions,
-  RetrievalResult,
-  KnowledgeDocument,
-  KnowledgeChunk,
-} from "../rag/types";
+import type { VectorStore, SearchOptions, RetrievalResult, KnowledgeDocument } from "../rag/types";
 import type { EmbeddingProvider } from "../embeddings";
 import { EMBEDDING_CONFIG } from "../embeddings/config";
 import type { DocumentMetadata, ScoredDocument, RetrievalStrategy } from "../contracts";

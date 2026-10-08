@@ -1,13 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  InMemoryRateLimiter,
-  createRateLimiter,
-  getClientIdentifier,
-} from "../security/rate-limiter";
+import { InMemoryRateLimiter } from "../security/rate-limiter";
 import {
   validateAndSanitize,
   ChatMessageSchema,
-  isValidationError,
   ValidationError,
   sanitizeInput,
 } from "../security/validation";
@@ -15,11 +10,11 @@ import { detectPromptInjection } from "../security/prompt-injection";
 import { auditLogger } from "../security/audit-log";
 import { createSecurityMiddleware, addSecurityHeaders } from "../security/middleware";
 import { SkillExecutor } from "../skills/executor";
-import { skillRegistry, registerSkill, unregisterSkill } from "../skills/registry";
-import { SearchKnowledgeSkill, createSearchKnowledgeSkill } from "../skills/search-knowledge";
-import { SummarizeSkill, createSummarizeSkill } from "../skills/summarize";
+import { skillRegistry, registerSkill } from "../skills/registry";
+import { createSearchKnowledgeSkill } from "../skills/search-knowledge";
+import { createSummarizeSkill } from "../skills/summarize";
 import { RAGEngine } from "../rag";
-import { AgentOrchestrator, AuthContext } from "../agent/orchestrator";
+import { AgentOrchestrator } from "../agent/orchestrator";
 import {
   AIModel,
   LLMProvider,

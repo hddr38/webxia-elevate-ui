@@ -181,6 +181,54 @@
   pointer-events: none;
 }
 
+/* LOT 42 P3 — fallback mobile du hero : gradient anime leger (< 2 Ko,
+   compositing GPU pur, aucun JS/canvas/SVG). Memes dimensions que le canvas
+   remplace (absolute inset-0 -z-10) pour un CLS = 0. Ambiance light :
+   halo bleu/violet ; ambiance dark (.dark) : teinte verte matrix. */
+.matrix-css-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: -10;
+  opacity: 0.7;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--brand) 22%, transparent),
+    color-mix(in oklab, var(--accent) 18%, transparent) 45%,
+    transparent 75%
+  );
+  background-size: 100% 200%;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, black, transparent);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, black, transparent);
+  animation: matrix-fallback-drift 20s linear infinite;
+}
+
+.dark .matrix-css-fallback {
+  opacity: 0.6;
+  background: linear-gradient(
+    180deg,
+    oklch(0.55 0.18 155 / 0.28),
+    oklch(0.35 0.12 155 / 0.35) 45%,
+    transparent 78%
+  );
+  background-size: 100% 200%;
+}
+
+@keyframes matrix-fallback-drift {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 0% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .matrix-css-fallback {
+    animation: none;
+  }
+}
+
 @keyframes float-slow {
   0%,
   100% {

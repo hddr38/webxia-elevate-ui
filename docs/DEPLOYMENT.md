@@ -673,3 +673,66 @@ pixels/frame, DPR 2, ~27 fps) et bloque touch events + paint.
   (le SSR sert a nouveau 1 canvas vide). Phase A alignee sur le
   comportement voulu (`toBe(1)`, cf. §13.8) — echec pre-existant,
   pas une regression LOT 41 (prouve via stash sur main pur).
+
+### 13.10 LOT 42 — Retrait du canvas sur mobile (fallback CSS anime)
+
+Malgre LOT 39/40/41, iPhone 12 Safari reste bloque : contenu 20-25 s,
+boutons morts quand la matrix rame, sections vides 10 s. Diagnostic :
+Safari iOS n'isole pas le canvas 2D anime en couche GPU, le rAF sature
+le main thread (taps + paint + Framer Motion bloques). Aucune
+optimisation ne suffit -> retrait du canvas sur mobile.
+
+#### P1 — Hook `useIsMobileViewport` (hero.tsx, exporte pour tests)
+
+- Seuil `MOBILE_MAX_WIDTH_PX = 767` (coherent avec `MOBILE_BREAKPOINT_PX`).
+- matchMedia `(max-width: 767px)` uniquement (jamais userAgent seul) ;
+  repli `innerWidth` si matchMedia indisponible.
+- **Rendu en deux temps** : 1er rendu (SSR + hydration) = `false`
+  (identique au HTML servi -> pas d'erreur React #418 constatee en E2E
+  avec lecture directe au 1er rendu) ; bascule apres mount via ecoute
+  `change` (rotation/zoom) + `resize`/`orientationchange` en secours
+  (Safari < 14 : addListener/removeListener).
+- Le canvas mobile monte/demonte au pire 1 frame (cleanup rAF dans le
+  cleanup du canvas) : cout negligeable vs 20 s d'animation.
+
+#### P2 — Rendu conditionnel hero.tsx
+
+- Mobile : `<div data-testid="hero-fallback" className="matrix-css-fallback" />`
+  (memes dimensions que le canvas : `absolute inset-0 -z-10`, CLS = 0).
+- Desktop/tablette (>= 768 px) : MatrixRain / ParticleField inchanges.
+
+#### P3 — Fallback CSS (styles.css, < 2 Ko, GPU pur)
+
+- Light : halo bleu/violet (`--brand`/`--accent` 18-22 %, opacite 0.7).
+- Dark (`.dark`) : teinte verte matrix (oklch 155, opacite 0.6).
+- `background-size: 100% 200%` + `@keyframes matrix-fallback-drift`
+  (20 s linear infinite) + masque radial identique aux canvas.
+- `prefers-reduced-motion: reduce` -> animation coupee.
+- `pointer-events: none` (taps traversants).
+
+#### P5 — Mesures avant/apres (cibles, a confirmer sur device reel)
+
+| Metrique (mobile 390px)          | Avant (LOT 41)        | Apres (LOT 42)              |
+| -------------------------------- | --------------------- | --------------------------- |
+| Delai apparition contenu         | 20-25 s constates     | cible < 3 s (E2E)           |
+| Demarrage animation visible      | 5-10 s                | immediat (CSS des le paint) |
+| Long tasks canvas (rAF/fillText) | saturees              | 0 (aucun JS/canvas)         |
+| INP proxy (tap CTA hero)         | bloque si matrix rame | cible < 300 ms (E2E)        |
+| Canvas DOM mobile                | 1 (anime)             | 0 (fallback div)            |
+| Canvas DOM desktop               | 1                     | 1 (inchange)                |
+
+> Methodo : constats utilisateur + E2E viewports (pas de profiler
+> device ici). Preview a tester sur iPhone 12 reel.
+
+#### Tests ajoutes
+
+- `hero.test.tsx` — describe LOT 42 (pragma happy-dom ajoute, fichier
+  ne faisait que du SSR) : hook true si match / false sinon ; mobile =
+  0 canvas + fallback `.matrix-css-fallback` ; desktop = 1 canvas,
+  pas de fallback.
+- `e2e/home.spec.ts` — LOT 42 mobile 390px : 0 canvas, fallback
+  visible/absolute/pointer-events-none, contenu < 3 s, geometrie hero
+  stable au scroll, CTA < 300 ms + navigation /work, 0 pageerror ;
+  desktop 1440px : 1 canvas, pas de fallback, 0 pageerror.
+- Non-regression : hero-gating (3), hero SSR (2), matrix/particle
+  LOT 41 : verts sans modification.

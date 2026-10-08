@@ -329,4 +329,62 @@ test.describe("Accueil", () => {
     await expect(bar).not.toHaveClass(/backdrop-blur-xl/);
     expect(pageErrors).toEqual([]);
   });
+
+  test("LOT 42 — mobile 390px : 0 canvas, fallback CSS, contenu < 3 s, CTA < 300 ms", async ({
+    page,
+  }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const t0 = Date.now();
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("section").nth(1)).toContainText("Avant / Après", {
+      timeout: 10000,
+    });
+    expect(Date.now() - t0).toBeLessThan(3000);
+    await waitForHydration(page);
+
+    // Pas de canvas sur mobile : fallback CSS (memes dimensions -> CLS = 0).
+    await expect(page.locator("section").first().locator("canvas")).toHaveCount(0);
+    const fallback = page.getByTestId("hero-fallback");
+    await expect(fallback).toBeVisible();
+    expect(await fallback.evaluate((el) => getComputedStyle(el).position)).toBe("absolute");
+    expect(await fallback.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
+
+    // Stabilite geometrique hero (fallback absolute comme le canvas).
+    const rect = (el: HTMLElement) => {
+      const r = el.getBoundingClientRect();
+      return { top: Math.round(r.top), h: Math.round(r.height) };
+    };
+    const before = await page.locator("section").first().evaluate(rect);
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(800);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(400);
+    expect(await page.locator("section").first().evaluate(rect)).toEqual(before);
+
+    // CTA repond vite (plus de canvas qui sature le thread).
+    const cta = page.getByRole("link", { name: "Découvrir WebXIA" }).first();
+    await expect(cta).toBeVisible();
+    const tTap = Date.now();
+    await cta.click();
+    expect(Date.now() - tTap).toBeLessThan(300);
+    await page.waitForURL((url) => url.pathname === "/work", { timeout: 10000 });
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("LOT 42 — desktop 1440px : 1 canvas dans le hero (inchangé)", async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+
+    await expect(page.locator("section").first().locator("canvas")).toHaveCount(1);
+    await expect(page.getByTestId("hero-fallback")).toHaveCount(0);
+    expect(pageErrors).toEqual([]);
+  });
 });

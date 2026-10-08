@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import MatrixRain from "@/components/ui/matrix-code";
 import ParticleField from "@/components/ui/particle-field";
@@ -8,9 +9,60 @@ import { useLocale } from "@/lib/locale-context";
 import { useTheme } from "@/lib/theme-context";
 import { ExpertiseMarquee } from "@/components/site/expertise-marquee";
 
+/** Seuil mobile LOT 42 : en dessous, pas de canvas (fallback CSS). */
+export const MOBILE_MAX_WIDTH_PX = 767;
+
+/**
+ * LOT 42 P1 — detection mobile SSR-safe (matchMedia, jamais userAgent seul).
+ * - SSR + 1er rendu client : `false` (identique au HTML servi -> pas d'erreur
+ *   d'hydratation React #418 sur mobile ; SEO/LCP preserves).
+ * - Apres mount : lecture matchMedia + ecoute `change` (rotation/zoom) et
+ *   `resize`/`orientationchange` en secours (Safari < 14 : addListener).
+ * - Complement tactile : si matchMedia est indisponible (vieux navigateurs),
+ *   repli sur `innerWidth` (les tactiles modernes supportent matchMedia).
+ */
+export function useIsMobileViewport(breakpoint: number = MOBILE_MAX_WIDTH_PX): boolean {
+  // Premier rendu (SSR + 1er rendu client) = `false`, identique au HTML servi
+  // (canvas) : evite l'erreur d'hydratation React #418 sur mobile. La bascule
+  // vers le fallback se fait dans l'effet ci-dessous, avant tout rAF couteux
+  // (le canvas demonte nettoie sa boucle dans son cleanup).
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const query = `(max-width: ${breakpoint}px)`;
+    const mq = window.matchMedia(query);
+    const read = (): boolean => {
+      try {
+        return window.matchMedia(query).matches;
+      } catch {
+        return window.innerWidth <= breakpoint;
+      }
+    };
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    if (typeof mq.addEventListener === "function") mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+    const onResize = () => setIsMobile(read());
+    window.addEventListener("resize", onResize, { passive: true });
+    window.addEventListener("orientationchange", onResize);
+    onResize();
+    return () => {
+      if (typeof mq.removeEventListener === "function") mq.removeEventListener("change", onChange);
+      else mq.removeListener(onChange);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
 export function Hero() {
   const { t } = useLocale();
   const { theme } = useTheme();
+  // LOT 42 P2 — sur mobile le canvas sature le main thread iOS (bloque taps
+  // + paint) : on le retire et on sert un fallback CSS anime (GPU pur).
+  const isMobile = useIsMobileViewport();
 
   return (
     <section
@@ -19,8 +71,11 @@ export function Hero() {
       // le navigateur garde le controle du touch-scroll meme si le canvas rame.
       style={{ touchAction: "pan-y" }}
     >
-      {/* Background */}
-      {theme === "dark" ? (
+      {/* Background — LOT 42 : mobile = fallback CSS (memes dimensions que
+          le canvas : absolute inset-0 -z-10, CLS = 0), desktop = canvas. */}
+      {isMobile ? (
+        <div data-testid="hero-fallback" aria-hidden="true" className="matrix-css-fallback" />
+      ) : theme === "dark" ? (
         <>
           <MatrixRain
             className="absolute inset-0 -z-10 opacity-60"

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { SaveLeadSkill, createSaveLeadSkill } from "../skills/save-lead";
-import { SkillContext, ToolPermission } from "../skills/types";
+import { SkillContext } from "../skills/types";
 import { auditLogger } from "../security/audit-log";
 
 vi.mock("@/lib/supabase/admin", () => ({ getSupabaseAdmin: vi.fn() }));

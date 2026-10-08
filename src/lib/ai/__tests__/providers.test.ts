@@ -3,12 +3,7 @@ import { NvidiaProvider } from "../providers/nvidia";
 import { NvidiaEmbeddingProvider } from "../embeddings/nvidia";
 import { ModelRouter, createModelRouter } from "../providers/model-router";
 import type { AIModel, StreamChunk } from "../contracts";
-import {
-  ProviderError,
-  ProviderErrorCode,
-  isRetryableError,
-  mapHttpErrorToProviderError,
-} from "../providers/errors";
+import { ProviderError, isRetryableError, mapHttpErrorToProviderError } from "../providers/errors";
 import { createMockProvider, createMockRequest, createMockStreamRequest } from "./test-utils";
 import { EMBEDDING_CONFIG } from "../embeddings/config";
 

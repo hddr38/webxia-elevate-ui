@@ -14,7 +14,10 @@
     "test": "vitest run",
     "test:e2e": "playwright test --project=chromium",
     "preview:e2e": "vite preview --port 4173 --strictPort",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "audit:baseline": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "audit:unused:ts": "tsc --noEmit --noUnusedLocals --noUnusedParameters",
+    "audit:unused:eslint": "eslint src --rule \"@typescript-eslint/no-unused-vars: warn\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

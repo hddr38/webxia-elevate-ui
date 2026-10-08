@@ -33,7 +33,8 @@ export default tseslint.config(
         },
       ],
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-      "@typescript-eslint/no-unused-vars": "off",
+      // Vague 0 audit : "warn" uniquement (jamais --fix) — ne fait pas échouer "npm run lint".
+      "@typescript-eslint/no-unused-vars": "warn",
     },
   },
   {

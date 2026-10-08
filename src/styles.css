@@ -171,6 +171,16 @@
   box-shadow: var(--shadow-glow);
 }
 
+/* LOT 41 P1 — canvas decoratifs isoles sur leur propre couche composite
+   (Safari iOS) + taps traversants. Applique en inline-style sur les canvas
+   matrix/particles ; utilitaire de secours pour tout futur canvas de fond. */
+@utility canvas-gpu {
+  will-change: transform;
+  transform: translateZ(0);
+  contain: strict;
+  pointer-events: none;
+}
+
 @keyframes float-slow {
   0%,
   100% {

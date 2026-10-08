@@ -566,3 +566,110 @@ ont été observées sur iPhone 12 / Safari en production :
 #### Message de commit propose (ASCII) :
 
 fix(home): LOT 40 hotfix mobile safari - revert canvas SSR, IO rootMargin, etend SSR visible
+
+### 13.9 LOT 41 — Allegement matrix + header (mobile prioritaire)
+
+Apres LOT 40, observe sur iPhone 12 Safari : sections post-hero vides
+~10 s, boutons hero morts quand la matrix rame, matrix qui bugue au
+scroll. Diagnostic : le canvas sature le main thread iOS (trop de
+pixels/frame, DPR 2, ~27 fps) et bloque touch events + paint.
+
+#### P1 — Reductions matrix-code.tsx
+
+- **DPR cap adaptatif** : 1.5 sur mobile (< 768 px), 2 sur desktop
+  (avant : 2 partout). iPhone DPR 3 : 390x844 passe de 780x1688
+  (1 316 640 px) a 585x1266 (740 610 px), soit -44 % de pixels/frame.
+- **fontSize 16 -> 22** (defaut 18 -> 22) : colonnes 390/16 = 24
+  -> 390/22 = 17, soit ~30 % de fillText en moins par frame.
+- **fps 27 -> 15** (frameMs 33/speed ~= 36.7 ms -> 66 ms fixes) :
+  -45 % de frames. Chute plus lente/zen, valide par l'utilisateur.
+- **Fade trail** : deja une seule passe fillRect, zero shadowBlur
+  (verifie, commente).
+- **Isolation GPU** : canvas `willChange: transform`,
+  `transform: translateZ(0)`, `contain: strict` -> couche composite
+  dediee sur iOS, plus de recomposition du viewport par frame.
+- **pointer-events** : classe `pointer-events-none` + inline
+  `pointerEvents: none` (ceinture + bretelles). Les taps traversent.
+- **Reprise IO** : reset `lastFrame = 0` sur transition hors-champ ->
+  en-champ (dessin immediat, pas de trou, tests deterministes).
+- **Cout combine estime** : 0.56 (DPR) x 0.70 (colonnes) x 0.55 (fps)
+  ~= **0.22x du cout initial, soit ~4.5x moins de travail main-thread**.
+
+#### P1 — Reductions particle-field.tsx (vernote clair)
+
+- Meme DPR cap 1.5 / 2.
+- **fps clamp 66 ms** (avant : rAF 60 fps sans limite) : meme logique
+  lastFrame + reset a la reprise (kick/IO/visibilite).
+- **shadowBlur 8*scale -> 4*scale** : le flou d'ombre est le poste le
+  plus couteux sur iOS, impact visuel mineur sur fond clair.
+- **Particules 169 -> 81** (defaut `particleCount` 13 -> 9, hero
+  `13` -> `9`) : -52 % d'arcs + shadowBlur par frame.
+- Meme isolation GPU + pointer-events inline.
+
+#### P2 — Gate backdrop-blur header.tsx
+
+- Etat `scrolled` (seuil `scrollY > 20`), listener `{ passive: true }`
+  - throttle rAF, `data-testid="header-bar"` + `data-scrolled` pour E2E.
+- Au top : `bg-background/0` SANS `backdrop-blur-xl` (rien a flouter
+  derriere le hero) -> supprime un RecalcStyle full-viewport par frame
+  de matrix tant qu'on est en haut.
+- Scrolle : `bg-background/60 backdrop-blur-xl` (identique a l'actuel,
+  apparence preservee).
+- Note : le `backdrop-blur-md` du petit `LocaleSwitcher` est conserve
+  (pastille, pas full-viewport).
+
+#### Hero (touch-action + z-index)
+
+- `hero.tsx` : `fontSize={16}` -> `{22}`, `particleCount={13}` ->
+  `{9}`, `style={{ touchAction: "pan-y" }}` sur la `<section>` (le
+  navigateur garde le scroll vertical meme si le canvas rame),
+  contenu `relative z-10` au-dessus des canvas `-z-10`.
+
+#### P4 — Mesures avant/apres (analytiques, iPhone 12 390x844 DPR 3)
+
+| Metrique                  | Avant (LOT 40)                | Apres (LOT 41)              | Gain             |
+| ------------------------- | ----------------------------- | --------------------------- | ---------------- |
+| Pixels matrix / frame     | 780x1688 = 1 316 640          | 585x1266 = 740 610          | -44 %            |
+| Colonnes / frame (390 px) | 24 (fontSize 16)              | 17 (fontSize 22)            | -29 %            |
+| fillText / s (matrix)     | 24 x 27 = 648                 | 17 x 15 = 255               | -61 %            |
+| Travail matrix combine    | 1x                            | ~0.22x                      | ~4.5x moins      |
+| shadowBlur particules     | 8\*scale x169                 | 4\*scale x81                | -76 % cout ombre |
+| fps particules            | 60 (sans limite)              | 15 (clamp 66 ms)            | -75 % frames     |
+| Couche composite canvas   | non (recompose viewport)      | oui (translateZ + contain)  | -recalc/frame    |
+| RecalcStyle header au top | 1x blur full-viewport / frame | 0 (pas de blur)             | supprime         |
+| TTI boutons hero (cible)  | bloque si matrix rame         | < 300 ms (taps traversants) | debloque         |
+
+> Methodo : calculs geometriques + lecture code (pas de profiler
+> device ici). A confirmer sur iPhone 12 reel via la preview :
+> time-to-animation < 1 s, tap CTA < 300 ms, sections visibles < 3 s.
+
+#### Tests ajoutes
+
+- `matrix-code.test.tsx` — describe LOT 41 : DPR mobile 585
+  (= 390x1.5) + desktop 2880 (= 1440x2) ; fps clamp (1030 ms = pas
+  de dessin, 1100 ms = dessin) ; pointer-events classe + inline +
+  willChange/translateZ.
+- `particle-field.test.tsx` — describe LOT 41 : DPR mobile 585 ;
+  fps clamp idem ; pointer-events + GPU. Adapte `(g)` en
+  `flushRaf(2000)` (clamp 66 ms).
+- `header.test.tsx` (nouveau) : top = `bg-background/0` sans
+  `backdrop-blur-xl` (`data-scrolled=false`) ; scroll 100 px = blur
+  present ; retour top = blur retire.
+- `e2e/home.spec.ts` — LOT 41 : contenu visible < 3 s + canvas
+  `pointer-events: none` + tap atteint le lien + clic < 300 ms +
+  navigation /work ; header blur gate + scroll hero 0 pageerror.
+
+#### Gates (resultats constates)
+
+- `npm run typecheck` -> 0 erreur.
+- `npm run lint` -> 0 erreur (2 warnings pre-existants
+  `admin/leads.tsx`, hors perimetre).
+- `npm test` -> **49 fichiers, 615 tests verts** (607 + 8 nouveaux :
+  3 matrix + 3 particle + 2 header).
+- `npm run test:e2e` -> **36 verts, 4 skipped, 0 echec** (dont 2
+  nouveaux LOT 41).
+- Correctif collaterale : le test E2E LOT 39 P3 `0 canvas sans JS`
+  echouait deja sur main (LOT 40) car obsolete depuis le revert QW-7
+  (le SSR sert a nouveau 1 canvas vide). Phase A alignee sur le
+  comportement voulu (`toBe(1)`, cf. §13.8) — echec pre-existant,
+  pas une regression LOT 41 (prouve via stash sur main pur).

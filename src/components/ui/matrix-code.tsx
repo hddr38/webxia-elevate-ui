@@ -28,7 +28,7 @@ function resolveThemeColor(variable: string, fallback: string): string {
 }
 
 const MatrixRain: FC<MatrixRainProps> = ({
-  fontSize = 18,
+  fontSize = 22,
   color,
   characters = "01",
   fadeOpacity = 0.12,
@@ -58,7 +58,12 @@ const MatrixRain: FC<MatrixRainProps> = ({
       const parent = canvas.parentElement;
       const width = parent?.clientWidth ?? window.innerWidth;
       const height = parent?.clientHeight ?? window.innerHeight;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // LOT 41 P1 — DPR cap adaptatif : 1.5 sur mobile (< 768 px), 2 sur
+      // desktop. La matrix est un fond decoratif flou : -44 % de pixels sur
+      // iPhone (DPR 3 -> 1.5 vs 2), invisible a l'oeil.
+      const viewportWidth = window.innerWidth || width;
+      const dprCap = viewportWidth < 768 ? 1.5 : 2;
+      const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
       // Cap DPR to keep the animation cheap on retina screens.
       const newW = Math.max(1, Math.floor(width * dpr));
       const newH = Math.max(1, Math.floor(height * dpr));
@@ -80,6 +85,8 @@ const MatrixRain: FC<MatrixRainProps> = ({
       const width = canvas.clientWidth || window.innerWidth;
       const height = canvas.clientHeight || window.innerHeight;
 
+      // LOT 41 P1 — fade trail en une seule passe fillRect, sans shadowBlur
+      // (jamais utilise sur la matrix : trop couteux sur iOS).
       ctx.fillStyle = `rgba(0, 0, 0, ${fadeOpacity})`;
       ctx.fillRect(0, 0, width, height);
 
@@ -121,10 +128,12 @@ const MatrixRain: FC<MatrixRainProps> = ({
       };
     }
 
-    // QW-1 — gated rAF loop with fps clamp. Same cadence as before
-    // (33/speed ms per frame), but driven by rAF timestamps and paused
-    // whenever the hero is offscreen or the tab is hidden (CPU cost ≈ 0).
-    const frameMs = 33 / speed;
+    // QW-1 — gated rAF loop with fps clamp, driven by rAF timestamps and
+    // paused whenever the hero is offscreen or the tab is hidden (CPU cost
+    // ≈ 0). LOT 41 P1 — cadence reduite a ~15 fps (66 ms) : -45 % de frames
+    // vs ~27 fps avant (33/speed). Chute plus lente/zen, divise le cout
+    // main-thread par ~2.7 cumule au DPR cap + fontSize 22.
+    const frameMs = 66;
     let rafId = 0;
     let ticking = false;
     let lastFrame = 0; // rAF timestamp of the last drawn frame
@@ -159,6 +168,10 @@ const MatrixRain: FC<MatrixRainProps> = ({
         const shouldBeInView = entries[0]?.isIntersecting ?? true;
         clearTimeout(inViewTimeout);
         inViewTimeout = setTimeout(() => {
+          // LOT 41 — reset lastFrame a la reprise pour dessiner des la
+          // prochaine frame (evite un trou visuel + rend les tests
+          // deterministes avec le fps clamp 66 ms).
+          if (shouldBeInView && !inView) lastFrame = 0;
           inView = shouldBeInView;
           if (inView) {
             kick();
@@ -194,7 +207,17 @@ const MatrixRain: FC<MatrixRainProps> = ({
       ref={canvasRef}
       aria-hidden="true"
       className={cn("pointer-events-none", className)}
-      style={{ width: "100%", height: "100%" }}
+      style={{
+        width: "100%",
+        height: "100%",
+        // LOT 41 P1 — isolation GPU + ceinture-bretelles pointer-events :
+        // Safari iOS peint le canvas sur sa propre couche composite (pas de
+        // recomposition du viewport par frame) et les taps traversent.
+        willChange: "transform",
+        transform: "translateZ(0)",
+        contain: "strict",
+        pointerEvents: "none",
+      }}
     />
   );
 };

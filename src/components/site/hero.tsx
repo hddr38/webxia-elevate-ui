@@ -13,14 +13,19 @@ export function Hero() {
   const { theme } = useTheme();
 
   return (
-    <section className="relative isolate overflow-hidden pt-28 pb-12 md:pb-16">
+    <section
+      className="relative isolate overflow-hidden pt-28 pb-12 md:pb-16"
+      // LOT 41 — le scroll vertical ne doit jamais etre capte par le canvas :
+      // le navigateur garde le controle du touch-scroll meme si le canvas rame.
+      style={{ touchAction: "pan-y" }}
+    >
       {/* Background */}
       {theme === "dark" ? (
         <>
           <MatrixRain
             className="absolute inset-0 -z-10 opacity-60"
             characters="01"
-            fontSize={16}
+            fontSize={22}
             fadeOpacity={0.08}
             speed={0.9}
           />
@@ -32,7 +37,7 @@ export function Hero() {
           <div className="absolute inset-0 bg-grid opacity-30 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
           <ParticleField
             className="absolute inset-0 opacity-70 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_35%,black,transparent)]"
-            particleCount={13}
+            particleCount={9}
           />
         </div>
       )}
@@ -40,7 +45,9 @@ export function Hero() {
       <div className="pointer-events-none absolute left-1/2 top-0 -z-10 size-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/20 blur-[120px]" />
       <div className="pointer-events-none absolute right-0 top-40 -z-10 size-[360px] rounded-full bg-accent/20 blur-[120px] animate-float-slow" />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* LOT 41 — contenu au-dessus du canvas (-z-10) en couche propre :
+          les taps atteignent les CTA meme si le canvas sature le main thread. */}
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           // LOT 33 — visible des le SSR (LCP) : le conteneur etait aussi
           // opacity:0 en SSR, corriger le seul h1 n'aurait pas suffi.

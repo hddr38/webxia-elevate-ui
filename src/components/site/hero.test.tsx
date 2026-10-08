@@ -27,18 +27,18 @@ vi.mock("@tanstack/react-router", () => ({
  * l'hydratation basculait vers ParticleField sur device clair.
  */
 describe("Hero SSR (LOT 39 P3 — QW-7)", () => {
-   it("sert un <canvas> dans le HTML SSR (placeholder client-only revert)", () => {
-     const html = renderToStaticMarkup(
-       <LocaleProvider>
-         <ThemeProvider>
-           <Hero />
-         </ThemeProvider>
-       </LocaleProvider>,
-     );
-     expect(html).toContain("<canvas");
-     // Le hero lui-meme est servi (titre LCP present).
-     expect(html).toContain("<h1");
-   });
+  it("sert un <canvas> dans le HTML SSR (placeholder client-only revert)", () => {
+    const html = renderToStaticMarkup(
+      <LocaleProvider>
+        <ThemeProvider>
+          <Hero />
+        </ThemeProvider>
+      </LocaleProvider>,
+    );
+    expect(html).toContain("<canvas");
+    // Le hero lui-meme est servi (titre LCP present).
+    expect(html).toContain("<h1");
+  });
 
   it("garde les wrappers de fond (dimensions identiques, CLS = 0)", () => {
     const html = renderToStaticMarkup(

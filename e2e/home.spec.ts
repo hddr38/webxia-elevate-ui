@@ -155,7 +155,7 @@ test.describe("Accueil", () => {
     expect(scriptPos).toBeLessThan(bodyOpen);
   });
 
-  test("LOT 39 P3 — 0 canvas sans JS, 1 seul canvas apres hydratation (bonne variante)", async ({
+  test("LOT 39 P3 — 1 canvas SSR (revert QW-7 LOT 40), 1 seul canvas apres hydratation (bonne variante)", async ({
     page,
   }) => {
     const pageErrors: string[] = [];
@@ -164,11 +164,13 @@ test.describe("Accueil", () => {
       window.localStorage.setItem("webxia-theme", "light");
     });
 
-    // Phase A — SSR pur (JS bloque) : aucun <canvas> dans le hero (QW-7).
+    // Phase A — SSR pur (JS bloque) : EXACTEMENT 1 <canvas> vide dans le hero.
+    // LOT 40 a reverte QW-7 (client-only) : le canvas SSR vide (meanAlpha=0)
+    // elimine le delai d'hydratation ~5 s sur mobile (cf. §13.8).
     const jsHandler = (route: import("@playwright/test").Route) => route.abort();
     await page.route("**/*.js", jsHandler);
     await page.goto("/");
-    expect(await page.locator("section canvas").count()).toBe(0);
+    expect(await page.locator("section canvas").count()).toBe(1);
     await page.unroute("**/*.js", jsHandler);
 
     // Phase B — hydratation : EXACTEMENT 1 canvas, directement la variante
@@ -253,6 +255,78 @@ test.describe("Accueil", () => {
     expect(sections).toBeGreaterThanOrEqual(5); // Hero, ProblemSolution, Expertises, WhyChooseUs, CTAStrip (et éventuellement la section des réalisations si présente)
 
     // Aucune erreur JS pendant le test.
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("LOT 41 — contenu visible < 3 s, canvas non-bloquant, CTA hero < 300 ms", async ({
+    page,
+  }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+
+    const t0 = Date.now();
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    // SSR : h1 LCP + 2e section visibles sans attendre l'hydratation.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("section").nth(1)).toContainText("Avant / Après", {
+      timeout: 10000,
+    });
+    expect(Date.now() - t0).toBeLessThan(3000);
+    await waitForHydration(page);
+
+    // Le canvas du hero ne doit jamais intercepter les taps.
+    const canvas = page.locator("section").first().locator("canvas").first();
+    if ((await canvas.count()) > 0) {
+      expect(await canvas.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
+    }
+
+    // Le tap atteint le lien (pas le canvas) : elementFromPoint au centre du CTA.
+    const cta = page.getByRole("link", { name: "Découvrir WebXIA" }).first();
+    await expect(cta).toBeVisible();
+    const hitLink = await cta.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return hit ? !!hit.closest("a") : false;
+    });
+    expect(hitLink).toBe(true);
+
+    // Le clic est accepte en < 300 ms (le canvas ne bloque plus le thread).
+    const tTap = Date.now();
+    await cta.click();
+    expect(Date.now() - tTap).toBeLessThan(300);
+    await page.waitForURL((url) => url.pathname === "/work", { timeout: 10000 });
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("LOT 41 — header blur gate + scroll hero sans erreur", async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+    const bar = page.getByTestId("header-bar");
+
+    // Au top : pas de blur (transparent).
+    await expect(bar).not.toHaveClass(/backdrop-blur-xl/);
+
+    // Scroll dans le hero par steps : 0 erreur, pas de freeze.
+    const heroBox = await page.locator("section").first().boundingBox();
+    const heroHeight = heroBox?.height ?? 800;
+    for (let i = 1; i <= 5; i++) {
+      await page.evaluate((y) => window.scrollTo(0, y), (heroHeight * i) / 5);
+      await page.waitForTimeout(120);
+    }
+    expect(pageErrors).toEqual([]);
+
+    // Apres scroll : blur present.
+    await page.evaluate(() => window.scrollTo(0, 300));
+    await page.waitForTimeout(400);
+    await expect(bar).toHaveClass(/backdrop-blur-xl/);
+
+    // Retour top : blur retire.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(400);
+    await expect(bar).not.toHaveClass(/backdrop-blur-xl/);
     expect(pageErrors).toEqual([]);
   });
 });

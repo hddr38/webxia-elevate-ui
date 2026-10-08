@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 interface ParticleFieldProps {
   className?: string;
-  /** Nombre de particules par côté (total = n²). Défaut 13 → ~169 points. */
+  /** Nombre de particules par côté (total = n²). Défaut 9 → ~81 points (LOT 41). */
   particleCount?: number;
   /** Active le suivi souris/tactile. Défaut true. */
   interactive?: boolean;
@@ -48,7 +48,7 @@ function mixColor(t: number): string {
  */
 const ParticleField: FC<ParticleFieldProps> = ({
   className,
-  particleCount = 13,
+  particleCount = 9,
   interactive = true,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -111,7 +111,10 @@ const ParticleField: FC<ParticleFieldProps> = ({
       const parent = canvas.parentElement;
       const w = parent?.clientWidth ?? window.innerWidth;
       const h = parent?.clientHeight ?? window.innerHeight;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // LOT 41 P1 — DPR cap adaptatif : 1.5 sur mobile (< 768 px), 2 desktop.
+      const viewportWidth = window.innerWidth || w;
+      const dprCap = viewportWidth < 768 ? 1.5 : 2;
+      const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
       canvas.width = Math.max(1, Math.floor(w * dpr));
       canvas.height = Math.max(1, Math.floor(h * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -132,7 +135,9 @@ const ParticleField: FC<ParticleFieldProps> = ({
         ctx.globalAlpha = p.alpha;
         ctx.fillStyle = p.color;
         ctx.shadowColor = p.color;
-        ctx.shadowBlur = 8 * p.scale;
+        // LOT 41 P1 — shadowBlur divise par 2 (8 -> 4) : le flou d'ombre est
+        // extremement couteux sur iOS, impact visuel mineur sur fond clair.
+        ctx.shadowBlur = 4 * p.scale;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius * p.scale, 0, Math.PI * 2);
         ctx.fill();
@@ -152,10 +157,20 @@ const ParticleField: FC<ParticleFieldProps> = ({
       return () => observer.disconnect();
     }
 
-    const tick = () => {
+    // LOT 41 P1 — fps clamp ~15 fps (66 ms) comme la matrix : le rAF tourne
+    // a 60 fps par defaut, on saute les frames trop rapprochees.
+    const frameMs = 66;
+    let lastFrame = 0;
+    const tick = (now: number = 0) => {
       ticking = false;
       // QW-1 — stop scheduling while offscreen or tab-hidden (CPU cost ≈ 0).
       if (!running || !inView || document.hidden) return;
+      if (lastFrame !== 0 && now - lastFrame < frameMs) {
+        raf = requestAnimationFrame(tick);
+        ticking = true;
+        return;
+      }
+      lastFrame = now;
       const t = (Date.now() - startTime) * 0.001;
       if (isAutoMode) {
         target.x = Math.sin(t * 0.3) * 110 + Math.sin(t * 0.17) * 55;
@@ -181,6 +196,9 @@ const ParticleField: FC<ParticleFieldProps> = ({
 
     const kick = () => {
       if (running && inView && !document.hidden && !ticking) {
+        // LOT 41 — reset lastFrame a la reprise pour dessiner des la
+        // prochaine frame (coherent avec le fps clamp 66 ms).
+        lastFrame = 0;
         raf = requestAnimationFrame(tick);
         ticking = true;
       }
@@ -232,6 +250,8 @@ const ParticleField: FC<ParticleFieldProps> = ({
         const shouldBeInView = entries[0]?.isIntersecting ?? true;
         clearTimeout(gateObserverTimeout);
         gateObserverTimeout = setTimeout(() => {
+          // LOT 41 — reset lastFrame a la reprise (voir kick()).
+          if (shouldBeInView && !inView) lastFrame = 0;
           inView = shouldBeInView;
           if (inView) {
             kick();
@@ -243,7 +263,10 @@ const ParticleField: FC<ParticleFieldProps> = ({
     gateObserver.observe(canvas.closest("section") ?? canvas);
 
     const onVisibilityChange = () => {
-      if (!document.hidden) kick();
+      if (!document.hidden) {
+        lastFrame = 0;
+        kick();
+      }
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
@@ -268,7 +291,15 @@ const ParticleField: FC<ParticleFieldProps> = ({
       ref={canvasRef}
       aria-hidden="true"
       className={cn("pointer-events-none", className)}
-      style={{ width: "100%", height: "100%" }}
+      style={{
+        width: "100%",
+        height: "100%",
+        // LOT 41 P1 — isolation GPU + taps traversants (cf. matrix-code).
+        willChange: "transform",
+        transform: "translateZ(0)",
+        contain: "strict",
+        pointerEvents: "none",
+      }}
     />
   );
 };

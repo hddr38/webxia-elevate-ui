@@ -1,17 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import {
-  Bot,
-  Globe,
-  Palette,
-  Pause,
-  Play,
-  Shield,
-  TrendingUp,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react";
+import { Bot, Globe, Palette, Shield, TrendingUp, Wrench, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useLocale } from "@/lib/locale-context";
 
@@ -108,7 +98,8 @@ function MarqueeCard({
 export function ExpertiseMarquee() {
   const { t } = useLocale();
   const reduceMotion = useReducedMotion();
-  const [userPaused, setUserPaused] = useState(false);
+  // LOT 43 Phase 5 — bouton pause retire (taps inutiles sur mobile) : la
+  // pause reste pilotee par hover/touch/visibilite uniquement.
   const [hoverPaused, setHoverPaused] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   // LOT 34 — init a `true` pour coller au HTML SSR (sinon mismatch de style
@@ -120,8 +111,8 @@ export function ExpertiseMarquee() {
   // LOT 34 — le pilotage rAF + MotionValue est remplace par une animation CSS
   // (voir .marquee-track dans styles.css) : le compositor l'execute, le
   // main thread n'est plus sollicite frame par frame pendant le scroll.
-  // Tous les etats de pause sont conserves et pilotent animation-play-state.
-  const paused = userPaused || hoverPaused || !isVisible || !tabVisible;
+  // Les etats de pause restants pilotent animation-play-state.
+  const paused = hoverPaused || !isVisible || !tabVisible;
 
   useEffect(() => {
     const onVisibility = () => setTabVisible(!document.hidden);
@@ -190,19 +181,6 @@ export function ExpertiseMarquee() {
             ))}
           </div>
         </div>
-        {!reduceMotion && (
-          <div className="mt-2 flex justify-center">
-            <button
-              type="button"
-              onClick={() => setUserPaused((p) => !p)}
-              aria-pressed={userPaused}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-border bg-background/60 px-4 py-2 text-xs font-medium text-muted-foreground backdrop-blur-md transition-colors hover:text-foreground"
-            >
-              {userPaused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
-              {userPaused ? t("marquee.play") : t("marquee.pause")}
-            </button>
-          </div>
-        )}
       </div>
     </motion.div>
   );

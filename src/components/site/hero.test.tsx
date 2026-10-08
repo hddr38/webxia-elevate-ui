@@ -5,7 +5,8 @@ import { render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/lib/locale-context";
 import { ThemeProvider } from "@/lib/theme-context";
-import { Hero, useIsMobileViewport } from "@/components/site/hero";
+import { Hero } from "@/components/site/hero";
+import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({

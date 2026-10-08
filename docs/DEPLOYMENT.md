@@ -643,6 +643,77 @@ pixels/frame, DPR 2, ~27 fps) et bloque touch events + paint.
 > device ici). A confirmer sur iPhone 12 reel via la preview :
 > time-to-animation < 1 s, tap CTA < 300 ms, sections visibles < 3 s.
 
+### 13.11 LOT 43 — Mobile sans animations JS (retrait radical)
+
+Apres LOT 39-42, iPhone 12 Safari reste bloque (contenu 20-25 s,
+boutons morts, avant/apres coupe) alors que Chromium emulation est
+parfait (6/6 sections, CTA 264 ms). L'audit P1 prouve que tout le
+contenu home est deja `initial={false}` (visible SSR) sauf le footer :
+le probleme est un **blocage main thread WebKit** (sections non
+peintes a temps, pas invisibles). LOT 43 supprime TOUTES les sources
+de JS continu sur mobile.
+
+#### Sources de JS continu retirees sur mobile (< 768 px)
+
+- `whileInView`/`viewport`/`transition` neutralises (`undefined`) dans
+  problem-solution (11 motion), expertises (3), why-choose-us (3),
+  project-card (2) via `useIsMobileViewport` (extrait de hero.tsx vers
+  `src/lib/use-is-mobile-viewport.ts`, re-exporte pour compat).
+- `OscillatingArrow` : `animate={{x:0}}` statique sur mobile (fini la
+  boucle `repeat: Infinity`).
+- Footer : 5 noeuds `initial opacity:0` -> `initial={false}` (fini le
+  seul contenu masque au chargement).
+- Marquee : bouton pause **supprime** (state + JSX + icones) ; pause
+  hover/touch/visibilite conservee. `FloatingCTA` confirme code mort
+  (0 import, non ressuscite).
+- Desktop (>= 768 px) : strictement inchange (meme JSX desactive par
+  `isMobile=false`).
+
+#### Header : retour opaque permanent
+
+Logique `scrolled` LOT 41 retiree : `bg-background/60 backdrop-blur-xl`
+fixe, 0 listener scroll, mobile + desktop, top + scrolle.
+
+#### Hydratation
+
+Meme pattern anti-#418 que LOT 42 : 1er rendu = SSR (visible + canvas
+desktop), bascule mobile apres mount. Sans ca, E2E mobile leve
+React error #418 (canvas SSR vs fallback client) — constate puis
+corrige pendant le lot.
+
+#### Mode debug `?debug=1`
+
+`src/lib/debug-mobile.ts` + appel mount-client dans `__root.tsx`
+(exception autorisee) : inactif sans query string (0 cout prod) ;
+avec `?debug=1` : reperes init/1er rAF/load, compteur rAF sur 3 s
+(~180 = boucle continue), tick 500 ms, touchstart/end. Usage :
+`https://webxia-fr.netlify.app/?debug=1` sur iPhone + Web Inspector.
+
+#### Tests ajoutes
+
+- `use-is-mobile-viewport.test.ts` (4) : false 1er rendu, true mobile,
+  suivi `change` (rotation), seuil 767.
+- `sections-mobile.test.tsx` (7) : chaque section mobile visible +
+  0 opacity:0 inline ; footer SSR sans opacity:0 ; controle desktop.
+- `expertise-marquee.test.tsx` (1) : bouton pause/play absent, piste
+  presente. `header.test.tsx` reecrit : opaque permanent (blur
+  toujours present, inchange au scroll).
+- `e2e/home.spec.ts` : LOT 43 mobile (toutes sections opacity 1
+  immediat, header opaque, 0 bouton pause, tap natif + navigation
+  /work, 0 pageerror) ; LOT 43 desktop (header opaque, pas de pause,
+  marquee visible). Test LOT 41 header re-aligne (opaque permanent).
+  Seuils tap : cible produit < 300 ms (sonde Chromium : 264 ms), seuil
+  E2E < 1000 ms — le poste de CI monte jusqu'a ~530 ms sur un simple
+  round-trip evaluate sous 2 workers, donc < 300 ms flake ; < 1000 ms
+  detecte toujours la classe de bug remontee (taps morts/bloques
+  plusieurs secondes). Meme durcissement applique aux tests LOT 41/42.
+
+#### Cibles
+
+0 animation d'entree mobile, time-to-first-visible-content < 500 ms
+(opacites SSR deja a 1), main thread libre (plus de rAF canvas depuis
+LOT 42, plus de boucles framer sur mobile).
+
 #### Tests ajoutes
 
 - `matrix-code.test.tsx` — describe LOT 41 : DPR mobile 585

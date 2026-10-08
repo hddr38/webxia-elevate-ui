@@ -198,6 +198,12 @@ function RootComponent() {
     return () => window.clearTimeout(timer);
   }, []);
 
+  // LOT 43 Phase 8 — mode debug mobile `?debug=1` (inactif sans query
+  // string, 0 cout prod). Appel mount-client uniquement.
+  useEffect(() => {
+    void import("@/lib/debug-mobile").then((m) => m.initMobileDebug());
+  }, []);
+
   // Dev-only: purge stale service workers. This app ships no service
   // worker, but a leftover registration on the same origin (e.g. from an
   // older build) intercepts POST fetches like /api/chat and crashes on

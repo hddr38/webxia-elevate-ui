@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
+import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
 const expertises = [
   {
@@ -67,6 +68,8 @@ const expertises = [
 
 export function Expertises() {
   const { t } = useLocale();
+  // LOT 43 Phase 2 — mobile : aucune animation d'entree JS.
+  const isMobile = useIsMobileViewport();
 
   return (
     <section className="pt-14 pb-20 md:pt-20 md:pb-28">
@@ -74,9 +77,9 @@ export function Expertises() {
         {/* Header */}
         <motion.div
           initial={false}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+          viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
+          transition={isMobile ? undefined : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto max-w-3xl mb-16 md:mb-20"
         >
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
@@ -96,9 +99,11 @@ export function Expertises() {
             <motion.article
               key={`expertise-${exp.sectionId}-${i}`}
               initial={false}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+              whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+              viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+              transition={
+                isMobile ? undefined : { duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }
+              }
               className="group relative flex flex-col rounded-2xl border border-border bg-card p-6 transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_30px_80px_-30px_color-mix(in_oklab,var(--brand)_40%,transparent)]"
             >
               <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-brand/0 via-transparent to-brand/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-hover:from-brand/10 group-hover:to-accent/5" />
@@ -130,9 +135,9 @@ export function Expertises() {
         {/* CTA */}
         <motion.div
           initial={false}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+          viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+          transition={isMobile ? undefined : { duration: 0.5, delay: 0.3 }}
           className="mt-14 flex justify-center"
         >
           <Button variant="brand" size="lg" asChild>

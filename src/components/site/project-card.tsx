@@ -6,15 +6,20 @@ import type { DisplayRealisation } from "@/lib/mappers";
 import { useLocale } from "@/lib/locale-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
 export function ProjectCard({ project, index = 0 }: { project: Project; index?: number }) {
   const { t } = useLocale();
+  // LOT 43 Phase 2 — mobile : aucune animation d'entree JS.
+  const isMobile = useIsMobileViewport();
   return (
     <motion.article
       initial={false}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+      whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+      viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+      transition={
+        isMobile ? undefined : { duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }
+      }
       className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_30px_80px_-30px_color-mix(in_oklab,var(--brand)_40%,transparent)]"
     >
       <div
@@ -77,6 +82,8 @@ export function DbRealisationCard({
   index?: number;
 }) {
   const { t } = useLocale();
+  // LOT 43 Phase 2 — mobile : aucune animation d'entree JS.
+  const isMobile = useIsMobileViewport();
   const hasSlug = item.slug.trim().length > 0;
   if (!hasSlug) {
     console.warn(`[work] Réalisation sans slug ignorée du lien détail : "${item.title}"`);
@@ -144,9 +151,11 @@ export function DbRealisationCard({
   return (
     <motion.article
       initial={false}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+      whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+      viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+      transition={
+        isMobile ? undefined : { duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }
+      }
       className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_30px_80px_-30px_color-mix(in_oklab,var(--brand)_40%,transparent)]"
     >
       {hasSlug ? (

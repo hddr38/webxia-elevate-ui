@@ -1,12 +1,11 @@
 // @vitest-environment happy-dom
 /**
- * LOT 41 P2 — gate du backdrop-blur du header sur le scroll.
- * Au top : transparent SANS blur (rien a flouter derriere le hero).
- * Apres scroll (> 20 px) : comportement historique (bg + blur).
+ * LOT 43 Phase 6 — header OPAQUE PERMANENT (mobile + desktop, top + scrolle).
+ * Le gating blur LOT 41 (etat `scrolled`) est retire : 0 listener scroll.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
-import { act, render } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { LocaleProvider } from "@/lib/locale-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { Header } from "@/components/site/header";
@@ -29,45 +28,13 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
-// ---------------------------------------------------------------------------
-// rAF manuelle (throttle du listener scroll).
-// ---------------------------------------------------------------------------
-interface RafEntry {
-  id: number;
-  cb: FrameRequestCallback;
-}
-let rafQueue: RafEntry[] = [];
-let nextRafId = 1;
-const flushRaf = () => {
-  const q = rafQueue;
-  rafQueue = [];
-  for (const { cb } of q) cb(1000);
-};
-
-let mockScrollY = 0;
-
 beforeEach(() => {
-  mockScrollY = 0;
-  rafQueue = [];
-  nextRafId = 1;
-  Object.defineProperty(window, "scrollY", {
-    configurable: true,
-    get: () => mockScrollY,
-  });
-  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback): number => {
-    const id = nextRafId++;
-    rafQueue.push({ id, cb });
-    return id;
-  });
-  vi.stubGlobal("cancelAnimationFrame", (id: number): void => {
-    rafQueue = rafQueue.filter((e) => e.id !== id);
-  });
+  window.localStorage.clear();
 });
 
 afterEach(() => {
-  vi.unstubAllGlobals();
   vi.restoreAllMocks();
-  Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 0 });
+  window.localStorage.clear();
 });
 
 function renderHeader() {
@@ -86,34 +53,18 @@ function bar(container: HTMLElement): HTMLElement {
   return el as HTMLElement;
 }
 
-function scrollToY(y: number) {
-  mockScrollY = y;
-  act(() => {
-    window.dispatchEvent(new Event("scroll"));
-    flushRaf();
-  });
-}
-
-describe("Header — gate backdrop-blur LOT 41 P2", () => {
-  it("au top : transparent SANS backdrop-blur", () => {
+describe("Header LOT 43 Phase 6 — opaque permanent", () => {
+  it("toujours opaque + blur, au top comme scrolle", () => {
     const { container } = renderHeader();
     const el = bar(container);
-    expect(el.dataset.scrolled).toBe("false");
-    expect(el.className).not.toContain("backdrop-blur-xl");
-    expect(el.className).toContain("bg-background/0");
-  });
-
-  it("apres scroll 100 px : blur present, puis retrait au retour top", () => {
-    const { container } = renderHeader();
-    scrollToY(100);
-    const el = bar(container);
-    expect(el.dataset.scrolled).toBe("true");
+    expect(el.className).toContain("bg-background/60");
     expect(el.className).toContain("backdrop-blur-xl");
     expect(el.className).not.toContain("bg-background/0");
 
-    scrollToY(0);
-    const back = bar(container);
-    expect(back.dataset.scrolled).toBe("false");
-    expect(back.className).not.toContain("backdrop-blur-xl");
+    // Scroll : classes inchangees (aucune logique `scrolled`).
+    window.dispatchEvent(new Event("scroll"));
+    const after = bar(container);
+    expect(after.className).toContain("bg-background/60");
+    expect(after.className).toContain("backdrop-blur-xl");
   });
 });

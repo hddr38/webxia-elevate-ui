@@ -4,9 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
 import { cn } from "@/lib/utils";
+import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
 export function WhyChooseUs({ className }: { className?: string }) {
   const { t } = useLocale();
+  // LOT 43 Phase 2 — mobile : aucune animation d'entree JS.
+  const isMobile = useIsMobileViewport();
 
   const engagements = [
     t("home.whyChooseUs.1"),
@@ -25,9 +28,9 @@ export function WhyChooseUs({ className }: { className?: string }) {
         {/* Header */}
         <motion.div
           initial={false}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+          viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
+          transition={isMobile ? undefined : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto max-w-3xl mb-16 md:mb-20"
         >
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
@@ -44,9 +47,9 @@ export function WhyChooseUs({ className }: { className?: string }) {
         {/* Card */}
         <motion.div
           initial={false}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+          viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
+          transition={isMobile ? undefined : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-8 md:p-12"
         >
           <p className="text-base text-muted-foreground sm:text-lg text-pretty">
@@ -60,9 +63,9 @@ export function WhyChooseUs({ className }: { className?: string }) {
               <motion.li
                 key={`why-choose-${i}`}
                 initial={false}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.4, delay: i * 0.06 }}
+                whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+                viewport={isMobile ? undefined : { once: true, margin: "-50px" }}
+                transition={isMobile ? undefined : { duration: 0.4, delay: i * 0.06 }}
                 className="flex items-start gap-3 text-sm text-muted-foreground"
               >
                 <Check className="size-5 mt-0.5 shrink-0 text-brand" />

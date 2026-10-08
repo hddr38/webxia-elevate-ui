@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Menu, Moon, Sun, ArrowUpRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useLocale } from "@/lib/locale-context";
@@ -62,41 +62,15 @@ import { navItems } from "./nav-items";
 export function Header() {
   const { t, locale } = useLocale();
   const [open, setOpen] = useState(false);
-  // LOT 41 P2 — le backdrop-blur full-viewport coute un RecalcStyle par frame
-  // de la matrix tant qu'on est en haut (rien a flouter derriere le hero).
-  // Au top : header transparent sans blur ; apres scroll (> 20 px) : blur.
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    let raf = 0;
-    let ticking = false;
-    const update = () => {
-      ticking = false;
-      setScrolled(window.scrollY > 20);
-    };
-    const onScroll = () => {
-      if (!ticking) {
-        ticking = true;
-        raf = requestAnimationFrame(update);
-      }
-    };
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
       <div className="mx-auto mt-4 max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* LOT 43 Phase 6 — header opaque permanent (mobile + desktop, top +
+            scrolle) : le gating blur LOT 41 est retire, 0 listener scroll. */}
         <div
           data-testid="header-bar"
-          data-scrolled={scrolled ? "true" : "false"}
-          className={`flex items-center justify-between rounded-full border border-border px-4 py-2.5 shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--foreground)_15%,transparent)] ${
-            scrolled ? "bg-background/60 backdrop-blur-xl" : "bg-background/0"
-          }`}
+          className="flex items-center justify-between rounded-full border border-border bg-background/60 px-4 py-2.5 backdrop-blur-xl shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--foreground)_15%,transparent)]"
         >
           <Logo />
 

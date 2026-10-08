@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
+import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
 // LOT 34 — entrees en vue assagies : 0,35 s (au lieu de 0,6 s) et decalage
 // indexe PAR POSITION du bloc (0,08 s/bloc), jamais le meme delai fixe
@@ -38,28 +39,33 @@ function OscillatingArrow({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: false, margin: viewportMargin });
+  // LOT 43 Phase 3 — sur mobile la fleche est statique (x:0) : pas de boucle
+  // JS infinie sur le main thread iOS. Desktop inchange.
+  const isMobile = useIsMobileViewport();
   return (
     <div className={wrapperClassName}>
       <motion.div
         ref={ref}
         // LOT 39 P2 (QW-2) — visible des le SSR comme le hero (LOT 33).
         initial={false}
-        whileInView={{ opacity: 1, scale: 1 }}
-        viewport={{ once: true, margin: viewportMargin }}
-        animate={inView ? { x: xKeyframes } : { x: 0 }}
+        whileInView={isMobile ? undefined : { opacity: 1, scale: 1 }}
+        viewport={isMobile ? undefined : { once: true, margin: viewportMargin }}
+        animate={isMobile ? { x: 0 } : inView ? { x: xKeyframes } : { x: 0 }}
         transition={
-          inView
-            ? {
-                // LOT 34 — entree assagie (0,35 s, position 2) ; l'oscillation
-                // decorative garde sa propre transition (x, infinie).
-                ...reveal(2),
-                x: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
-              }
-            : // Subtilite framer-motion : garder repeat:Infinity dans la
-              // transition maintient la boucle en vie meme quand la cible
-              // devient statique. Hors champ : transition finie courte vers
-              // le repos (x:0), puis aucune frame.
-              { duration: 0.3 }
+          isMobile
+            ? undefined
+            : inView
+              ? {
+                  // LOT 34 — entree assagie (0,35 s, position 2) ; l'oscillation
+                  // decorative garde sa propre transition (x, infinie).
+                  ...reveal(2),
+                  x: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+                }
+              : // Subtilite framer-motion : garder repeat:Infinity dans la
+                // transition maintient la boucle en vie meme quand la cible
+                // devient statique. Hors champ : transition finie courte vers
+                // le repos (x:0), puis aucune frame.
+                { duration: 0.3 }
         }
         className={motionClassName}
       >
@@ -71,6 +77,9 @@ function OscillatingArrow({
 
 export function ProblemSolution() {
   const { t } = useLocale();
+  // LOT 43 Phase 2 — sur mobile : aucune animation d'entree JS, contenu
+  // visible immediatement (initial={false} + whileInView ignore).
+  const isMobile = useIsMobileViewport();
 
   const challenges = [
     t("home.problemSolution.challenges.1"),
@@ -92,9 +101,9 @@ export function ProblemSolution() {
         {/* Header */}
         <motion.div
           initial={false}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={reveal(0)}
+          whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+          viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
+          transition={isMobile ? undefined : reveal(0)}
           className="mx-auto max-w-3xl mb-16 md:mb-20"
         >
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
@@ -113,9 +122,9 @@ export function ProblemSolution() {
           {/* Challenges column */}
           <motion.article
             initial={false}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={reveal(1)}
+            whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+            viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
+            transition={isMobile ? undefined : reveal(1)}
             className="rounded-3xl border border-border bg-card p-6 md:p-8 flex flex-col"
           >
             <div className="flex flex-col items-center text-center mb-6">
@@ -131,9 +140,9 @@ export function ProblemSolution() {
                 <motion.li
                   key={i}
                   initial={false}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.35, delay: 0.1 + i * 0.08 }}
+                  whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+                  viewport={isMobile ? undefined : { once: true, margin: "-50px" }}
+                  transition={isMobile ? undefined : { duration: 0.35, delay: 0.1 + i * 0.08 }}
                   className="flex items-start gap-3 text-sm leading-relaxed text-foreground/90"
                 >
                   <XCircle
@@ -174,9 +183,9 @@ export function ProblemSolution() {
           {/* Solutions column */}
           <motion.article
             initial={false}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={reveal(3)}
+            whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+            viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
+            transition={isMobile ? undefined : reveal(3)}
             className="rounded-3xl border border-border bg-card p-6 md:p-8 flex flex-col"
           >
             <div className="flex flex-col items-center text-center mb-6">
@@ -192,9 +201,9 @@ export function ProblemSolution() {
                 <motion.li
                   key={i}
                   initial={false}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.35, delay: 0.2 + i * 0.08 }}
+                  whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+                  viewport={isMobile ? undefined : { once: true, margin: "-50px" }}
+                  transition={isMobile ? undefined : { duration: 0.35, delay: 0.2 + i * 0.08 }}
                   className="flex items-start gap-3 text-sm leading-relaxed text-foreground/90"
                 >
                   <CheckCircle2

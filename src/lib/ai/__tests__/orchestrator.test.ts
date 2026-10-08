@@ -13,7 +13,6 @@ import type {
   SkillContext,
 } from "../contracts";
 import type { RAGEngine } from "../rag";
-import type { RAGQueryResult } from "../rag/rag-engine";
 
 vi.mock("../memory/memory-service", () => ({
   createMemoryService: vi.fn(() => ({

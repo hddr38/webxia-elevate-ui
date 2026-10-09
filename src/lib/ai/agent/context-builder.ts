@@ -142,13 +142,20 @@ export async function buildAgentContext(options: ContextBuilderOptions): Promise
     })
     .catch(() => null);
 
-  // 4. Available tools (skills), minus chat-excluded ones.
-  // For anonymous users, only public skills
+  // 4. Available tools (skills), minus chat-excluded ones, filtered by
+  // permissions. Anonymous users only see public skills; authenticated
+  // users additionally see `authenticated` skills. `admin` skills are
+  // never listed here: isAdmin is not available at this layer (the
+  // orchestrator does not forward it), so fail closed — execution stays
+  // gated by SkillExecutor.checkPermissions either way.
   const isAuthenticated = !!userId;
   const availableTools = getAllToolDefinitions().filter((tool) => {
     if (CHAT_EXCLUDED_TOOLS.has(tool.function.name)) return false;
-    // In a real implementation, we'd check skill permissions against user role
-    // For now, allow all registered skills
+    const skill = skillRegistry.get(tool.function.name);
+    if (!skill) return true;
+    if (skill.permissions.includes("internal")) return false;
+    if (skill.permissions.includes("admin")) return false;
+    if (skill.permissions.includes("authenticated") && !isAuthenticated) return false;
     return true;
   });
 

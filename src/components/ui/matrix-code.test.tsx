@@ -358,7 +358,7 @@ describe("MatrixRain — gating canvas (LOT 39 P1)", () => {
 });
 
 describe("MatrixRain — allegement LOT 41 (mobile)", () => {
-  it("cap DPR a 1.5 sur mobile (< 768 px), 2 sur desktop", () => {
+  it("cap DPR a 1.5 sur mobile comme sur desktop (P1 perf home)", () => {
     const origDPR = window.devicePixelRatio;
     const origIW = window.innerWidth;
     try {
@@ -381,8 +381,8 @@ describe("MatrixRain — allegement LOT 41 (mobile)", () => {
       Object.defineProperty(parent2, "clientWidth", { configurable: true, value: 1440 });
       Object.defineProperty(parent2, "clientHeight", { configurable: true, value: 900 });
       MockResizeObserver.instances[1].fire();
-      // 1440 * 2 = 2880 (cap desktop inchange).
-      expect(canvas2.width).toBe(Math.floor(1440 * 2));
+      // 1440 * 1.5 = 2160 (cap desktop uniforme P1 perf home).
+      expect(canvas2.width).toBe(Math.floor(1440 * 1.5));
       second.unmount();
     } finally {
       Object.defineProperty(window, "devicePixelRatio", { configurable: true, value: origDPR });

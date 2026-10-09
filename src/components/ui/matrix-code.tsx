@@ -58,11 +58,10 @@ const MatrixRain: FC<MatrixRainProps> = ({
       const parent = canvas.parentElement;
       const width = parent?.clientWidth ?? window.innerWidth;
       const height = parent?.clientHeight ?? window.innerHeight;
-      // LOT 41 P1 — DPR cap adaptatif : 1.5 sur mobile (< 768 px), 2 sur
-      // desktop. La matrix est un fond decoratif flou : -44 % de pixels sur
-      // iPhone (DPR 3 -> 1.5 vs 2), invisible a l'oeil.
-      const viewportWidth = window.innerWidth || width;
-      const dprCap = viewportWidth < 768 ? 1.5 : 2;
+      // P1 perf home — DPR cap uniforme a 1.5, mobile comme desktop :
+      // la matrix est un fond decoratif flou (voile + masque par-dessus),
+      // -44 % de pixels/frame vs DPR 2 sur desktop, invisible a l'oeil.
+      const dprCap = 1.5;
       const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
       // Cap DPR to keep the animation cheap on retina screens.
       const newW = Math.max(1, Math.floor(width * dpr));
@@ -178,7 +177,7 @@ const MatrixRain: FC<MatrixRainProps> = ({
           }
         }, 150);
       },
-      { threshold: 0, rootMargin: "200px" },
+      { threshold: 0, rootMargin: "600px" },
     );
     intersectionObserver.observe(canvas.closest("section") ?? canvas);
 

@@ -171,8 +171,10 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { t } = useLocale();
-  const routerState = useRouterState();
-  const isAdmin = routerState.location.pathname.startsWith("/admin");
+  const routerState = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const isAdmin = routerState.startsWith("/admin");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [chatReady, setChatReady] = useState(false);
 

@@ -151,7 +151,7 @@ export function ExpertiseMarquee() {
           <div
             role="list"
             aria-label={t("services.eyebrow")}
-            className="marquee-track flex gap-4 overflow-visible py-8 will-change-transform"
+            className="marquee-track flex gap-4 overflow-visible py-8"
             style={
               {
                 width: singleRowWidth * 2 + gap,

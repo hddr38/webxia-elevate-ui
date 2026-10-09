@@ -87,7 +87,7 @@ validation manuelle + `build` vert.
 8. **`netlify.toml`** : hors périmètre Knip (pas de lecture TOML) — relu
    manuellement uniquement.
 9. **`e2e/**`** : projet Playwright séparé (secrets requis) ; anomalie
-   connue : `require("seroval")` sans dépendance déclarée → à vérifier,
+connue : `require("seroval")` sans dépendance déclarée → à vérifier,
    jamais à « corriger » via Knip.
 
 Volontairement **non ignorés** (Knip doit les signaler) : `dotenv`

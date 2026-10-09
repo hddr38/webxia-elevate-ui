@@ -89,6 +89,25 @@ export class ContextBuilder {
     return formattedDocs.join("\n---\n");
   }
 
+  /**
+   * Budgeted KNOWLEDGE string for the live path: full rendering when
+   * within `maxContextTokens`, cleanly truncated (document boundary)
+   * when over budget. `truncated` reflects real string truncation.
+   */
+  buildBudgetedContextString(retrieveResult: RetrieveResult): {
+    contextString: string;
+    truncated: boolean;
+  } {
+    const fullContext = this.buildContextString(retrieveResult);
+    if (this.estimateTokens(fullContext) <= this.options.maxContextTokens) {
+      return { contextString: fullContext, truncated: false };
+    }
+    return {
+      contextString: this.truncateToTokenLimit(fullContext, this.options.maxContextTokens),
+      truncated: true,
+    };
+  }
+
   private formatSource(source: DocumentSource): string {
     const parts: string[] = [source.type];
     if (source.url) parts.push(`URL: ${source.url}`);
@@ -107,9 +126,10 @@ export class ContextBuilder {
 
     const truncated = text.slice(0, maxChars);
     const lastSeparator = truncated.lastIndexOf("\n---\n");
-    return lastSeparator > maxChars * 0.5
-      ? truncated.slice(0, lastSeparator)
-      : truncated.slice(0, maxChars) + "\n[TRUNCATED]";
+    if (lastSeparator > maxChars * 0.5) return truncated.slice(0, lastSeparator);
+    // Reserve room for the marker so the result never exceeds the budget.
+    const marker = "\n[TRUNCATED]";
+    return truncated.slice(0, maxChars - marker.length) + marker;
   }
 
   setOptions(options: Partial<ContextBuilderOptions>): void {

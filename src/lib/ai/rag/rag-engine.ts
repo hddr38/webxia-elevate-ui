@@ -59,11 +59,6 @@ export class RAGEngine {
     this.vectorStore = vectorStore ?? new PgVectorStore(embeddingProvider);
     this.retriever = new Retriever(this.vectorStore);
     this.reranker = reranker ?? new NoOpReranker();
-    this.contextBuilder = new ContextBuilder({
-      maxContextTokens: config.maxContextTokens,
-      maxDocuments: config.maxDocuments,
-    });
-
     this.config = {
       topK: config.topK ?? EMBEDDING_CONFIG.defaultTopK,
       similarityThreshold: config.similarityThreshold ?? EMBEDDING_CONFIG.defaultThreshold,
@@ -71,6 +66,12 @@ export class RAGEngine {
       maxDocuments: config.maxDocuments ?? 5,
       defaultStrategy: config.defaultStrategy ?? "semantic",
     };
+    // NB: resolved values (never raw `config`, whose missing keys are
+    // `undefined` and would clobber the ContextBuilder defaults on spread).
+    this.contextBuilder = new ContextBuilder({
+      maxContextTokens: this.config.maxContextTokens,
+      maxDocuments: this.config.maxDocuments,
+    });
   }
 
   async initialize(): Promise<void> {
@@ -146,14 +147,15 @@ export class RAGEngine {
 
   /** Builds the budgeted KNOWLEDGE slice (empty when nothing is pertinent). */
   buildKnowledgeContext(retrieveResult: RetrieveResult): BuiltKnowledgeContext {
-    const contextString = this.contextBuilder.buildContextString(retrieveResult);
+    const { contextString, truncated } =
+      this.contextBuilder.buildBudgetedContextString(retrieveResult);
     const chunks = retrieveResult.documents;
     return {
       chunks,
       count: chunks.length,
       topScore: chunks[0]?.score ?? 0,
       contextString,
-      truncated: chunks.length < retrieveResult.totalFound,
+      truncated,
     };
   }
 

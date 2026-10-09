@@ -9,7 +9,6 @@ import {
   ToolPermission,
 } from "./types";
 import { LLMProvider } from "../providers";
-import { createSkillSchema } from "./validator";
 
 export interface SummarizeInput extends SkillInput {
   text: string;

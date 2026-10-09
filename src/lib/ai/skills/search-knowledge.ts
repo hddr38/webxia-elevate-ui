@@ -11,7 +11,6 @@ import {
 import { RAGEngine } from "../rag";
 import type { DocumentMetadata } from "../contracts";
 import { KNOWLEDGE_SOURCE_TYPES, type KnowledgeDocType } from "../rag/types";
-import { createSkillSchema } from "./validator";
 
 export interface SearchKnowledgeInput extends SkillInput {
   query: string;

@@ -122,3 +122,113 @@ Vague 2), `@lovable.dev/vite-tanstack-config`.
 Aucune suppression massive, aucun `eslint --fix`, aucun `tsc` avec écriture,
 aucun `npm prune/dedupe`, aucune réécriture de migrations ou d'historique
 (contrainte Lovable : pas de force-push sur l'historique partagé).
+
+---
+
+# État de la maintenance — octobre 2026
+
+## 1. Bilan
+
+| Métrique                                            |      Avant |               Après |
+| --------------------------------------------------- | ---------: | ------------------: |
+| Warnings ESLint                                     |        100 |                  73 |
+| Signaux `tsc --noUnusedLocals --noUnusedParameters` |         97 |                  71 |
+| Tests Vitest                                        | 630 passés | 638 passés + 1 todo |
+| Build client + SSR                                  |       vert |                vert |
+
+- Aucun changement de dépendance, aucun lockfile modifié.
+- Aucun fichier de production supprimé.
+- Correctifs fonctionnels réalisés : budget RAG (`22e8521`), filtrage des
+  tools (`195e245`).
+
+## 2. Correctifs fonctionnels réalisés
+
+### Budget RAG (`22e8521`)
+
+- Le contexte knowledge respecte désormais `maxContextTokens`.
+- `truncated` reflète la troncature réelle, plus la pagination des chunks.
+- Propagation de configuration du `ContextBuilder` corrigée (des clés
+  `undefined` écrasaient ses défauts au spread ; un moteur construit sans
+  options recevait un budget `undefined`).
+- Marqueur `[TRUNCATED]` réservé dans le budget (plus de dépassement).
+
+### Filtrage des tools (`195e245`)
+
+- `availableTools` filtrée selon les permissions dans `buildAgentContext`.
+- `public` visible pour tous ; `authenticated` visible si authentifié.
+- `admin` et `internal` masqués en fail closed tant que `isAdmin` n'est
+  pas transmis à cette couche (l'orchestrateur ne le fait pas suivre).
+- Exécution inchangée, toujours protégée par
+  `SkillExecutor.checkPermissions`.
+
+## 3. Politique de classification
+
+| Catégorie                   | Signification                                         | Action                               |
+| --------------------------- | ----------------------------------------------------- | ------------------------------------ |
+| A — supprimable sans risque | Import/variable morte, sans usage ni effet de bord    | Micro-vague future                   |
+| B — paramètre contractuel   | Callback, hook, mock, interface, signature imposée    | Conserver (préfixe selon convention) |
+| C — test intentionnel       | Mock, construction ou variable nécessaire au scénario | Conserver                            |
+| D — production à relire     | Variable/import/export en module métier sensible      | Revue humaine, ticket                |
+| E — faux positif structurel | Route, import dynamique, UI, build, config, asset     | Conserver et documenter              |
+| F — dette de design         | Export/barrel/helper sans usage mais structurel       | Décision produit/architecture        |
+| G — anomalie réelle         | Dépendance manquante, import invalide, incohérence    | Ticket prioritaire                   |
+
+État : A=55, B=8, C=5, D=4, E=5, F=1, G=0 (78 signaux uniques).
+**B, C et E se conservent et se documentent** : ils ne sont jamais une
+preuve de suppression.
+
+## 4. Règles de micro-vagues (protocole validé)
+
+1. Une seule intention par commit.
+2. Maximum quelques fichiers.
+3. Preuve d'absence d'usage avant suppression.
+4. Prettier check avant ESLint.
+5. Lint, typecheck, tests et build après chaque vague.
+6. Commit atomique.
+7. Aucun auto-fix global (`--fix`, `--write` interdits).
+8. Aucune suppression de dépendance sans build et tests verts.
+9. Aucune modification de routes, migrations, imports dynamiques ou
+   composants UI sans revue humaine.
+
+## 5. Tickets recommandés
+
+### T1 — Transmettre `isAdmin` au contexte agent
+
+- Objectif : afficher les skills admin aux admins.
+- Condition : uniquement lorsqu'une skill admin réelle sera ajoutée.
+- Risque : exposition de la définition de skill si mal implémenté.
+- Tests : visibilité admin, invisibilité anonyme/authentifié, exécution
+  protégée (cas `3c` en `todo` dans `context-permissions.test.ts`).
+
+### T2 — Nettoyer `finalContext` mort dans `buildContext()`
+
+- Objectif : supprimer le calcul inutile restant.
+- Condition : après vérification qu'aucun appelant n'en dépend
+  (le chemin live passe par `buildBudgetedContextString()`).
+- Tests : tests RAG existants et build.
+
+### T3 — Nettoyer les imports morts de l'orchestrateur et du RAG
+
+- Objectif : réduire les signaux TypeScript restants.
+- Condition : revue humaine, build et tests obligatoires.
+- Risque : modules cœur, imports dynamiques, architecture agent.
+
+### T4 — Nettoyer les imports morts des routes et composants UI
+
+- Objectif : réduire les warnings sans toucher au design system.
+- Condition : micro-vagues par fichier, build obligatoire.
+- Risque : imports dynamiques, routes TanStack, composants shadcn.
+
+### T5 — Décider du double lockfile npm/Bun
+
+- Objectif : éviter la dérive de versions (`package-lock.json` = référence
+  CI, `bun.lock` potentiellement périmé).
+- Condition : décision d'équipe.
+- Risque : CI npm, développeurs Bun, résolution de dépendances.
+
+### T6 — Documenter les faux positifs structurels
+
+- Objectif : éviter que Knip, ESLint ou TypeScript soient interprétés
+  comme une preuve de suppression.
+- Éléments : imports dynamiques, routes file-based, composants shadcn,
+  dépendances de build, migrations, assets, barrels.

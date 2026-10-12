@@ -154,6 +154,43 @@
   );
 }
 
+/* FIX mobile (Safari iOS) — blobs du hero (640px/360px) : l'ancien filtre
+   blur(120px) saturait le GPU / bloquait le compositing
+   (sections vides, taps retardes, checkerboarding). radial-gradient natif :
+   meme halo doux, zero filtre GPU. color-mix = memes teintes que
+   bg-brand/20 et bg-accent/20 (theme light + dark via --brand / --accent).
+   Le gradient atteint transparent avant le clip `rounded-full` : aucun bord
+   net. */
+.hero-blob {
+  pointer-events: none;
+  user-select: none;
+}
+
+.hero-blob-brand {
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--brand) 22%, transparent) 0%,
+    color-mix(in oklab, var(--brand) 10%, transparent) 38%,
+    transparent 68%
+  );
+}
+
+.hero-blob-accent {
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--accent) 20%, transparent) 0%,
+    color-mix(in oklab, var(--accent) 8%, transparent) 40%,
+    transparent 70%
+  );
+}
+
+@media (max-width: 767px) {
+  .hero-blob-brand,
+  .hero-blob-accent {
+    opacity: 0.8;
+  }
+}
+
 @utility text-gradient-brand {
   background-image: linear-gradient(
     100deg,

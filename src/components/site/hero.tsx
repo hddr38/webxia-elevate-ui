@@ -58,10 +58,10 @@ export function Hero() {
         </div>
       ) : null}
       <div className="absolute inset-0 -z-10 bg-radial-fade" />
-      <div className="pointer-events-none absolute left-1/2 top-0 -z-10 size-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/20 blur-[120px]" />
+      <div className="pointer-events-none absolute left-1/2 top-0 -z-10 size-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full hero-blob hero-blob-brand" />
       {/* LOT 44 P0 : blob statique sur mobile (`md:` uniquement) — même
-          élément, mêmes couleur/taille/opacité/blur, zéro changement desktop. */}
-      <div className="pointer-events-none absolute right-0 top-40 -z-10 size-[360px] rounded-full bg-accent/20 blur-[120px] md:animate-float-slow" />
+          élément, mêmes couleur/taille/opacité/gradient, zéro changement desktop. */}
+      <div className="pointer-events-none absolute right-0 top-40 -z-10 size-[360px] rounded-full hero-blob hero-blob-accent md:animate-float-slow" />
 
       {/* LOT 41 — contenu au-dessus du canvas (-z-10) en couche propre :
           les taps atteignent les CTA meme si le canvas sature le main thread. */}

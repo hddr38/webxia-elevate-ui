@@ -58,10 +58,14 @@ function Logo() {
 }
 
 import { navItems } from "./nav-items";
+import { useDiagnosticFlags } from "@/lib/use-diagnostic-flags";
 
 export function Header() {
   const { t, locale } = useLocale();
   const [open, setOpen] = useState(false);
+  // DIAG temporaire (branche diagnostic/...) : `?diag=no-header-blur|
+  // minimal|all-off`. Sans `?diag=` : chaîne de classes identique à main.
+  const diag = useDiagnosticFlags();
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
@@ -70,7 +74,11 @@ export function Header() {
             scrolle) : le gating blur LOT 41 est retire, 0 listener scroll. */}
         <div
           data-testid="header-bar"
-          className="flex items-center justify-between rounded-full border border-border bg-background/60 px-4 py-2.5 backdrop-blur-xl shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--foreground)_15%,transparent)]"
+          className={
+            diag.noHeaderBlur
+              ? "flex items-center justify-between rounded-full border border-border bg-background/90 px-4 py-2.5 shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--foreground)_15%,transparent)] md:bg-background/60 md:backdrop-blur-xl"
+              : "flex items-center justify-between rounded-full border border-border bg-background/60 px-4 py-2.5 backdrop-blur-xl shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--foreground)_15%,transparent)]"
+          }
         >
           <Logo />
 

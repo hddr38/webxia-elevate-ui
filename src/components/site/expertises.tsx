@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
 import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
+import { useDiagnosticFlags } from "@/lib/use-diagnostic-flags";
 
 const expertises = [
   {
@@ -70,6 +71,10 @@ export function Expertises() {
   const { t } = useLocale();
   // LOT 43 Phase 2 — mobile : aucune animation d'entree JS.
   const isMobile = useIsMobileViewport();
+  // DIAG temporaire (branche diagnostic/...) : `?diag=no-animations|
+  // minimal|all-off`. Sans `?diag=` : `staticMode === isMobile`.
+  const diag = useDiagnosticFlags();
+  const staticMode = isMobile || diag.noAnimations;
 
   return (
     <section className="pt-14 pb-20 md:pt-20 md:pb-28">
@@ -77,9 +82,9 @@ export function Expertises() {
         {/* Header */}
         <motion.div
           initial={false}
-          whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
-          viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
-          transition={isMobile ? undefined : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          whileInView={staticMode ? undefined : { opacity: 1, y: 0 }}
+          viewport={staticMode ? undefined : { once: true, margin: "-100px" }}
+          transition={staticMode ? undefined : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto max-w-3xl mb-16 md:mb-20"
         >
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
@@ -99,10 +104,12 @@ export function Expertises() {
             <motion.article
               key={`expertise-${exp.sectionId}-${i}`}
               initial={false}
-              whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
-              viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+              whileInView={staticMode ? undefined : { opacity: 1, y: 0 }}
+              viewport={staticMode ? undefined : { once: true, margin: "-80px" }}
               transition={
-                isMobile ? undefined : { duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }
+                staticMode
+                  ? undefined
+                  : { duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }
               }
               className="group relative flex flex-col rounded-2xl border border-border bg-card p-6 transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_30px_80px_-30px_color-mix(in_oklab,var(--brand)_40%,transparent)]"
             >
@@ -135,9 +142,9 @@ export function Expertises() {
         {/* CTA */}
         <motion.div
           initial={false}
-          whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
-          viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
-          transition={isMobile ? undefined : { duration: 0.5, delay: 0.3 }}
+          whileInView={staticMode ? undefined : { opacity: 1, y: 0 }}
+          viewport={staticMode ? undefined : { once: true, margin: "-80px" }}
+          transition={staticMode ? undefined : { duration: 0.5, delay: 0.3 }}
           className="mt-14 flex justify-center"
         >
           <Button variant="brand" size="lg" asChild>

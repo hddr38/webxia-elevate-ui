@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
 import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
+import { useDiagnosticFlags } from "@/lib/use-diagnostic-flags";
 
 // LOT 34 — entrees en vue assagies : 0,35 s (au lieu de 0,6 s) et decalage
 // indexe PAR POSITION du bloc (0,08 s/bloc), jamais le meme delai fixe
@@ -42,17 +43,21 @@ function OscillatingArrow({
   // LOT 43 Phase 3 — sur mobile la fleche est statique (x:0) : pas de boucle
   // JS infinie sur le main thread iOS. Desktop inchange.
   const isMobile = useIsMobileViewport();
+  // DIAG temporaire (branche diagnostic/...) : `?diag=no-animations|
+  // minimal|all-off`. Sans `?diag=` : `staticMode === isMobile`.
+  const diag = useDiagnosticFlags();
+  const staticMode = isMobile || diag.noAnimations;
   return (
     <div className={wrapperClassName}>
       <motion.div
         ref={ref}
         // LOT 39 P2 (QW-2) — visible des le SSR comme le hero (LOT 33).
         initial={false}
-        whileInView={isMobile ? undefined : { opacity: 1, scale: 1 }}
-        viewport={isMobile ? undefined : { once: true, margin: viewportMargin }}
-        animate={isMobile ? { x: 0 } : inView ? { x: xKeyframes } : { x: 0 }}
+        whileInView={staticMode ? undefined : { opacity: 1, scale: 1 }}
+        viewport={staticMode ? undefined : { once: true, margin: viewportMargin }}
+        animate={staticMode ? { x: 0 } : inView ? { x: xKeyframes } : { x: 0 }}
         transition={
-          isMobile
+          staticMode
             ? undefined
             : inView
               ? {
@@ -80,6 +85,9 @@ export function ProblemSolution() {
   // LOT 43 Phase 2 — sur mobile : aucune animation d'entree JS, contenu
   // visible immediatement (initial={false} + whileInView ignore).
   const isMobile = useIsMobileViewport();
+  // DIAG temporaire (branche diagnostic/...) : voir ci-dessus.
+  const diag = useDiagnosticFlags();
+  const staticMode = isMobile || diag.noAnimations;
 
   const challenges = [
     t("home.problemSolution.challenges.1"),
@@ -101,9 +109,9 @@ export function ProblemSolution() {
         {/* Header */}
         <motion.div
           initial={false}
-          whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
-          viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
-          transition={isMobile ? undefined : reveal(0)}
+          whileInView={staticMode ? undefined : { opacity: 1, y: 0 }}
+          viewport={staticMode ? undefined : { once: true, margin: "-100px" }}
+          transition={staticMode ? undefined : reveal(0)}
           className="mx-auto max-w-3xl mb-16 md:mb-20"
         >
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
@@ -122,9 +130,9 @@ export function ProblemSolution() {
           {/* Challenges column */}
           <motion.article
             initial={false}
-            whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
-            viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
-            transition={isMobile ? undefined : reveal(1)}
+            whileInView={staticMode ? undefined : { opacity: 1, y: 0 }}
+            viewport={staticMode ? undefined : { once: true, margin: "-100px" }}
+            transition={staticMode ? undefined : reveal(1)}
             className="rounded-3xl border border-border bg-card p-6 md:p-8 flex flex-col"
           >
             <div className="flex flex-col items-center text-center mb-6">
@@ -140,9 +148,9 @@ export function ProblemSolution() {
                 <motion.li
                   key={i}
                   initial={false}
-                  whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
-                  viewport={isMobile ? undefined : { once: true, margin: "-50px" }}
-                  transition={isMobile ? undefined : { duration: 0.35, delay: 0.1 + i * 0.08 }}
+                  whileInView={staticMode ? undefined : { opacity: 1, y: 0 }}
+                  viewport={staticMode ? undefined : { once: true, margin: "-50px" }}
+                  transition={staticMode ? undefined : { duration: 0.35, delay: 0.1 + i * 0.08 }}
                   className="flex items-start gap-3 text-sm leading-relaxed text-foreground/90"
                 >
                   <XCircle
@@ -183,9 +191,9 @@ export function ProblemSolution() {
           {/* Solutions column */}
           <motion.article
             initial={false}
-            whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
-            viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
-            transition={isMobile ? undefined : reveal(3)}
+            whileInView={staticMode ? undefined : { opacity: 1, y: 0 }}
+            viewport={staticMode ? undefined : { once: true, margin: "-100px" }}
+            transition={staticMode ? undefined : reveal(3)}
             className="rounded-3xl border border-border bg-card p-6 md:p-8 flex flex-col"
           >
             <div className="flex flex-col items-center text-center mb-6">
@@ -201,9 +209,9 @@ export function ProblemSolution() {
                 <motion.li
                   key={i}
                   initial={false}
-                  whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
-                  viewport={isMobile ? undefined : { once: true, margin: "-50px" }}
-                  transition={isMobile ? undefined : { duration: 0.35, delay: 0.2 + i * 0.08 }}
+                  whileInView={staticMode ? undefined : { opacity: 1, y: 0 }}
+                  viewport={staticMode ? undefined : { once: true, margin: "-50px" }}
+                  transition={staticMode ? undefined : { duration: 0.35, delay: 0.2 + i * 0.08 }}
                   className="flex items-start gap-3 text-sm leading-relaxed text-foreground/90"
                 >
                   <CheckCircle2

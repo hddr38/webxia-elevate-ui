@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Bot, Globe, Palette, Shield, TrendingUp, Wrench, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { useDiagnosticFlags } from "@/lib/use-diagnostic-flags";
 
 const marqueeKeys: {
   icon: LucideIcon;
@@ -107,6 +108,9 @@ export function ExpertiseMarquee() {
   // re-rend). La vraie valeur est synchro au montage dans l'effect ci-dessous.
   const [tabVisible, setTabVisible] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  // DIAG temporaire (branche diagnostic/...) : `?diag=no-marquee|
+  // no-animations|minimal|all-off`. Sans `?diag=` : rendu identique à main.
+  const diag = useDiagnosticFlags();
 
   // LOT 34 — le pilotage rAF + MotionValue est remplace par une animation CSS
   // (voir .marquee-track dans styles.css) : le compositor l'execute, le
@@ -131,12 +135,32 @@ export function ExpertiseMarquee() {
     return () => observer.disconnect();
   }, []);
 
+  // DIAG `no-marquee` : early-return APRES les hooks (règles des hooks
+  // intactes). Liste statique des 6 cartes, sans piste animée ni clones —
+  // la hauteur de section change (attendu, diagnostic uniquement).
+  if (diag.noMarquee) {
+    return (
+      <div ref={containerRef} className="mx-auto mt-16 w-full">
+        <div role="list" aria-label={t("services.eyebrow")} className="flex flex-col gap-4 py-8">
+          {marqueeKeys.map((m, i) => (
+            <MarqueeCard
+              key={`${m.titleKey}-${i}`}
+              icon={m.icon}
+              title={t(m.titleKey)}
+              desc={t(m.descKey)}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       ref={containerRef}
       // LOT 34 — visible des le SSR (pas de pop-in differe apres hydratation).
       initial={false}
-      animate={{ opacity: 1, y: 0 }}
+      animate={diag.noAnimations ? {} : { opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.55 }}
       className="mx-auto mt-16 w-full"
       onMouseEnter={() => setHoverPaused(true)}

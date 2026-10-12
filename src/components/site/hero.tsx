@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/locale-context";
 import { useTheme } from "@/lib/theme-context";
 import { ExpertiseMarquee } from "@/components/site/expertise-marquee";
 import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
+import { useDiagnosticFlags } from "@/lib/use-diagnostic-flags";
 
 export function Hero() {
   const { t } = useLocale();
@@ -15,6 +16,10 @@ export function Hero() {
   // LOT 42 P2 — sur mobile le canvas sature le main thread iOS (bloque taps
   // + paint) : on le retire et on sert un fallback CSS anime (GPU pur).
   const isMobile = useIsMobileViewport();
+  // DIAG temporaire (branche diagnostic/...) : `?diag=no-canvas|no-blobs|
+  // no-animations|minimal|all-off`. Sans `?diag=` : tout est `false`, rendu
+  // strictement identique à main.
+  const diag = useDiagnosticFlags();
 
   return (
     <section
@@ -36,7 +41,7 @@ export function Hero() {
         aria-hidden="true"
         className="matrix-css-fallback md:hidden"
       />
-      {!isMobile && theme === "dark" ? (
+      {!isMobile && !diag.noCanvas && theme === "dark" ? (
         <>
           <MatrixRain
             className="absolute inset-0 -z-10 hidden opacity-60 md:block"
@@ -46,9 +51,11 @@ export function Hero() {
             speed={0.9}
           />
           {/* Readability veil: keeps the centered title legible over the rain */}
-          <div className="absolute inset-0 -z-10 hidden bg-background/70 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_45%,black,transparent)] md:block" />
+          {!diag.noBlobs && (
+            <div className="absolute inset-0 -z-10 hidden bg-background/70 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_45%,black,transparent)] md:block" />
+          )}
         </>
-      ) : !isMobile ? (
+      ) : !isMobile && !diag.noCanvas ? (
         <div className="absolute inset-0 -z-10 hidden md:block">
           <div className="absolute inset-0 bg-grid opacity-30 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
           <ParticleField
@@ -57,11 +64,17 @@ export function Hero() {
           />
         </div>
       ) : null}
-      <div className="absolute inset-0 -z-10 bg-radial-fade" />
-      <div className="pointer-events-none absolute left-1/2 top-0 -z-10 size-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/20 blur-[120px]" />
-      {/* LOT 44 P0 : blob statique sur mobile (`md:` uniquement) — même
+      {/* DIAG `no-blobs` : voile radial + blobs hors DOM (tous `absolute`,
+          aucun impact layout). Sans flag : rendu identique à main. */}
+      {!diag.noBlobs && <div className="absolute inset-0 -z-10 bg-radial-fade" />}
+      {!diag.noBlobs && (
+        <>
+          <div className="pointer-events-none absolute left-1/2 top-0 -z-10 size-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/20 blur-[120px]" />
+          {/* LOT 44 P0 : blob statique sur mobile (`md:` uniquement) — même
           élément, mêmes couleur/taille/opacité/blur, zéro changement desktop. */}
-      <div className="pointer-events-none absolute right-0 top-40 -z-10 size-[360px] rounded-full bg-accent/20 blur-[120px] md:animate-float-slow" />
+          <div className="pointer-events-none absolute right-0 top-40 -z-10 size-[360px] rounded-full bg-accent/20 blur-[120px] md:animate-float-slow" />
+        </>
+      )}
 
       {/* LOT 41 — contenu au-dessus du canvas (-z-10) en couche propre :
           les taps atteignent les CTA meme si le canvas sature le main thread. */}
@@ -70,7 +83,7 @@ export function Hero() {
           // LOT 33 — visible des le SSR (LCP) : le conteneur etait aussi
           // opacity:0 en SSR, corriger le seul h1 n'aurait pas suffi.
           initial={false}
-          animate={{ opacity: 1, y: 0 }}
+          animate={diag.noAnimations ? {} : { opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto max-w-4xl text-center"
         >
@@ -82,7 +95,7 @@ export function Hero() {
           <motion.h1
             // LOT 33 — le h1 est l'element LCP : visible des le SSR.
             initial={false}
-            animate={{ opacity: 1, y: 0 }}
+            animate={diag.noAnimations ? {} : { opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="mt-8 font-display text-5xl font-semibold tracking-[-0.04em] text-balance sm:text-6xl md:text-7xl lg:text-[88px] lg:leading-[0.95]"
           >
@@ -93,7 +106,7 @@ export function Hero() {
             // LOT 34 — visible des le SSR comme le h1 (LOT 33) : le sous-titre
             // partait de opacity:0 et poppait apres hydratation (flash).
             initial={false}
-            animate={{ opacity: 1, y: 0 }}
+            animate={diag.noAnimations ? {} : { opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.25 }}
             className="mx-auto mt-8 max-w-2xl text-balance text-base text-muted-foreground sm:text-lg"
           >
@@ -103,7 +116,7 @@ export function Hero() {
           <motion.div
             // LOT 34 — meme chose pour les CTA : visibles des le SSR.
             initial={false}
-            animate={{ opacity: 1, y: 0 }}
+            animate={diag.noAnimations ? {} : { opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
             className="mt-10 flex flex-wrap items-center justify-center gap-3"
           >

@@ -7,6 +7,7 @@ import { useLocale } from "@/lib/locale-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
+import { useDiagnosticFlags } from "@/lib/use-diagnostic-flags";
 
 export function ProjectCard({ project, index = 0 }: { project: Project; index?: number }) {
   const { t } = useLocale();
@@ -84,6 +85,18 @@ export function DbRealisationCard({
   const { t } = useLocale();
   // LOT 43 Phase 2 — mobile : aucune animation d'entree JS.
   const isMobile = useIsMobileViewport();
+  // DIAG temporaire (branche diagnostic/...) : `?diag=no-card-blur|
+  // no-animations|all-off`. Sans `?diag=` : `cardBlur` retourne la chaîne
+  // d'origine à l'identique et `staticMode === isMobile` (pixel-perfect).
+  const diag = useDiagnosticFlags();
+  const staticMode = isMobile || diag.noAnimations;
+  const cardBlur = (cls: string) =>
+    diag.noCardBlur
+      ? cls
+          .replace("backdrop-blur-md", "backdrop-blur-none md:backdrop-blur-md")
+          .replace("bg-black/30", "bg-black/50 md:bg-black/30")
+          .replace("bg-white/15", "bg-white/25 md:bg-white/15")
+      : cls;
   const hasSlug = item.slug.trim().length > 0;
   if (!hasSlug) {
     console.warn(`[work] Réalisation sans slug ignorée du lien détail : "${item.title}"`);
@@ -105,16 +118,28 @@ export function DbRealisationCard({
         )}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_60%)]" />
         <div className="absolute inset-0 bg-grid opacity-10 mix-blend-overlay" />
-        <div className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white backdrop-blur-md">
+        <div
+          className={cardBlur(
+            "absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white backdrop-blur-md",
+          )}
+        >
           {item.category}
         </div>
         {item.featured && (
-          <div className="absolute left-4 top-11 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/90 backdrop-blur-md">
+          <div
+            className={cardBlur(
+              "absolute left-4 top-11 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/90 backdrop-blur-md",
+            )}
+          >
             <Star className="size-3 fill-current" aria-hidden="true" />
             {t("admin.form.featured")}
           </div>
         )}
-        <div className="absolute right-4 top-4 rounded-full border border-white/20 bg-black/30 px-2 py-0.5 font-mono text-[10px] font-medium text-white backdrop-blur-md">
+        <div
+          className={cardBlur(
+            "absolute right-4 top-4 rounded-full border border-white/20 bg-black/30 px-2 py-0.5 font-mono text-[10px] font-medium text-white backdrop-blur-md",
+          )}
+        >
           {item.year}
         </div>
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-5">
@@ -128,7 +153,11 @@ export function DbRealisationCard({
               {item.title}
             </div>
           </div>
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition-transform group-hover:rotate-45">
+          <span
+            className={cardBlur(
+              "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition-transform group-hover:rotate-45",
+            )}
+          >
             <ArrowUpRight className="size-4" aria-hidden="true" />
           </span>
         </div>
@@ -151,10 +180,10 @@ export function DbRealisationCard({
   return (
     <motion.article
       initial={false}
-      whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
-      viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+      whileInView={staticMode ? undefined : { opacity: 1, y: 0 }}
+      viewport={staticMode ? undefined : { once: true, margin: "-80px" }}
       transition={
-        isMobile ? undefined : { duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }
+        staticMode ? undefined : { duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }
       }
       className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_30px_80px_-30px_color-mix(in_oklab,var(--brand)_40%,transparent)]"
     >

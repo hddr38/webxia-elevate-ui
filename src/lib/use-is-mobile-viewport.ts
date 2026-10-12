@@ -30,10 +30,20 @@ export function useIsMobileViewport(breakpoint: number = MOBILE_MAX_WIDTH_PX): b
         return window.innerWidth <= breakpoint;
       }
     };
-    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    // LOT 44 P0 — mises à jour fonctionnelles : `resize` (barre d'adresse
+    // mobile qui se masque/affiche), `orientationchange` et `change` ne
+    // re-rendent que si la valeur a réellement changé (retourner `previous`
+    // identique = bailout React, zéro re-render des consommateurs).
+    const onChange = (e: MediaQueryListEvent) => {
+      const next = e.matches;
+      setIsMobile((previous) => (previous === next ? previous : next));
+    };
     if (typeof mq.addEventListener === "function") mq.addEventListener("change", onChange);
     else mq.addListener(onChange);
-    const onResize = () => setIsMobile(read());
+    const onResize = () => {
+      const next = read();
+      setIsMobile((previous) => (previous === next ? previous : next));
+    };
     window.addEventListener("resize", onResize, { passive: true });
     window.addEventListener("orientationchange", onResize);
     onResize();

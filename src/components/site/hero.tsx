@@ -23,34 +23,45 @@ export function Hero() {
       // le navigateur garde le controle du touch-scroll meme si le canvas rame.
       style={{ touchAction: "pan-y" }}
     >
-      {/* Background — LOT 42 : mobile = fallback CSS (memes dimensions que
-          le canvas : absolute inset-0 -z-10, CLS = 0), desktop = canvas. */}
-      {isMobile ? (
-        <div data-testid="hero-fallback" aria-hidden="true" className="matrix-css-fallback" />
-      ) : theme === "dark" ? (
+      {/* Background — LOT 44 P0 : le fallback est TOUJOURS rendu (SSR inclus)
+          et affiché < 768px via CSS (`md:hidden`, miroir exact du
+          `max-width: 767px` de `useIsMobileViewport`). Le canvas desktop est
+          masqué < 768px via CSS (`hidden md:block`) ET démonté côté client
+          par `isMobile` : sur mobile, zéro paint du canvas dès le 1er paint,
+          zéro swap visible à l'hydratation (le fallback ne bouge pas, seul
+          l'attribut `data-testid` est posé après mount). Mêmes dimensions
+          partout (absolute inset-0 -z-10) : CLS = 0. */}
+      <div
+        data-testid={isMobile ? "hero-fallback" : undefined}
+        aria-hidden="true"
+        className="matrix-css-fallback md:hidden"
+      />
+      {!isMobile && theme === "dark" ? (
         <>
           <MatrixRain
-            className="absolute inset-0 -z-10 opacity-60"
+            className="absolute inset-0 -z-10 hidden opacity-60 md:block"
             characters="01"
             fontSize={22}
             fadeOpacity={0.08}
             speed={0.9}
           />
           {/* Readability veil: keeps the centered title legible over the rain */}
-          <div className="absolute inset-0 -z-10 bg-background/70 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_45%,black,transparent)]" />
+          <div className="absolute inset-0 -z-10 hidden bg-background/70 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_45%,black,transparent)] md:block" />
         </>
-      ) : (
-        <div className="absolute inset-0 -z-10">
+      ) : !isMobile ? (
+        <div className="absolute inset-0 -z-10 hidden md:block">
           <div className="absolute inset-0 bg-grid opacity-30 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
           <ParticleField
             className="absolute inset-0 opacity-70 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_35%,black,transparent)]"
             particleCount={9}
           />
         </div>
-      )}
+      ) : null}
       <div className="absolute inset-0 -z-10 bg-radial-fade" />
       <div className="pointer-events-none absolute left-1/2 top-0 -z-10 size-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/20 blur-[120px]" />
-      <div className="pointer-events-none absolute right-0 top-40 -z-10 size-[360px] rounded-full bg-accent/20 blur-[120px] animate-float-slow" />
+      {/* LOT 44 P0 : blob statique sur mobile (`md:` uniquement) — même
+          élément, mêmes couleur/taille/opacité/blur, zéro changement desktop. */}
+      <div className="pointer-events-none absolute right-0 top-40 -z-10 size-[360px] rounded-full bg-accent/20 blur-[120px] md:animate-float-slow" />
 
       {/* LOT 41 — contenu au-dessus du canvas (-z-10) en couche propre :
           les taps atteignent les CTA meme si le canvas sature le main thread. */}

@@ -229,6 +229,17 @@
   }
 }
 
+/* LOT 44 P0 — fallback statique sur mobile (<= 767px, miroir exact du
+   `max-width: 767px` de `useIsMobileViewport`) : l'animation
+   `matrix-fallback-drift` pilote `background-position`, donc un repaint
+   pleine-hero à chaque frame sur GPU mobile. Desktop inchangé (drift 20s
+   conservé). Marquee non touchée. */
+@media (max-width: 767px) {
+  .matrix-css-fallback {
+    animation: none;
+  }
+}
+
 @keyframes float-slow {
   0%,
   100% {

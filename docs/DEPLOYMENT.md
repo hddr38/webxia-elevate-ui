@@ -807,3 +807,103 @@ optimisation ne suffit -> retrait du canvas sur mobile.
   desktop 1440px : 1 canvas, pas de fallback, 0 pageerror.
 - Non-regression : hero-gating (3), hero SSR (2), matrix/particle
   LOT 41 : verts sans modification.
+
+## 13.12 — Résolution bug perf Safari iOS : filter:blur sur blobs hero
+
+### 1. Résumé exécutif
+
+- **Symptôme** : sur iPhone 12 / Safari iOS, sections vides au scroll,
+  hero figée au retour en haut, boutons non cliquables, section
+  avant/après lente.
+- **Cause racine** : `filter: blur(120px)` (utilitaire Tailwind
+  `blur-[120px]`) sur les 2 blobs décoratifs du hero (640x640 et
+  360x360 px) — filtre très coûteux à rasteriser pour WebKit iOS.
+- **Solution** : remplacement des 2 blobs par des `radial-gradient` CSS
+  natifs couplés à `color-mix(in oklab, ...)`, sans aucun filtre GPU.
+- **Commits** : `625355c` (fix) puis `a5e8d3c` (merge dans `main`).
+
+### 2. Symptôme et impact
+
+Reproduit sur iPhone 12 / Safari iOS (absent sur desktop) :
+
+- sections qui se vident visuellement au scroll ;
+- hero figée (ou hachurée) au retour en haut ;
+- boutons non cliquables (taps ignorés) ;
+- section avant/après lente à répondre ;
+- saturation GPU / raster WebKit iOS ;
+- checkerboarding (zones non peintes pendant le scroll).
+
+### 3. Méthode de diagnostic
+
+- Branche dédiée `diagnostic/mobile-home` (commit `1cbd0ad`) : 9 flags
+  URL `?diag=xxx` — `baseline`, `no-canvas`, `no-blobs`,
+  `no-header-blur`, `no-card-blur`, `no-animations`, `no-marquee`,
+  `minimal`, `all-off`.
+- Bisection progressive, un flag à la fois, sur device réel.
+- **Seul le flag `no-blobs` a résolu le problème** (tous les
+  symptômes) ; `minimal` et `all-off` passaient aussi car ils incluent
+  la désactivation des blobs ; les autres flags seuls ne corrigeaient
+  rien.
+- Cause racine ainsi isolée : les blobs, pas le canvas, ni le blur du
+  header, ni celui des cartes, ni les animations, ni le marquee.
+
+### 4. Solution retenue
+
+- Suppression de `filter: blur(120px)` sur les blobs du hero.
+- Remplacement par des `radial-gradient(circle, ...)` natifs.
+- Couleurs via `color-mix(in oklab, var(--brand) 22%, transparent)`
+  (centre) → `10%` (38 %) → `transparent` (68 %), et équivalent
+  `var(--accent)` (20 % → 8 % → `transparent`) : mêmes teintes que les
+  anciennes classes `bg-brand/20` et `bg-accent/20`.
+- Conservation des thèmes light/dark (`--brand` et `--accent` définis
+  dans `:root` et `.dark`).
+- Conservation de la géométrie : position, tailles (640 / 360 px),
+  `rounded-full`, `-z-10`, `md:animate-float-slow` sur le petit blob.
+- Le gradient atteint `transparent` avant le clip `rounded-full`
+  (307 px < 320 px ; 173 px < 180 px) : halo doux, aucun bord net.
+
+### 5. Fichiers modifiés
+
+- `src/components/site/hero.tsx` — classes des 2 blobs
+  (`hero-blob hero-blob-brand` / `hero-blob hero-blob-accent`).
+- `src/styles.css` — classes `.hero-blob`, `.hero-blob-brand`,
+  `.hero-blob-accent` + media query `max-width: 767px` (opacité 0.8).
+
+Aucun autre fichier : routes, canvas, header, cartes, dépendances et
+configurations inchangés.
+
+### 6. Commits
+
+- `625355c` — `perf(mobile): replace hero blobs blur filter with radial-gradient`
+- `a5e8d3c` — `merge: fix hero blobs gradient (Safari iOS perf)`
+
+### 7. Tests
+
+- **Test anti-régression statique** :
+  `src/components/site/hero-blur-guard.test.ts` (Vitest, environnement
+  node, lecture des sources uniquement, aucun mock) : interdit
+  `blur-[Npx]` > 20, les classes `blur-xl/2xl/3xl`, un `filter: blur`
+  inline dans `hero.tsx` ; vérifie que `.hero-blob-brand` et
+  `.hero-blob-accent` existent, contiennent `radial-gradient` et ni
+  `filter: blur` ni `backdrop-filter: blur`.
+- **Validation iPhone 12 Safari** (post-déploiement, sans `?diag=`) :
+  sections non vides, hero fluide, boutons cliquables, avant/après
+  < 1 s, halos bleu + violet préservés — **OK** (utilisateur).
+
+### 8. Leçon retenue
+
+Bisection par flags URL **avant** toute optimisation à l'aveugle : les
+9 flags ont isolé la cause racine en une session ; agir au hasard sur
+canvas / header / cartes / animations aurait pu manquer la vraie cause.
+
+### 9. Références croisées
+
+- §13.5 et §13.6 — mesures P5a et notes d'interprétation (baseline
+  perf home).
+- §13.8 — hotfix mobile Safari (LOT 40).
+- §13.9 — allègement matrix + header (LOT 41).
+- §13.10 — retrait du canvas sur mobile, fallback CSS (LOT 42).
+- §13.11 — mobile sans animations JS (LOT 43).
+- §13.7 — section inexistante dans ce document.
+- `docs/maintenance/mobile-perf-profiling.md` — protocole de profiling
+  mobile (grille d'interprétation, scénarios, checklist).

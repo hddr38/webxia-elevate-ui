@@ -333,6 +333,11 @@
   }
 }
 
+/* Kill global prefers-reduced-motion (pattern MDN standard).
+   Neutralise animations et transitions en rendu instantané.
+   États hover/focus préservés (anneau statique, pas de transition).
+   Les 3 règles ciblées adjacentes (marquee, matrix, scroll) sont
+   redondantes mais conservées pour clarté sémantique. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

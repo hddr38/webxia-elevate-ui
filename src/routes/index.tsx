@@ -5,6 +5,7 @@ import { ProblemSolution } from "@/components/site/problem-solution";
 import { Expertises } from "@/components/site/expertises";
 import { WhyChooseUs } from "@/components/site/why-choose-us";
 import { DbRealisationCard, CTAStrip } from "@/components/site/project-card";
+import { Container } from "@/components/ui/container";
 import { useLocale } from "@/lib/locale-context";
 import { getPublishedRealisations } from "@/server/functions/realisations";
 import { realisationToDisplay, type DisplayRealisation } from "@/lib/mappers";
@@ -63,7 +64,7 @@ function Index() {
 
       {featured.length > 0 && (
         <section className="pt-20 pb-24 md:pt-24 md:pb-32">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Container size="wide" className="px-4 sm:px-6 lg:px-8">
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div className="max-w-2xl">
                 <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
@@ -91,7 +92,7 @@ function Index() {
                 />
               ))}
             </div>
-          </div>
+          </Container>
         </section>
       )}
 

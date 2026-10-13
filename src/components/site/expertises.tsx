@@ -10,6 +10,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/container";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
 import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
@@ -73,7 +74,7 @@ export function Expertises() {
 
   return (
     <section className="pt-14 pb-20 md:pt-20 md:pb-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container size="wide" className="px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={false}
@@ -146,7 +147,7 @@ export function Expertises() {
             </Link>
           </Button>
         </motion.div>
-      </div>
+      </Container>
     </section>
   );
 }

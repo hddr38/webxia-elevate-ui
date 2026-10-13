@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { MapPin, Mail, Phone, Globe, Palette, TrendingUp, Bot, Wrench, Shield } from "lucide-react";
+import { Container } from "@/components/ui/container";
 import { useLocale } from "@/lib/locale-context";
 
 function XIcon({ className }: { className?: string }) {
@@ -61,7 +62,7 @@ export function Footer() {
       className="relative border-t border-border bg-muted/30"
       role="contentinfo"
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      <Container size="wide" className="px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <motion.div
           initial={false}
           whileInView={{ opacity: 1, y: 0 }}
@@ -226,7 +227,7 @@ export function Footer() {
         >
           {t("footer.madeby")}
         </motion.p>
-      </div>
+      </Container>
     </motion.footer>
   );
 }

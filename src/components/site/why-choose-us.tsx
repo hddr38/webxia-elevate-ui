@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Check, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/container";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,7 @@ export function WhyChooseUs({ className }: { className?: string }) {
 
   return (
     <section className={cn("pt-14 pb-20 md:pt-20 md:pb-28", className)}>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container size="wide" className="px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={false}
@@ -81,7 +82,7 @@ export function WhyChooseUs({ className }: { className?: string }) {
             </Button>
           </div>
         </motion.div>
-      </div>
+      </Container>
     </section>
   );
 }

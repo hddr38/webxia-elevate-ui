@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/container";
 import MatrixRain from "@/components/ui/matrix-code";
 import ParticleField from "@/components/ui/particle-field";
 import { useLocale } from "@/lib/locale-context";
@@ -65,7 +66,7 @@ export function Hero() {
 
       {/* LOT 41 — contenu au-dessus du canvas (-z-10) en couche propre :
           les taps atteignent les CTA meme si le canvas sature le main thread. */}
-      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container size="wide" className="relative z-10 px-4 sm:px-6 lg:px-8">
         <motion.div
           // LOT 33 — visible des le SSR (LCP) : le conteneur etait aussi
           // opacity:0 en SSR, corriger le seul h1 n'aurait pas suffi.
@@ -120,7 +121,7 @@ export function Hero() {
 
         {/* Expertises marquee */}
         <ExpertiseMarquee />
-      </div>
+      </Container>
     </section>
   );
 }

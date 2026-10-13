@@ -6,6 +6,7 @@ import * as React from "react";
 import { useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/container";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -70,7 +71,7 @@ export function Contact() {
         className="absolute inset-0 -z-10 bg-radial-fade opacity-60 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_100%,black,transparent)]"
       />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container size="wide" className="px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -89,7 +90,7 @@ export function Contact() {
           </p>
         </motion.div>
 
-        <div className="mx-auto mt-16 flex max-w-4xl flex-col gap-8">
+        <Container size="legacy-4xl" className="mt-16 flex flex-col gap-8">
           {/* Booking Calendar */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -223,8 +224,8 @@ export function Contact() {
               />
             </form>
           </motion.div>
-        </div>
-      </div>
+        </Container>
+      </Container>
     </section>
   );
 }

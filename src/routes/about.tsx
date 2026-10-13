@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { MapPin, Code, Palette, Bot, TrendingUp } from "lucide-react";
 import { CTAStrip, DbRealisationCard } from "@/components/site/project-card";
+import { Container } from "@/components/ui/container";
 import { useLocale } from "@/lib/locale-context";
 import { founder, expertisePoles } from "@/data/team";
 import { getPublishedRealisations } from "@/server/functions/realisations";
@@ -98,7 +99,7 @@ function AboutPage() {
       {/* Hero */}
       <section className="relative pt-28 pb-14 md:pb-[4.5rem]">
         <div className="absolute inset-0 -z-10 bg-radial-fade opacity-60 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,black,transparent)]" />
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -119,24 +120,24 @@ function AboutPage() {
               {t("about.location")}
             </div>
           </motion.div>
-        </div>
+        </Container>
       </section>
 
       {/* Manifesto */}
       <section className="py-10 md:py-14">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <Container size="legacy-4xl" className="px-4 sm:px-6 lg:px-8">
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
             {t("about.manifesto.title")}
           </span>
           <p className="mt-6 font-display text-2xl font-medium leading-snug tracking-[-0.02em] text-balance text-foreground sm:text-3xl md:text-4xl">
             {t("about.manifesto.body")}
           </p>
-        </div>
+        </Container>
       </section>
 
       {/* Values */}
       <section className="py-10 md:py-14">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
             {t("about.values.title")}
           </h2>
@@ -158,12 +159,12 @@ function AboutPage() {
               </motion.div>
             ))}
           </div>
-        </div>
+        </Container>
       </section>
 
       {/* Team */}
       <section className="py-10 md:py-14">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
             {t("about.team.title")}
           </h2>
@@ -231,12 +232,12 @@ function AboutPage() {
               );
             })}
           </div>
-        </div>
+        </Container>
       </section>
 
       {/* Process */}
       <section className="py-10 md:py-14">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
             {t("about.process.title")}
           </h2>
@@ -254,13 +255,13 @@ function AboutPage() {
               </div>
             ))}
           </div>
-        </div>
+        </Container>
       </section>
 
       {/* Réalisations (DB) */}
       {work.length > 0 && (
         <section id="realisations" className="py-10 md:py-14">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Container size="wide" className="px-4 sm:px-6 lg:px-8">
             <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
               {t("work.eyebrow")}
             </span>
@@ -300,7 +301,7 @@ function AboutPage() {
                 />
               ))}
             </div>
-          </div>
+          </Container>
         </section>
       )}
 

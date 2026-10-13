@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { Container } from "@/components/ui/container";
 
 export const Route = createFileRoute("/politique-confidentialite")({
   head: () => ({
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/politique-confidentialite")({
 function PolitiqueConfidentialitePage() {
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-24 md:py-32">
+      <Container size="narrow" className="px-4 sm:px-6 lg:px-8 py-24 md:py-32">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -184,7 +185,7 @@ function PolitiqueConfidentialitePage() {
             </section>
           </div>
         </motion.div>
-      </div>
+      </Container>
     </div>
   );
 }

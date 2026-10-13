@@ -8,6 +8,7 @@ import { getRealisationBySlug } from "@/server/functions/realisations";
 import { realisationToDisplay } from "@/lib/mappers";
 import { CTAStrip } from "@/components/site/project-card";
 import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/container";
 
 export const Route = createFileRoute("/work/$slug")({
   loader: async ({ params }) => {
@@ -72,7 +73,7 @@ function RealisationPage() {
   return (
     <>
       <article className="pt-28">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <Container size="narrow" className="px-4 sm:px-6 lg:px-8">
           <Link
             to="/work"
             className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -139,9 +140,12 @@ function RealisationPage() {
               )}
             </div>
           )}
-        </div>
+        </Container>
 
-        <div className="relative mx-auto mt-12 aspect-[16/9] w-full max-w-5xl overflow-hidden rounded-2xl bg-muted">
+        <Container
+          size="legacy-5xl"
+          className="relative mt-12 aspect-[16/9] overflow-hidden rounded-2xl bg-muted"
+        >
           {item.coverUrl ? (
             <img
               src={item.coverUrl}
@@ -161,18 +165,18 @@ function RealisationPage() {
             className="absolute inset-0 bg-grid opacity-10 mix-blend-overlay"
             aria-hidden="true"
           />
-        </div>
+        </Container>
 
-        <div className="mx-auto mt-12 max-w-3xl px-4 sm:px-6 lg:px-8">
+        <Container size="narrow" className="mt-12 px-4 sm:px-6 lg:px-8">
           <div className="text-lg leading-relaxed text-foreground/90 [&>*:first-child]:mt-0 [&>blockquote]:my-6 [&>blockquote]:border-l-4 [&>blockquote]:border-brand/50 [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:text-muted-foreground [&>h2]:mb-4 [&>h2]:mt-10 [&>h2]:font-display [&>h2]:text-2xl [&>h2]:font-semibold [&>h2]:tracking-tight [&>h3]:mb-3 [&>h3]:mt-8 [&>h3]:font-display [&>h3]:text-xl [&>h3]:font-semibold [&>h3]:tracking-tight [&>hr]:my-10 [&>hr]:border-border [&>img]:my-8 [&>img]:w-full [&>img]:rounded-2xl [&>ol]:my-6 [&>ol]:list-decimal [&>ol]:space-y-2 [&>ol]:pl-6 [&>p]:my-6 [&>pre]:my-6 [&>pre]:overflow-x-auto [&>pre]:rounded-2xl [&>pre]:border [&>pre]:border-border [&>pre]:bg-muted [&>pre]:p-4 [&>pre]:text-sm [&>ul]:my-6 [&>ul]:list-disc [&>ul]:space-y-2 [&>ul]:pl-6 [&_a]:font-medium [&_a]:text-brand [&_a]:underline-offset-4 [&_a]:hover:underline [&_code]:rounded-md [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[0.85em] [&_pre_code]:bg-transparent [&_pre_code]:p-0">
             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
               {descriptionMd}
             </ReactMarkdown>
           </div>
-        </div>
+        </Container>
 
         {gallery.length > 0 && (
-          <div className="mx-auto mt-12 max-w-5xl px-4 sm:px-6 lg:px-8">
+          <Container size="gallery" className="mt-12 px-4 sm:px-6 lg:px-8">
             <h2 className="font-display text-xl font-semibold tracking-tight">
               {t("admin.form.gallery")}
             </h2>
@@ -189,11 +193,11 @@ function RealisationPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Container>
         )}
 
         {categories.length > 1 && (
-          <div className="mx-auto mt-10 flex max-w-3xl flex-wrap gap-1.5 px-4 sm:px-6 lg:px-8">
+          <Container size="narrow" className="mt-10 flex flex-wrap gap-1.5 px-4 sm:px-6 lg:px-8">
             {categories.map((cat) => (
               <span
                 key={cat}
@@ -202,7 +206,7 @@ function RealisationPage() {
                 {cat}
               </span>
             ))}
-          </div>
+          </Container>
         )}
       </article>
 

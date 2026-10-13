@@ -3,6 +3,7 @@ import { Menu, Moon, Sun, ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Container } from "@/components/ui/container";
 import { useLocale } from "@/lib/locale-context";
 import { useTheme } from "@/lib/theme-context";
 
@@ -65,7 +66,7 @@ export function Header() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
-      <div className="mx-auto mt-4 max-w-7xl px-4 sm:px-6 lg:px-8">
+      <Container size="wide" className="mt-4 px-4 sm:px-6 lg:px-8">
         {/* LOT 43 Phase 6 — header opaque permanent (mobile + desktop, top +
             scrolle) : le gating blur LOT 41 est retire, 0 listener scroll. */}
         <div
@@ -141,7 +142,7 @@ export function Header() {
             </Sheet>
           </div>
         </div>
-      </div>
+      </Container>
     </header>
   );
 }

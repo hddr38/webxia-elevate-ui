@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
+import { Container } from "@/components/ui/container";
 import { useLocale } from "@/lib/locale-context";
 import { getPublishedArticles } from "@/server/functions/articles";
 import { articleToDisplay, type DisplayArticle } from "@/lib/mappers";
@@ -52,7 +53,7 @@ function JournalPage() {
     <>
       <section className="relative pt-28 pb-7 md:pb-9">
         <div className="absolute inset-0 -z-10 bg-radial-fade opacity-60 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,black,transparent)]" />
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -69,11 +70,11 @@ function JournalPage() {
               {t("journal.subtitle")}
             </p>
           </motion.div>
-        </div>
+        </Container>
       </section>
 
       <section className="py-10 md:py-14">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <div className="inline-flex flex-wrap gap-1.5 rounded-full border border-border bg-background/40 p-1 backdrop-blur-md">
             {filters.map((f) => (
               <button
@@ -153,7 +154,7 @@ function JournalPage() {
               );
             })}
           </div>
-        </div>
+        </Container>
       </section>
     </>
   );

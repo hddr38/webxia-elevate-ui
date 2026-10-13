@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/container";
 import { Link } from "@tanstack/react-router";
 import { useLocale } from "@/lib/locale-context";
 import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
@@ -97,7 +98,7 @@ export function ProblemSolution() {
 
   return (
     <section className="pt-14 pb-20 md:pt-20 md:pb-28">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <Container size="legacy-5xl" className="px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={false}
@@ -223,7 +224,7 @@ export function ProblemSolution() {
             </div>
           </motion.article>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

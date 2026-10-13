@@ -31,6 +31,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Check } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
+import { Container } from "@/components/ui/container";
 import { servicesFr, type ServiceCardData, type ServiceSectionData } from "@/data/services-fr";
 import { servicesEn } from "@/data/services-en";
 
@@ -123,8 +124,8 @@ export function Services() {
           id={sectionIndex === 0 ? "services" : `section-${sectionIndex}`}
           className="relative py-16 md:py-[5.5rem]"
         >
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-3xl">
+          <Container size="wide" className="px-4 sm:px-6 lg:px-8">
+            <Container size="narrow">
               {section.eyebrow && (
                 <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
                   {section.eyebrow}
@@ -136,7 +137,7 @@ export function Services() {
               <p className="mt-5 text-balance text-base text-muted-foreground sm:text-lg">
                 {section.subtitle}
               </p>
-            </div>
+            </Container>
 
             {section.cards && (
               <div
@@ -166,7 +167,7 @@ export function Services() {
                 </ul>
               </div>
             )}
-          </div>
+          </Container>
         </section>
       ))}
     </>

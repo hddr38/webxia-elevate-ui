@@ -5,6 +5,7 @@ import type { Project } from "@/data/projects";
 import type { DisplayRealisation } from "@/lib/mappers";
 import { useLocale } from "@/lib/locale-context";
 import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/container";
 import { cn } from "@/lib/utils";
 import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
@@ -184,7 +185,7 @@ export function CTAStrip({
 }) {
   return (
     <section className={cn("py-24 md:py-32", className)}>
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <Container size="legacy-5xl" className="px-4 sm:px-6 lg:px-8">
         <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-card p-10 text-center sm:p-16">
           <div className="absolute inset-0 bg-radial-fade opacity-70" aria-hidden="true" />
           {eyebrow && (
@@ -204,7 +205,7 @@ export function CTAStrip({
             </Link>
           </Button>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

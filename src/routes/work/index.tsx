@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { FolderKanban } from "lucide-react";
 import { DbRealisationCard, CTAStrip } from "@/components/site/project-card";
+import { Container } from "@/components/ui/container";
 import { useLocale } from "@/lib/locale-context";
 import { getPublishedRealisations } from "@/server/functions/realisations";
 import { realisationToDisplay, type DisplayRealisation } from "@/lib/mappers";
@@ -70,7 +71,7 @@ function WorkPage() {
     <>
       <section className="relative pt-40 pb-12">
         <div className="absolute inset-0 -z-10 bg-radial-fade opacity-60 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,black,transparent)]" />
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -106,11 +107,11 @@ function WorkPage() {
               ))}
             </div>
           )}
-        </div>
+        </Container>
       </section>
 
       <section className="pb-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           {list.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-16 text-center">
               <span
@@ -135,7 +136,7 @@ function WorkPage() {
               ))}
             </div>
           )}
-        </div>
+        </Container>
       </section>
 
       <CTAStrip

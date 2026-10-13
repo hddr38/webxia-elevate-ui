@@ -69,7 +69,7 @@ function WorkPage() {
 
   return (
     <>
-      <section className="relative pt-40 pb-12">
+      <section className="relative pt-28 pb-12">
         <div className="absolute inset-0 -z-10 bg-radial-fade opacity-60 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,black,transparent)]" />
         <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <motion.div

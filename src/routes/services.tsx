@@ -28,13 +28,13 @@ function ServicesPage() {
   return (
     <div>
       <Services />
-      <WhyChooseUs className="py-16 md:py-[5.5rem]" />
+      <WhyChooseUs className="pt-14 pb-20 md:pt-20 md:pb-28" />
       <CTAStrip
         eyebrow={t("contact.eyebrow")}
         title={t("home.cta.title")}
         body={t("home.cta.body")}
         cta={t("home.cta.button")}
-        className="py-16 md:py-[5.5rem]"
+        className="pt-14 pb-20 md:pt-20 md:pb-28"
       />
     </div>
   );

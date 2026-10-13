@@ -124,7 +124,7 @@ function AboutPage() {
       </section>
 
       {/* Manifesto */}
-      <section className="py-10 md:py-14">
+      <section className="pt-14 pb-20 md:pt-20 md:pb-28">
         <Container size="narrow" className="px-4 sm:px-6 lg:px-8">
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
             {t("about.manifesto.title")}

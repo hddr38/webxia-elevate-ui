@@ -98,7 +98,7 @@ export function ProblemSolution() {
 
   return (
     <section className="pt-14 pb-20 md:pt-20 md:pb-28">
-      <Container size="legacy-5xl" className="px-4 sm:px-6 lg:px-8">
+      <Container size="wide" className="px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={false}

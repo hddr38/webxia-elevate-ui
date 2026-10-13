@@ -110,8 +110,8 @@ function ArticlePage() {
         </Container>
 
         <Container
-          size="legacy-5xl"
-          className="relative mt-12 aspect-[16/9] overflow-hidden rounded-2xl bg-muted"
+          size="narrow"
+          className="relative mt-12 aspect-[16/9] overflow-hidden rounded-2xl bg-muted px-4 sm:px-6 lg:px-8"
         >
           {coverUrl ? (
             <img

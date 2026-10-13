@@ -90,7 +90,7 @@ export function Contact() {
           </p>
         </motion.div>
 
-        <Container size="legacy-4xl" className="mt-16 flex flex-col gap-8">
+        <Container size="narrow" className="mt-16 flex flex-col gap-8">
           {/* Booking Calendar */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}

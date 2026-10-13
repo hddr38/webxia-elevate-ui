@@ -141,7 +141,7 @@ function JournalPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-80px" }}
                   transition={{ duration: 0.6, delay: i * 0.06 }}
-                  className="group overflow-hidden rounded-card border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40"
+                  className="group overflow-hidden rounded-card border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
                 >
                   {hasSlug ? (
                     <Link to="/journal/$slug" params={{ slug: a.slug }} className="block">

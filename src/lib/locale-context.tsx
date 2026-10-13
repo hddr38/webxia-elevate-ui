@@ -21,7 +21,7 @@ const translations: Record<Locale, Dict> = {
     "hero.primary": "Start a project",
     "hero.secondary": "Discover WebXIA",
     "services.eyebrow": "Capabilities",
-    "services.title": "A focused team. Four sharp services.",
+    "services.title": "A focused team. Seven sharp services.",
     "services.subtitle":
       "We operate as your in-house product squad — from strategy to launch, with the obsession of a craft studio.",
     "service.1.title": "Web Design & Brand",
@@ -182,6 +182,8 @@ const translations: Record<Locale, Dict> = {
     "journal.filter.article": "Articles",
     "journal.filter.case-study": "Case studies",
     "journal.filter.news": "News",
+    "journal.filter.Intelligence artificielle": "Artificial intelligence",
+    "journal.filter.Marketing": "Marketing",
     "journal.readMore": "Read article",
     "journal.minutes": "min read",
     "journal.back": "Back to journal",
@@ -588,7 +590,7 @@ const translations: Record<Locale, Dict> = {
     "hero.primary": "Démarrer un projet",
     "hero.secondary": "Découvrir WebXIA",
     "services.eyebrow": "Expertises",
-    "services.title": "Une équipe restreinte. Quatre expertises pointues.",
+    "services.title": "Une équipe restreinte. Sept expertises pointues.",
     "services.subtitle":
       "Nous opérons comme votre équipe produit interne — de la stratégie au lancement, avec l'obsession d'un atelier de création.",
     "service.1.title": "Design & Identité",
@@ -750,6 +752,8 @@ const translations: Record<Locale, Dict> = {
     "journal.filter.article": "Articles",
     "journal.filter.case-study": "Études de cas",
     "journal.filter.news": "Actualités",
+    "journal.filter.Intelligence artificielle": "Intelligence artificielle",
+    "journal.filter.Marketing": "Marketing",
     "journal.readMore": "Lire l'article",
     "journal.minutes": "min de lecture",
     "journal.back": "Retour au journal",
@@ -1149,6 +1153,7 @@ const LocaleContext = createContext<{
   locale: Locale;
   setLocale: (l: Locale) => void;
   t: (key: keyof typeof translations.en, params?: Record<string, string | number>) => string;
+  tDynamic: (prefix: string, value: string) => string;
 } | null>(null);
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
@@ -1175,8 +1180,13 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     return value;
   };
 
+  const tDynamic = (prefix: string, value: string) =>
+    translations[locale][`${prefix}.${value}`] ?? value;
+
   return (
-    <LocaleContext.Provider value={{ locale, setLocale, t }}>{children}</LocaleContext.Provider>
+    <LocaleContext.Provider value={{ locale, setLocale, t, tDynamic }}>
+      {children}
+    </LocaleContext.Provider>
   );
 }
 

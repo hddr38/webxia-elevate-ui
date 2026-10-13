@@ -39,7 +39,7 @@ const filters = ["all", "article", "case-study", "news"] as const;
 
 function JournalPage() {
   const { articles } = Route.useLoaderData();
-  const { t, locale } = useLocale();
+  const { t, tDynamic, locale } = useLocale();
   const [filter, setFilter] = useState<string>("all");
   const list = filter === "all" ? articles : articles.filter((a) => a.category === filter);
 
@@ -108,7 +108,7 @@ function JournalPage() {
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_60%)]" />
                     <div className="absolute inset-0 bg-grid opacity-10 mix-blend-overlay" />
                     <span className="absolute left-4 top-4 inline-flex items-center rounded-full bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white backdrop-blur-md">
-                      {t(`journal.filter.${a.category}` as "journal.filter.article")}
+                      {tDynamic("journal.filter", a.category)}
                     </span>
                   </div>
                   <div className="p-6">

@@ -57,7 +57,7 @@ function ArticleNotFound() {
 
 function ArticlePage() {
   const { article, rawContent, coverUrl, tags, categories } = Route.useLoaderData();
-  const { t, locale } = useLocale();
+  const { t, tDynamic, locale } = useLocale();
   const dateFmt = new Intl.DateTimeFormat(locale === "fr" ? "fr-FR" : "en-US", {
     year: "numeric",
     month: "long",
@@ -76,7 +76,7 @@ function ArticlePage() {
           </Link>
 
           <div className="mt-8 inline-flex items-center rounded-full bg-secondary px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-foreground">
-            {t(`journal.filter.${article.category}` as "journal.filter.article")}
+            {tDynamic("journal.filter", article.category)}
           </div>
           <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl md:text-6xl">
             {article.title}

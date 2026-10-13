@@ -98,7 +98,7 @@ export function Contact() {
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.7 }}
           >
-            <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_30px_80px_-30px_color-mix(in_oklab,var(--foreground)_25%,transparent)] sm:p-10">
+            <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-elevated)] sm:p-10">
               <BookingCalendar username={CAL_USERNAME} eventType={CAL_EVENT_TYPE} />
             </div>
           </motion.div>
@@ -112,7 +112,7 @@ export function Contact() {
           >
             <form
               onSubmit={handleSubmit(onSubmit)}
-              className="rounded-3xl border border-border bg-card p-6 shadow-[0_30px_80px_-30px_color-mix(in_oklab,var(--foreground)_25%,transparent)] sm:p-10"
+              className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-elevated)] sm:p-10"
             >
               <div className="mb-6">
                 <h3 className="text-2xl font-semibold tracking-tight">{t("contact.form.title")}</h3>

@@ -101,7 +101,6 @@ function Index() {
         title={t("home.cta.title")}
         body={t("home.cta.body")}
         cta={t("home.cta.button")}
-        className="pt-20 pb-24 md:pt-24 md:pb-32"
       />
     </>
   );

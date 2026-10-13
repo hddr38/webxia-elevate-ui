@@ -80,7 +80,7 @@ function MarqueeCard({
     <motion.div
       role={hidden ? undefined : "listitem"}
       aria-hidden={hidden || undefined}
-      className="relative z-10 w-[280px] flex-shrink-0 rounded-2xl border border-border bg-background/80 p-5 text-center"
+      className="relative z-10 w-[280px] flex-shrink-0 rounded-card border border-border bg-background/80 p-5 text-center"
       whileHover={{ y: -4, scale: 1.02, zIndex: 20, transition: { duration: 0.3 } }}
     >
       <div

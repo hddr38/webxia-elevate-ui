@@ -51,7 +51,7 @@ export function WhyChooseUs({ className }: { className?: string }) {
           whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
           viewport={isMobile ? undefined : { once: true, margin: "-100px" }}
           transition={isMobile ? undefined : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-8 md:p-12"
+          className="mx-auto max-w-3xl rounded-card border border-border bg-card p-8 md:p-12"
         >
           <p className="text-base text-muted-foreground sm:text-lg text-pretty">
             {t("home.whyChooseUs.body")}

@@ -141,7 +141,7 @@ export function Services() {
 
             {section.cards && (
               <div
-                className={`mt-16 grid gap-5 sm:grid-cols-2 ${section.cards.length === 2 ? "lg:grid-cols-2 max-w-4xl mx-auto" : section.cards.length === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}
+                className={`mt-16 grid gap-6 sm:grid-cols-2 ${section.cards.length === 2 ? "lg:grid-cols-2 max-w-4xl mx-auto" : section.cards.length === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}
               >
                 {section.cards.map((card, cardIndex) => (
                   <ServiceCard key={card.tag} card={card} index={cardIndex} learnMore={learnMore} />

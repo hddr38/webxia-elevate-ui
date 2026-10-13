@@ -95,7 +95,7 @@ export function Expertises() {
         </motion.div>
 
         {/* Cards grid */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr">
           {expertises.map((exp, i) => (
             <motion.article
               key={`expertise-${exp.sectionId}-${i}`}

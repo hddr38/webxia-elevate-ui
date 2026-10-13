@@ -141,7 +141,7 @@ function AboutPage() {
           <h2 className="font-display text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
             {t("about.values.title")}
           </h2>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          <div className="mt-10 grid gap-6 sm:grid-cols-2">
             {values.map((v, i) => (
               <motion.div
                 key={v.titleKey}
@@ -206,7 +206,7 @@ function AboutPage() {
           </motion.div>
 
           {/* Expertise poles */}
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {expertisePoles.map((pole, i) => {
               const icons = { code: Code, palette: Palette, bot: Bot, "trending-up": TrendingUp };
               const Icon = icons[pole.icon as keyof typeof icons] || Code;

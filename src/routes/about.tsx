@@ -136,7 +136,7 @@ function AboutPage() {
       </section>
 
       {/* Values */}
-      <section className="py-10 md:py-14">
+      <section className="pt-14 pb-20 md:pt-20 md:pb-28">
         <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
             {t("about.values.title")}
@@ -163,7 +163,7 @@ function AboutPage() {
       </section>
 
       {/* Team */}
-      <section className="py-10 md:py-14">
+      <section className="pt-14 pb-20 md:pt-20 md:pb-28">
         <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
             {t("about.team.title")}
@@ -236,7 +236,7 @@ function AboutPage() {
       </section>
 
       {/* Process */}
-      <section className="py-10 md:py-14">
+      <section className="pt-14 pb-20 md:pt-20 md:pb-28">
         <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
             {t("about.process.title")}
@@ -260,7 +260,7 @@ function AboutPage() {
 
       {/* Réalisations (DB) */}
       {work.length > 0 && (
-        <section id="realisations" className="py-10 md:py-14">
+        <section id="realisations" className="pt-14 pb-20 md:pt-20 md:pb-28">
           <Container size="wide" className="px-4 sm:px-6 lg:px-8">
             <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
               {t("work.eyebrow")}

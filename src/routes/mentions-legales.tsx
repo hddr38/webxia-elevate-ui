@@ -23,7 +23,7 @@ export const Route = createFileRoute("/mentions-legales")({
 function MentionsLegalesPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Container size="narrow" className="px-4 sm:px-6 lg:px-8 py-24 md:py-32">
+      <Container size="narrow" className="px-4 sm:px-6 lg:px-8 pt-14 pb-20 md:pt-20 md:pb-28">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

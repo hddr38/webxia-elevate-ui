@@ -63,7 +63,7 @@ function Index() {
       <WhyChooseUs />
 
       {featured.length > 0 && (
-        <section className="pt-20 pb-24 md:pt-24 md:pb-32">
+        <section className="pt-14 pb-20 md:pt-20 md:pb-28">
           <Container size="wide" className="px-4 sm:px-6 lg:px-8">
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div className="max-w-2xl">

@@ -73,7 +73,7 @@ function JournalPage() {
         </Container>
       </section>
 
-      <section className="py-10 md:py-14">
+      <section className="pt-14 pb-20 md:pt-20 md:pb-28">
         <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <div className="inline-flex flex-wrap gap-1.5 rounded-full border border-border bg-background/40 p-1 backdrop-blur-md">
             {filters.map((f) => (

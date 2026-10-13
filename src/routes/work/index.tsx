@@ -110,7 +110,7 @@ function WorkPage() {
         </Container>
       </section>
 
-      <section className="pb-24">
+      <section className="pb-20 md:pb-28">
         <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           {list.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-16 text-center">

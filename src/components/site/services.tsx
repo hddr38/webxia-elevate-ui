@@ -122,7 +122,7 @@ export function Services() {
         <section
           key={sectionIndex}
           id={sectionIndex === 0 ? "services" : `section-${sectionIndex}`}
-          className="relative py-16 md:py-[5.5rem]"
+          className="relative pt-14 pb-20 md:pt-20 md:pb-28"
         >
           <Container size="wide" className="px-4 sm:px-6 lg:px-8">
             <Container size="narrow">

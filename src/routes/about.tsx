@@ -310,7 +310,6 @@ function AboutPage() {
         title={t("home.cta.title")}
         body={t("home.cta.body")}
         cta={t("home.cta.button")}
-        className="py-11 md:py-16"
       />
     </>
   );

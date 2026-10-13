@@ -80,7 +80,7 @@ function ServiceCard({ card, index, learnMore }: ServiceCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.6, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
-      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
+      className="group relative flex h-full flex-col overflow-hidden rounded-card border border-border bg-card p-6 transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
     >
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-brand/0 via-transparent to-brand/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-hover:from-brand/10 group-hover:to-accent/5" />
 
@@ -150,7 +150,7 @@ export function Services() {
             )}
 
             {section.engagements && (
-              <div className="mx-auto mt-16 max-w-3xl rounded-2xl border border-border bg-card p-8 md:p-12">
+              <div className="mx-auto mt-16 max-w-3xl rounded-card border border-border bg-card p-8 md:p-12">
                 <p className="text-base text-muted-foreground sm:text-lg">
                   {t("home.whyChooseUs.body")}
                 </p>

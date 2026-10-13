@@ -105,7 +105,7 @@ export function Expertises() {
               transition={
                 isMobile ? undefined : { duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }
               }
-              className="group relative flex flex-col rounded-2xl border border-border bg-card p-6 transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
+              className="group relative flex flex-col rounded-card border border-border bg-card p-6 transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
             >
               <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-brand/0 via-transparent to-brand/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-hover:from-brand/10 group-hover:to-accent/5" />
 

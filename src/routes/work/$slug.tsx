@@ -144,7 +144,7 @@ function RealisationPage() {
 
         <Container
           size="narrow"
-          className="relative mt-12 aspect-[16/9] overflow-hidden rounded-2xl bg-muted px-4 sm:px-6 lg:px-8"
+          className="relative mt-12 aspect-[16/9] overflow-hidden rounded-card bg-muted px-4 sm:px-6 lg:px-8"
         >
           {item.coverUrl ? (
             <img
@@ -182,7 +182,10 @@ function RealisationPage() {
             </h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               {gallery.map((src) => (
-                <div key={src} className="overflow-hidden rounded-2xl border border-border bg-card">
+                <div
+                  key={src}
+                  className="overflow-hidden rounded-card border border-border bg-card"
+                >
                   <img
                     src={src}
                     alt=""

@@ -149,7 +149,7 @@ function AboutPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.5, delay: i * 0.06 }}
-                className="rounded-2xl border border-border bg-card p-6"
+                className="rounded-card border border-border bg-card p-6"
               >
                 <div className="font-mono text-xs text-muted-foreground">— 0{i + 1}</div>
                 <h3 className="mt-3 font-display text-xl font-semibold tracking-tight">
@@ -178,7 +178,7 @@ function AboutPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.6 }}
-            className="mt-12 overflow-hidden rounded-2xl border border-border bg-card"
+            className="mt-12 overflow-hidden rounded-card border border-border bg-card"
           >
             <div className="flex flex-col md:flex-row">
               {/* Photo placeholder */}
@@ -217,7 +217,7 @@ function AboutPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-80px" }}
                   transition={{ duration: 0.5, delay: i * 0.06 }}
-                  className="rounded-2xl border border-border bg-card p-6"
+                  className="rounded-card border border-border bg-card p-6"
                 >
                   <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-background/50 text-brand">
                     <Icon className="size-5" />
@@ -244,7 +244,7 @@ function AboutPage() {
           <p className="mt-5 max-w-2xl text-balance text-base text-muted-foreground sm:text-lg">
             {t("about.process.subtitle")}
           </p>
-          <div className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-border bg-border/60 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-px overflow-hidden rounded-card border border-border bg-border/60 sm:grid-cols-2 lg:grid-cols-4">
             {process.map((p, i) => (
               <div key={p.titleKey} className="bg-card p-6">
                 <div className="font-mono text-xs text-brand">— 0{i + 1}</div>

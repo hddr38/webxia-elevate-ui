@@ -21,7 +21,7 @@ export function ProjectCard({ project, index = 0 }: { project: Project; index?: 
       transition={
         isMobile ? undefined : { duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }
       }
-      className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
+      className="group relative overflow-hidden rounded-card border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
     >
       <div
         className="relative aspect-[4/3] w-full overflow-hidden"
@@ -157,7 +157,7 @@ export function DbRealisationCard({
       transition={
         isMobile ? undefined : { duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }
       }
-      className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
+      className="group relative overflow-hidden rounded-card border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
     >
       {hasSlug ? (
         <Link to="/work/$slug" params={{ slug: item.slug }} className="block">

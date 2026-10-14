@@ -188,6 +188,8 @@ export const translations: Record<Locale, Dict> = {
     "journal.filter.Marketing": "Marketing",
     "journal.readMore": "Read article",
     "journal.minutes": "min read",
+    "journal.empty.all": "No articles yet. Check back soon.",
+    "journal.empty.filtered": "No articles match this filter.",
     "journal.back": "Back to journal",
     "journal.related": "Keep reading",
 
@@ -760,6 +762,8 @@ export const translations: Record<Locale, Dict> = {
     "journal.filter.Marketing": "Marketing",
     "journal.readMore": "Lire l'article",
     "journal.minutes": "min de lecture",
+    "journal.empty.all": "Aucun article pour le moment. Revenez bientôt.",
+    "journal.empty.filtered": "Aucun article ne correspond à ce filtre.",
     "journal.back": "Retour au journal",
     "journal.related": "Lire aussi",
 

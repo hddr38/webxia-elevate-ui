@@ -8,7 +8,7 @@ import { useLocale } from "@/lib/locale-context";
 import { getPublishedRealisations } from "@/server/functions/realisations";
 import { realisationToDisplay, type DisplayRealisation } from "@/lib/mappers";
 
-interface WorkItem {
+export interface WorkItem {
   item: DisplayRealisation;
   technologies: string[];
   categories: string[];
@@ -122,7 +122,9 @@ function WorkPage() {
                 <FolderKanban className="size-6" />
               </span>
               <p className="font-display text-xl font-semibold tracking-tight">
-                {t("admin.realisations.empty")}
+                {realisations.length > 0 && filter !== "all"
+                  ? t("admin.realisations.emptyFiltered")
+                  : t("admin.realisations.empty")}
               </p>
             </div>
           ) : (

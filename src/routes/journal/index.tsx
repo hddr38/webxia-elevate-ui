@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, FileText } from "lucide-react";
 import { Container } from "@/components/ui/container";
+import { CTAStrip } from "@/components/site/project-card";
 import { useLocale } from "@/lib/locale-context";
 import { getPublishedArticles } from "@/server/functions/articles";
 import { articleToDisplay, type DisplayArticle } from "@/lib/mappers";
@@ -99,71 +100,94 @@ function JournalPage() {
             </div>
           )}
 
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {list.map((a, i) => {
-              // Garde anti-lien-mort : un slug vide pointerait vers /journal lui-même
-              // (clic silencieux + remontée en haut). La carte reste visible mais non cliquable.
-              const hasSlug = a.slug.trim().length > 0;
-              if (!hasSlug) {
-                console.warn(`[journal] Article sans slug ignoré du lien détail : "${a.title}"`);
-              }
-              const body = (
-                <>
-                  <div
-                    className="relative aspect-[16/10] overflow-hidden"
-                    style={{ backgroundImage: a.cover }}
+          {list.length === 0 ? (
+            <div className="mt-12 flex flex-col items-center justify-center gap-2 rounded-card border border-border bg-card px-6 py-16 text-center">
+              <span
+                className="mb-1 inline-flex size-12 items-center justify-center rounded-2xl bg-brand/10 text-brand"
+                aria-hidden="true"
+              >
+                <FileText className="size-6" />
+              </span>
+              <p className="font-display text-xl font-semibold tracking-tight">
+                {filter !== "all" && articles.length > 0
+                  ? t("journal.empty.filtered")
+                  : t("journal.empty.all")}
+              </p>
+            </div>
+          ) : (
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {list.map((a, i) => {
+                // Garde anti-lien-mort : un slug vide pointerait vers /journal lui-même
+                // (clic silencieux + remontée en haut). La carte reste visible mais non cliquable.
+                const hasSlug = a.slug.trim().length > 0;
+                if (!hasSlug) {
+                  console.warn(`[journal] Article sans slug ignoré du lien détail : "${a.title}"`);
+                }
+                const body = (
+                  <>
+                    <div
+                      className="relative aspect-[16/10] overflow-hidden"
+                      style={{ backgroundImage: a.cover }}
+                    >
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_60%)]" />
+                      <div className="absolute inset-0 bg-grid opacity-10 mix-blend-overlay" />
+                      <span className="absolute left-4 top-4 inline-flex items-center rounded-full bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white backdrop-blur-md">
+                        {tDynamic("journal.filter", a.category)}
+                      </span>
+                    </div>
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{dateFmt.format(new Date(a.date))}</span>
+                        <span>·</span>
+                        <span>
+                          {a.readingMinutes} {t("journal.minutes")}
+                        </span>
+                      </div>
+                      <h2 className="mt-3 font-display text-xl font-semibold tracking-tight transition-colors group-hover:text-brand">
+                        {a.title}
+                      </h2>
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                        {a.excerpt}
+                      </p>
+                      <div className="mt-5 flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">{a.author}</span>
+                        <span className="inline-flex items-center gap-1 font-medium text-foreground/80 transition-colors group-hover:text-brand">
+                          {t("journal.readMore")} <ArrowUpRight className="size-3.5" />
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                );
+                return (
+                  <motion.article
+                    key={a.slug || `${a.title}-${i}`}
+                    initial={false}
+                    whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+                    viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+                    transition={isMobile ? undefined : { duration: 0.6, delay: i * 0.06 }}
+                    className="group overflow-hidden rounded-card border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
                   >
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_60%)]" />
-                    <div className="absolute inset-0 bg-grid opacity-10 mix-blend-overlay" />
-                    <span className="absolute left-4 top-4 inline-flex items-center rounded-full bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white backdrop-blur-md">
-                      {tDynamic("journal.filter", a.category)}
-                    </span>
-                  </div>
-                  <div className="p-6">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{dateFmt.format(new Date(a.date))}</span>
-                      <span>·</span>
-                      <span>
-                        {a.readingMinutes} {t("journal.minutes")}
-                      </span>
-                    </div>
-                    <h2 className="mt-3 font-display text-xl font-semibold tracking-tight transition-colors group-hover:text-brand">
-                      {a.title}
-                    </h2>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                      {a.excerpt}
-                    </p>
-                    <div className="mt-5 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{a.author}</span>
-                      <span className="inline-flex items-center gap-1 font-medium text-foreground/80 transition-colors group-hover:text-brand">
-                        {t("journal.readMore")} <ArrowUpRight className="size-3.5" />
-                      </span>
-                    </div>
-                  </div>
-                </>
-              );
-              return (
-                <motion.article
-                  key={a.slug || `${a.title}-${i}`}
-                  initial={false}
-                  whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
-                  viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
-                  transition={isMobile ? undefined : { duration: 0.6, delay: i * 0.06 }}
-                  className="group overflow-hidden rounded-card border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
-                >
-                  {hasSlug ? (
-                    <Link to="/journal/$slug" params={{ slug: a.slug }} className="block">
-                      {body}
-                    </Link>
-                  ) : (
-                    <div className="block">{body}</div>
-                  )}
-                </motion.article>
-              );
-            })}
-          </div>
+                    {hasSlug ? (
+                      <Link to="/journal/$slug" params={{ slug: a.slug }} className="block">
+                        {body}
+                      </Link>
+                    ) : (
+                      <div className="block">{body}</div>
+                    )}
+                  </motion.article>
+                );
+              })}
+            </div>
+          )}
         </Container>
       </section>
+
+      <CTAStrip
+        eyebrow={t("contact.eyebrow")}
+        title={t("home.cta.title")}
+        body={t("home.cta.body")}
+        cta={t("home.cta.button")}
+      />
     </>
   );
 }

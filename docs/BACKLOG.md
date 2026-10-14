@@ -21,16 +21,19 @@
 
 ## Vue d'ensemble
 
-| #   | Priorité | Titre                                                                            | Lot cible   | Statut               | Date       |
-| --- | -------- | -------------------------------------------------------------------------------- | ----------- | -------------------- | ---------- |
-| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b` | résolu en production | 2026-10-14 |
-| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`       | ouvert               | 2026-10-14 |
-| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b` | résolu en production | 2026-10-14 |
-| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`       | ouvert               | 2026-10-14 |
-| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`       | ouvert               | 2026-10-14 |
-| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir   | ouvert               | 2026-10-14 |
-| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | à définir   | ouvert               | 2026-10-14 |
-| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | à définir   | ouvert               | 2026-10-14 |
+| #   | Priorité | Titre                                                                            | Lot cible       | Statut               | Date       |
+| --- | -------- | -------------------------------------------------------------------------------- | --------------- | -------------------- | ---------- |
+| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`     | résolu en production | 2026-10-14 |
+| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`           | ouvert               | 2026-10-14 |
+| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`     | résolu en production | 2026-10-14 |
+| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`           | résolu en production | 2026-10-15 |
+| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`           | ouvert               | 2026-10-14 |
+| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir       | ouvert               | 2026-10-14 |
+| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | à définir       | ouvert               | 2026-10-14 |
+| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | à définir       | ouvert               | 2026-10-14 |
+| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | à joindre à `6` | ouvert               | 2026-10-15 |
+| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`         | résolu en production | 2026-10-15 |
+| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`           | résolu               | 2026-10-15 |
 
 **Barème de priorité utilisé**
 
@@ -231,8 +234,18 @@ LOT 5.2-pre-a et ne décrit plus l'état actuel du site.
 
 - **Priorité** : `P3`
 - **Lot cible** : `5.2`
-- **Statut** : `ouvert`
-- **Date** : `2026-10-14`
+- **Statut** : `résolu en production` — commit `0e9a199` (LOT 5.2-a), poussé avec `21a28ac`
+  sur `origin/main` le `2026-10-15`.
+  **Preuve production** : bundle déployé
+  `https://webxia-fr.netlify.app/assets/ChatWidget-AQw8_exg.js` (HTTP 200) →
+  `group-hover:animate-ping` = 1, `group-focus-visible:animate-ping` = 1,
+  `motion-reduce:animate-none` = 1, **`animate-ping` nu = 0** ; CSS déployé
+  `/assets/styles-BaCpWVTQ.css` émet les 3 nouvelles classes de variantes.
+  **Note** : le launcher `ChatWidget` est monté post-hydration (Suspense + 150 ms) : absent du
+  HTML SSR de `/` (comportement inchangé, `data-webi-launcher` = 0 côté serveur).
+  **`FloatingCTA` n'est monté nulle part** dans l'arborescence (constat Phase 0 LOT 5.2,
+  cf. item **#9**) — le correctif y est appliqué et verrouillé par test, sans impact runtime.
+- **Date** : `2026-10-15`
 
 **Contexte**
 
@@ -260,10 +273,15 @@ décompte d'**instances réellement rendues à l'exécution** : le nombre d'él�
 des composants montés sur la page visitée et de leur nombre d'instanciations. Aucune mesure
 d'exécution ni de coût GPU n'a été effectuée par l'audit.
 
-**Correction recommandée (non appliquée)**
+**Traitement LOT 5.2-a — état : résolu en production (`0e9a199`)**
 
-Restreindre la pulsation au survol/focus du bouton
-(`group-hover:animate-ping`) et ajouter `motion-reduce:animate-none`, ou supprimer l'effet.
+La pulsation a été restreinte au survol/focus du bouton parent et neutralisée sous
+`prefers-reduced-motion` : les deux occurrences (`src/components/site/floating-cta.tsx:25` et
+`src/components/chat/ChatWidget.tsx:55`) passent de `animate-ping` nu à
+`group-hover:animate-ping group-focus-visible:animate-ping motion-reduce:animate-none` (les
+parents `<Link>` / `motion.button` portaient déjà `group`). 6 tests unitaires verrouillent le
+conditionnement (`src/components/site/floating-cta.test.tsx`,
+`src/components/chat/chat-widget.test.tsx`). Aucune suppression d'animation au chargement.
 
 ---
 
@@ -429,6 +447,90 @@ décision éditoriale à trancher avant correction.
 
 ---
 
+## 9 — FloatingCTA non monté dans l'arborescence (composant obsolète)
+
+- **Priorité** : `P3`
+- **Lot cible** : `à joindre à l'item code mort (I-16, item #6)`
+- **Statut** : `ouvert`
+- **Date** : `2026-10-15`
+
+**Contexte**
+
+Découvert Phase 0 (audit read-only) du LOT 5.2. Le composant `src/components/site/floating-cta.tsx`
+est corrigé (ping conditionnel, LOT 5.2-a) et testé (`src/components/site/floating-cta.test.tsx`),
+mais **n'est importé nulle part** dans l'arborescence applicative. Il est remplacé
+fonctionnellement par le lanceur `ChatWidget` (monté dans `src/routes/__root.tsx:271`).
+
+**Preuve**
+
+`grep FloatingCTA` sur `src/` → aucune occurrence hors du fichier source lui-même
+(`src/components/site/floating-cta.tsx:6` — définition) et de son fichier de test. Aucun import
+dans une route, un layout ou un composant.
+
+**Action proposée**
+
+Joindre `src/components/site/floating-cta.tsx` et son test à la suppression de code mort de
+l'item **#6** (I-16), après confirmation éditoriale qu'aucune re-montée du CTA flottant n'est
+prévue (sinon, le remonter explicitement plutôt que le supprimer).
+
+---
+
+## 10 — SSR/hydratation animations — 65 éléments `opacity:0` corrigés
+
+- **Priorité** : `P1`
+- **Lot cible** : `5.2-b`
+- **Statut** : `résolu en production` — commit `21a28ac` poussé sur `origin/main` le
+  `2026-10-15`, vérifié en production le même jour.
+  **Preuve production** : `https://webxia-fr.netlify.app` — 8 pages publiques servies en
+  `HTTP 200` avec **`opacity:0` = 0** occurrences dans le HTML SSR et un `<h1>` présent sur
+  chacune : `/about`, `/journal`, `/work`, `/contact`, `/services`, `/cgu`,
+  `/mentions-legales`, `/politique-confidentialite` (balayage identique en local avant push).
+  La home `/` était déjà conforme depuis LOT 33/34/43.
+- **Date** : `2026-10-15`
+
+**Contexte**
+
+Découvert par l'audit LOT 5 (I-02), confirmé Phase 0 du LOT 5.2. Les 5 pages non-home
+(+ 3 pages légales) servaient du contenu essentiel (h1 LCP, cartes, formulaires, pages
+entières) à `opacity: 0` dans le HTML rendu côté serveur : le contenu n'apparaissait qu'après
+hydratation (blocs `animate`) ou au scroll (blocs `whileInView`), et restait invisible si
+JavaScript échouait ou était retardé.
+
+**Traitement LOT 5.2-b — motif appliqué (pattern LOT 43)**
+
+- 15 emplacements de code sur 8 fichiers (`about`, `journal`, `work`, `contact`, `services`,
+  `cgu`, `mentions-legales`, `politique-confidentialite`) — ~65 instances rendues (FR).
+- Blocs `animate` (heroes, pages légales) → `initial={false}` seul.
+- Blocs `whileInView` (grids, cartes, forms) → `initial={false}` + gating
+  `isMobile ? undefined` via `useIsMobileViewport`.
+- Aucun changement de design visible (durées, easings et distances conservés) ; composants
+  déjà gatés LOT 43/33/34 et chat intouchés.
+
+---
+
+## 11 — MotionConfig `reducedMotion="user"` — présent et verrouillé par test
+
+- **Priorité** : `P3`
+- **Lot cible** : `N/A` (constat, non modifié dans le LOT 5.2 — décision D-5.2-B)
+- **Statut** : `résolu` (constat)
+- **Date** : `2026-10-15`
+
+**Contexte**
+
+Découvert Phase 0 du LOT 5.2 : un `MotionConfig reducedMotion="user"` est **déjà monté** dans
+`src/routes/__root.tsx:237` (fermé `:278`), englobant le contenu principal (Header, Outlet,
+Footer, ChatWidget, Toaster) depuis une version antérieure. Aucun ajout nécessaire.
+
+**Preuve**
+
+3 tests structurels ajoutés dans `src/routes/-__root.test.tsx` (LOT 5.2-a, commit `0e9a199`)
+verrouillent : l'import depuis `framer-motion`, l'unicité du provider avec
+`reducedMotion="user"`, et son positionnement englobant `main#main-content` + `<Outlet>`.
+Limite documentée : le rendu complet de `RootComponent` n'étant pas isolable en node (contexte
+TanStack Router + providers + lazy), le test lit le fichier source du module.
+
+---
+
 ## Note complémentaire — clés manquantes supplémentaires
 
 Conformément à la consigne d'ajout, l'audit 5.2-pre-a a recherché toute clé i18n manquante
@@ -448,3 +550,4 @@ découverte hors couverture de l'item global **#1**.
 ## Historique
 
 - `2026-10-14` — push `4f481dc`, vérification production `/about` EN OK.
+- `2026-10-15` — push `21a28ac` (LOT 5.2), vérification prod SSR 8/8 pages OK.

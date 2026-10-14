@@ -12,7 +12,7 @@ import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 export const Route = createFileRoute("/journal/")({
   loader: async () => {
     try {
-      const result = await getPublishedArticles({ data: {} });
+      const result = await getPublishedArticles({ data: { limit: 100 } });
       return { articles: result.data.map(articleToDisplay) };
     } catch (error) {
       console.error("[journal] Failed to load articles:", error);
@@ -36,14 +36,15 @@ export const Route = createFileRoute("/journal/")({
   component: JournalPage,
 });
 
-const filters = ["all", "article", "case-study", "news"] as const;
-
 function JournalPage() {
   const { articles } = Route.useLoaderData();
   const { t, tDynamic, locale } = useLocale();
   const [filter, setFilter] = useState<string>("all");
   // LOT 5.2 — pattern LOT 43 : aucune animation d'entree JS sur mobile.
   const isMobile = useIsMobileViewport();
+  // LOT 5.3 — filtres derives depuis les categories reelles en base (pattern work).
+  const categories = [...new Set(articles.map((a) => a.category))].sort();
+  const filters = ["all", ...categories];
   const list = filter === "all" ? articles : articles.filter((a) => a.category === filter);
 
   const dateFmt = new Intl.DateTimeFormat(locale === "fr" ? "fr-FR" : "en-US", {
@@ -79,21 +80,24 @@ function JournalPage() {
 
       <section className="pt-14 pb-20 md:pt-20 md:pb-28">
         <Container size="wide" className="px-4 sm:px-6 lg:px-8">
-          <div className="inline-flex flex-wrap gap-1.5 rounded-full border border-border bg-background/40 p-1 backdrop-blur-md">
-            {filters.map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                  filter === f
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t(`journal.filter.${f}` as "journal.filter.all")}
-              </button>
-            ))}
-          </div>
+          {filters.length > 1 && (
+            <div className="inline-flex flex-wrap gap-1.5 rounded-full border border-border bg-background/40 p-1 backdrop-blur-md">
+              {filters.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  aria-pressed={filter === f}
+                  className={`min-h-[44px] rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-0 ${
+                    filter === f
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tDynamic("journal.filter", f)}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {list.map((a, i) => {

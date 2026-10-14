@@ -52,7 +52,10 @@ export function ChatWidget() {
           data-webi-launcher=""
         >
           <span className="relative inline-flex size-8 items-center justify-center rounded-full bg-brand text-brand-foreground">
-            <span className="absolute inset-0 animate-ping rounded-full bg-brand opacity-40" />
+            {/* LOT 5.2 — ping conditionne : hover/focus uniquement (le bouton
+                porte `group` + focus-visible:ring), jamais au repos, jamais
+                sous reduced-motion. */}
+            <span className="absolute inset-0 rounded-full bg-brand opacity-40 group-hover:animate-ping group-focus-visible:animate-ping motion-reduce:animate-none" />
             <Bot className="size-4 relative" />
           </span>
           {t("chat.widget.title")}

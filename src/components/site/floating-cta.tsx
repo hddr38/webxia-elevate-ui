@@ -22,7 +22,9 @@ export function FloatingCTA() {
         className="group inline-flex items-center gap-2 rounded-full bg-foreground py-3 pl-3 pr-5 text-sm font-medium text-background shadow-[0_20px_50px_-12px_color-mix(in_oklab,var(--foreground)_60%,transparent)]"
       >
         <span className="relative inline-flex size-8 items-center justify-center rounded-full bg-brand text-brand-foreground">
-          <span className="absolute inset-0 animate-ping rounded-full bg-brand opacity-40" />
+          {/* LOT 5.2 — ping conditionne : hover/focus uniquement (le parent
+              <Link> porte `group`), jamais au repos, jamais sous reduced-motion. */}
+          <span className="absolute inset-0 rounded-full bg-brand opacity-40 group-hover:animate-ping group-focus-visible:animate-ping motion-reduce:animate-none" />
           <MessageCircle className="size-4 relative" />
         </span>
         {t("floating.cta")}

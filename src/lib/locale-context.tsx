@@ -4,7 +4,7 @@ export type Locale = "fr" | "en";
 
 type Dict = Record<string, string>;
 
-const translations: Record<Locale, Dict> = {
+export const translations: Record<Locale, Dict> = {
   en: {
     "nav.home": "Home",
     "nav.services": "Services",
@@ -160,6 +160,8 @@ const translations: Record<Locale, Dict> = {
       "Fixed scope, transparent pricing, no surprise invoices. Hard conversations early, never late.",
     "about.team.title": "The team",
     "about.process.title": "How we work",
+    "about.process.subtitle":
+      "A simple, transparent and results-driven approach to turn your ideas into high-performing digital solutions.",
     "about.process.1.title": "Discovery",
     "about.process.1.desc":
       "One week. We align on goals, audience, constraints and success metrics.",
@@ -499,6 +501,8 @@ const translations: Record<Locale, Dict> = {
     "admin.form.sortOrder": "Display order",
     "admin.form.technologies": "Technologies (comma-separated)",
     "admin.common.pageOf": "Page {page} of {total}",
+    "admin.common.prev": "Previous",
+    "admin.common.next": "Next",
     "admin.common.deleting": "Deleting...",
     "admin.common.saved": "Saved successfully.",
     "admin.common.saveError": "Save failed. Please try again.",
@@ -1071,6 +1075,8 @@ const translations: Record<Locale, Dict> = {
     "admin.form.sortOrder": "Ordre d'affichage",
     "admin.form.technologies": "Technologies (séparées par virgules)",
     "admin.common.pageOf": "Page {page} sur {total}",
+    "admin.common.prev": "Précédent",
+    "admin.common.next": "Suivant",
     "admin.common.deleting": "Suppression...",
     "admin.common.saved": "Enregistré avec succès.",
     "admin.common.saveError": "Échec de l'enregistrement. Réessayez.",

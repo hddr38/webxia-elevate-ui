@@ -9,6 +9,7 @@ import { getPublishedRealisations } from "@/server/functions/realisations";
 import { realisationToDisplay, type DisplayRealisation } from "@/lib/mappers";
 import { useState } from "react";
 import { seo } from "@/lib/seo";
+import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
 interface AboutWorkItem {
   item: DisplayRealisation;
@@ -81,6 +82,8 @@ function AboutPage() {
   const { t } = useLocale();
   const { work } = Route.useLoaderData();
   const [filter, setFilter] = useState<string>("all");
+  // LOT 5.2 — pattern LOT 43 : aucune animation d'entree JS sur mobile.
+  const isMobile = useIsMobileViewport();
 
   // Filtres construits depuis les catégories réellement présentes en DB.
   const categories = [...new Set(work.flatMap((r) => r.categories))].sort();
@@ -101,7 +104,8 @@ function AboutPage() {
         <div className="absolute inset-0 -z-10 bg-radial-fade opacity-60 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,black,transparent)]" />
         <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            // LOT 5.2 — h1 LCP visible des le SSR (pattern hero LOT 33/34).
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="max-w-4xl"
@@ -145,10 +149,10 @@ function AboutPage() {
             {values.map((v, i) => (
               <motion.div
                 key={v.titleKey}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.5, delay: i * 0.06 }}
+                initial={false}
+                whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+                viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+                transition={isMobile ? undefined : { duration: 0.5, delay: i * 0.06 }}
                 className="rounded-card border border-border bg-card p-6"
               >
                 <div className="font-mono text-xs text-muted-foreground">— 0{i + 1}</div>
@@ -174,10 +178,10 @@ function AboutPage() {
 
           {/* Founder block */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.6 }}
+            initial={false}
+            whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+            viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+            transition={isMobile ? undefined : { duration: 0.6 }}
             className="mt-12 overflow-hidden rounded-card border border-border bg-card"
           >
             <div className="flex flex-col md:flex-row">
@@ -213,10 +217,10 @@ function AboutPage() {
               return (
                 <motion.article
                   key={pole.titleKey}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-80px" }}
-                  transition={{ duration: 0.5, delay: i * 0.06 }}
+                  initial={false}
+                  whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+                  viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+                  transition={isMobile ? undefined : { duration: 0.5, delay: i * 0.06 }}
                   className="rounded-card border border-border bg-card p-6"
                 >
                   <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-background/50 text-brand">

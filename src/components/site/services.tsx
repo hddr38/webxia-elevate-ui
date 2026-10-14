@@ -34,6 +34,7 @@ import { useLocale } from "@/lib/locale-context";
 import { Container } from "@/components/ui/container";
 import { servicesFr, type ServiceCardData, type ServiceSectionData } from "@/data/services-fr";
 import { servicesEn } from "@/data/services-en";
+import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
 const iconMap: Record<string, LucideIcon> = {
   Globe,
@@ -74,12 +75,16 @@ type ServiceCardProps = {
 
 function ServiceCard({ card, index, learnMore }: ServiceCardProps) {
   const Icon = iconMap[card.icon] ?? Globe;
+  // LOT 5.2 — pattern LOT 43 : aucune animation d'entree JS sur mobile.
+  const isMobile = useIsMobileViewport();
   return (
     <motion.article
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.6, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
+      initial={false}
+      whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+      viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+      transition={
+        isMobile ? undefined : { duration: 0.6, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }
+      }
       className="group relative flex h-full flex-col overflow-hidden rounded-card border border-border bg-card p-6 transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
     >
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-brand/0 via-transparent to-brand/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-hover:from-brand/10 group-hover:to-accent/5" />

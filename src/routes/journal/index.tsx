@@ -7,6 +7,7 @@ import { useLocale } from "@/lib/locale-context";
 import { getPublishedArticles } from "@/server/functions/articles";
 import { articleToDisplay, type DisplayArticle } from "@/lib/mappers";
 import { seo } from "@/lib/seo";
+import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
 export const Route = createFileRoute("/journal/")({
   loader: async () => {
@@ -41,6 +42,8 @@ function JournalPage() {
   const { articles } = Route.useLoaderData();
   const { t, tDynamic, locale } = useLocale();
   const [filter, setFilter] = useState<string>("all");
+  // LOT 5.2 — pattern LOT 43 : aucune animation d'entree JS sur mobile.
+  const isMobile = useIsMobileViewport();
   const list = filter === "all" ? articles : articles.filter((a) => a.category === filter);
 
   const dateFmt = new Intl.DateTimeFormat(locale === "fr" ? "fr-FR" : "en-US", {
@@ -55,7 +58,8 @@ function JournalPage() {
         <div className="absolute inset-0 -z-10 bg-radial-fade opacity-60 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,black,transparent)]" />
         <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            // LOT 5.2 — h1 LCP visible des le SSR (pattern hero LOT 33/34).
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="max-w-3xl"
@@ -137,10 +141,10 @@ function JournalPage() {
               return (
                 <motion.article
                   key={a.slug || `${a.title}-${i}`}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-80px" }}
-                  transition={{ duration: 0.6, delay: i * 0.06 }}
+                  initial={false}
+                  whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+                  viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+                  transition={isMobile ? undefined : { duration: 0.6, delay: i * 0.06 }}
                   className="group overflow-hidden rounded-card border border-border bg-card transition-all duration-500 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)]"
                 >
                   {hasSlug ? (

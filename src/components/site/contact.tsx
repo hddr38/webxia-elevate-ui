@@ -14,6 +14,7 @@ import { useLocale } from "@/lib/locale-context";
 import { BookingCalendar } from "@/components/ui/booking-calendar";
 import { CAL_EVENT_TYPE, CAL_USERNAME } from "@/lib/constants";
 import { submitContactMessage } from "@/server/functions/contact";
+import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
 type TFn = ReturnType<typeof useLocale>["t"];
 
@@ -36,6 +37,8 @@ type FormData = z.infer<ReturnType<typeof createContactSchema>>;
 export function Contact() {
   const { t, locale } = useLocale();
   const [sendState, setSendState] = useState<"idle" | "sent" | "error">("idle");
+  // LOT 5.2 — pattern LOT 43 : aucune animation d'entree JS sur mobile.
+  const isMobile = useIsMobileViewport();
   const {
     register,
     handleSubmit,
@@ -73,10 +76,10 @@ export function Contact() {
 
       <Container size="wide" className="px-4 sm:px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6 }}
+          initial={false}
+          whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+          viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+          transition={isMobile ? undefined : { duration: 0.6 }}
           className="mx-auto max-w-3xl text-center"
         >
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
@@ -93,10 +96,10 @@ export function Contact() {
         <Container size="narrow" className="mt-16 flex flex-col gap-8">
           {/* Booking Calendar */}
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.7 }}
+            initial={false}
+            whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+            viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+            transition={isMobile ? undefined : { duration: 0.7 }}
           >
             <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-elevated)] sm:p-10">
               <BookingCalendar username={CAL_USERNAME} eventType={CAL_EVENT_TYPE} />
@@ -105,10 +108,10 @@ export function Contact() {
 
           {/* Form */}
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.7, delay: 0.1 }}
+            initial={false}
+            whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+            viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+            transition={isMobile ? undefined : { duration: 0.7, delay: 0.1 }}
           >
             <form
               onSubmit={handleSubmit(onSubmit)}

@@ -25,7 +25,8 @@ function CguPage() {
     <div className="min-h-screen bg-background">
       <Container size="narrow" className="px-4 sm:px-6 lg:px-8 pt-14 pb-20 md:pt-20 md:pb-28">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          // LOT 5.2 — page visible des le SSR (pattern hero LOT 33/34).
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >

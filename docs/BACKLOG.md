@@ -3,8 +3,9 @@
 > **Origine** : LOT 5.2-pre-a (audit i18n read-only, 2026-10-14), rectifié par LOT 5.2-pre-b
 > (correction de trois clés i18n + garde-fou, 2026-10-14).
 > **Date de création de tous les items** : `2026-10-14`.
-> **Règle** : aucune correction n'est commitée ni déployée. Toute mise en production exige un
-> GO explicite.
+> **Règle** : toute mise en production exige un GO explicite. GO #2 accordé le `2026-10-14` :
+> push du commit `4f481dc` (LOT 5.2-pre-b) sur `origin/main`, items **#1** et **#3** passés en
+> `résolu en production`.
 >
 > **Vocabulaire de statut**
 >
@@ -12,21 +13,24 @@
 > - `corrigé localement, non commité, non déployé` — le diff existe sur la branche locale
 >   `main` et les contrôles du lot sont verts, **mais rien n'est poussé ni visible en
 >   production**. Ce statut ne signifie pas « résolu en production ».
+> - `résolu en production` — commit poussé sur `origin/main` (hash `4f481dc`) **et** rendu
+>   vérifié sur `https://webxia-fr.netlify.app`. Exige une preuve de rendu observée en
+>   production ; à défaut, la limite est mentionnée explicitement sur l'item.
 
 ---
 
 ## Vue d'ensemble
 
-| #   | Priorité | Titre                                                                            | Lot cible   | Statut                                       | Date       |
-| --- | -------- | -------------------------------------------------------------------------------- | ----------- | -------------------------------------------- | ---------- |
-| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b` | corrigé localement, non commité, non déployé | 2026-10-14 |
-| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`       | ouvert                                       | 2026-10-14 |
-| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b` | corrigé localement, non commité, non déployé | 2026-10-14 |
-| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`       | ouvert                                       | 2026-10-14 |
-| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`       | ouvert                                       | 2026-10-14 |
-| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir   | ouvert                                       | 2026-10-14 |
-| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | à définir   | ouvert                                       | 2026-10-14 |
-| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | à définir   | ouvert                                       | 2026-10-14 |
+| #   | Priorité | Titre                                                                            | Lot cible   | Statut               | Date       |
+| --- | -------- | -------------------------------------------------------------------------------- | ----------- | -------------------- | ---------- |
+| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b` | résolu en production | 2026-10-14 |
+| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`       | ouvert               | 2026-10-14 |
+| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b` | résolu en production | 2026-10-14 |
+| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`       | ouvert               | 2026-10-14 |
+| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`       | ouvert               | 2026-10-14 |
+| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir   | ouvert               | 2026-10-14 |
+| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | à définir   | ouvert               | 2026-10-14 |
+| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | à définir   | ouvert               | 2026-10-14 |
 
 **Barème de priorité utilisé**
 
@@ -42,8 +46,11 @@
 
 - **Priorité** : `P1`
 - **Lot cible** : `5.2-pre-b`
-- **Statut** : `corrigé localement, non commité, non déployé` — **ne pas considérer comme
-  résolu en production**
+- **Statut** : `résolu en production` — push `4f481dc` sur `origin/main` le `2026-10-14`,
+  vérification Netlify `HTTP 200`.
+  **Vérification production admin non réalisée faute de session réelle** : `admin.common.prev`
+  et `admin.common.next` n'ont été observées rendues **qu'en local** (session simulée + mocks
+  server functions, 10/10 contrôles FR/EN) ; les 3 workflows CI/E2E/Integration sont verts.
 - **Date** : `2026-10-14`
 
 **Contexte**
@@ -73,11 +80,14 @@ LOT 5.2-pre-a a produit trois listes exhaustives :
 **Portée restante hors item #3**
 
 Seules les 2 clés de la liste (c) relèvent de cet item. Elles sont servies par une route
-`/admin/*` protégée : **le rendu admin n'a pas été vérifié en production**, faute de session
-de test autorisée. Leur correction est validée par le test unitaire, pas par un rendu observé
-(limite également documentée en section 9 du rapport 5.2-pre-a).
+`/admin/*` protégée : **le rendu admin n'a pas été vérifié en production** — faute de session
+réelle, seule une session de test simulée (mocks côté navigateur) a permis de les observer
+rendues, en local. Leur correction est validée par le test unitaire **et** par le rendu local,
+pas par un rendu observé en production (limite également documentée en section 9 du rapport
+5.2-pre-a).
 
-**Traitement LOT 5.2-pre-b — état : corrigé localement, non commité, non déployé**
+**Traitement LOT 5.2-pre-b — état : résolu en production (`4f481dc`), limite de rendu admin
+mentionnée**
 
 1. Appliqué : ajout de `admin.common.prev` / `admin.common.next` dans les deux blocs de
    `src/lib/locale-context.tsx` (FR `Précédent` / `Suivant`, EN `Previous` / `Next`),
@@ -155,8 +165,10 @@ et `/journal/ia-marketing-pme-ce-qui-marche-2026`.
 
 - **Priorité** : `P1`
 - **Lot cible** : `5.2-pre-b`
-- **Statut** : `corrigé localement, non commité, non déployé` — **ne pas considérer comme
-  résolu en production**
+- **Statut** : `résolu en production` — push `4f481dc` sur `origin/main` le `2026-10-14`.
+  **Preuve** : `https://webxia-fr.netlify.app/about` en locale `en` →
+  `contains "about.process.subtitle" = false`, sous-titre EN rendu et
+  `documentElement.lang = "en"` ; Netlify `HTTP 200`.
 - **Date** : `2026-10-14`
 
 **Contexte**
@@ -170,7 +182,7 @@ et `/journal/ia-marketing-pme-ce-qui-marche-2026`.
 Comme `t()` retombe sur `String(key)`, la valeur littérale `about.process.subtitle` est rendue
 comme texte visible en locale `en`.
 
-**Preuve — production, vérifiée le 2026-10-14**
+**Preuve — état constaté AVANT correction (production, vérifiée le 2026-10-14)**
 
 `https://webxia-fr.netlify.app/about`
 
@@ -191,13 +203,27 @@ Discovery
 La clé brute apparaît **entre le titre de section et la première étape du process**, exactement
 au niveau d'attente d'un sous-titre de section.
 
-**Traitement LOT 5.2-pre-b — état : corrigé localement, non commité, non déployé**
+**Traitement LOT 5.2-pre-b — état : résolu en production (`4f481dc`)**
 
 La valeur EN a été ajoutée dans le bloc `en` de `src/lib/locale-context.tsx`, immédiatement
 après `about.process.title`, dans l'ordre du bloc FR. Aucune valeur existante — FR ou EN —
-n'a été modifiée. Le diff local est vert sur l'ensemble des contrôles du lot, mais il n'est
-ni commité ni déployé : **la page `/about` en EN reste corrigée uniquement en local**, et la
-preuve de production ci-dessus reste celle observée avant correction.
+n'a été modifiée. Poussée sur `origin/main` le `2026-10-14` (GO #2, commit `4f481dc`).
+
+**Preuve — état APRÈS correction, production (push `4f481dc`, vérifiée le 2026-10-14)**
+
+`https://webxia-fr.netlify.app/about`, locale `en` forcée via
+`localStorage.setItem("webxia-locale", "en")` **avant** navigation (Playwright) :
+
+- `contains "about.process.subtitle" = false` — **clé brute absente**.
+- Sous-titre EN rendu, exactement la valeur du dictionnaire :
+  "A simple, transparent and results-driven approach to turn your ideas into high-performing
+  digital solutions."
+- `documentElement.lang = "en"`, aucune valeur FR résiduelle.
+- Balayage FR + EN sur les 7 pages publiques : **0 clé brute** (14 combinaisons).
+- Netlify : `GET /` → `HTTP 200`.
+
+La preuve **AVANT** correction, conservée ci-dessus, documente l'état constaté par l'audit
+LOT 5.2-pre-a et ne décrit plus l'état actuel du site.
 
 ---
 
@@ -416,3 +442,9 @@ découverte hors couverture de l'item global **#1**.
 - Les **45 clés candidates au nettoyage** (à revérifier au lot dédié, sur la base des mêmes
   contrôles) et les 3 sources de traduction parallèles identifiées par l'audit relèvent du
   rapport 5.2-pre-a (sections 7 et 8) et n'ouvrent pas de clé manquante.
+
+---
+
+## Historique
+
+- `2026-10-14` — push `4f481dc`, vérification production `/about` EN OK.

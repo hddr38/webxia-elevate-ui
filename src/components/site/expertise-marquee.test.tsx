@@ -15,10 +15,13 @@ describe("ExpertiseMarquee LOT 43 Phase 5 — bouton pause retire", () => {
         <ExpertiseMarquee />
       </LocaleProvider>,
     );
-    expect(html).not.toContain("marquee.pause");
+    // LOT 6.1 — les cles marquee.pause/play ont ete supprimees du dictionnaire
+    // (dead keys). On garde la meme intention : aucun libelle de pause/play,
+    // ni FR ni EN, ne doit apparaitre dans le DOM.
     expect(html).not.toContain("Mettre les animations en pause");
-    expect(html).not.toContain("marquee.play");
+    expect(html).not.toContain("Pause animations");
     expect(html).not.toContain("Reprendre les animations");
+    expect(html).not.toContain("Play animations");
     // La piste du marquee est toujours la (12 cartes : 6 + 6 clones).
     expect(html).toContain("marquee-track");
   });

@@ -21,19 +21,20 @@
 
 ## Vue d'ensemble
 
-| #   | Priorité | Titre                                                                            | Lot cible       | Statut               | Date       |
-| --- | -------- | -------------------------------------------------------------------------------- | --------------- | -------------------- | ---------- |
-| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`     | résolu en production | 2026-10-14 |
-| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`           | ouvert               | 2026-10-14 |
-| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`     | résolu en production | 2026-10-14 |
-| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`           | résolu en production | 2026-10-15 |
-| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`           | ouvert               | 2026-10-14 |
-| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir       | ouvert               | 2026-10-14 |
-| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | à définir       | ouvert               | 2026-10-14 |
-| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | à définir       | ouvert               | 2026-10-14 |
-| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | à joindre à `6` | ouvert               | 2026-10-15 |
-| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`         | résolu en production | 2026-10-15 |
-| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`           | résolu               | 2026-10-15 |
+| #   | Priorité | Titre                                                                            | Lot cible       | Statut                                       | Date       |
+| --- | -------- | -------------------------------------------------------------------------------- | --------------- | -------------------------------------------- | ---------- |
+| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`     | résolu en production                         | 2026-10-14 |
+| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`           | ouvert                                       | 2026-10-14 |
+| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`     | résolu en production                         | 2026-10-14 |
+| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`           | résolu en production                         | 2026-10-15 |
+| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`           | ouvert                                       | 2026-10-14 |
+| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir       | ouvert                                       | 2026-10-14 |
+| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | à définir       | ouvert                                       | 2026-10-14 |
+| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | à définir       | ouvert                                       | 2026-10-14 |
+| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | à joindre à `6` | ouvert                                       | 2026-10-15 |
+| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`         | résolu en production                         | 2026-10-15 |
+| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`           | résolu                                       | 2026-10-15 |
+| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`           | corrigé localement, non commité, non déployé | 2026-10-15 |
 
 **Barème de priorité utilisé**
 
@@ -528,6 +529,55 @@ verrouillent : l'import depuis `framer-motion`, l'unicité du provider avec
 `reducedMotion="user"`, et son positionnement englobant `main#main-content` + `<Outlet>`.
 Limite documentée : le rendu complet de `RootComponent` n'étant pas isolable en node (contexte
 TanStack Router + providers + lazy), le test lit le fichier source du module.
+
+---
+
+## 12 — Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)
+
+- **Priorité** : `P3`
+- **Lot cible** : `6.1`
+- **Statut** : `corrigé localement, non commité, non déployé` — le diff existe sur la branche
+  locale `main` et tous les contrôles du lot sont verts, **mais rien n'est poussé ni visible
+  en production**. Ne pas déclarer résolu en production avant push et vérification.
+- **Date** : `2026-10-15`
+
+**Décision D-6-1 (option A)**
+
+Les sources de traduction parallèles sont conservées comme sources dédiées légitimes :
+
+- `src/lib/seo.ts`
+- `src/data/services-fr.ts`
+- `src/data/services-en.ts`
+
+Seules les clés mortes correspondantes sont purgées du dictionnaire principal. Aucune
+migration vers `t()` n'a été réalisée dans ce lot.
+
+**Clés supprimées — 47 au total (parité FR/EN stricte vérifiée)**
+
+| Groupe        | Nb  | Détail                                                                                                                                                                                                                                                                                                                        |
+| ------------- | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admin.*`     | 20  | `nav.dashboard`, `dashboard.quickStats/totalArticles/totalProjects`, `common.closeMenu/loading`, `articles.filters/loading`, `realisations.filters/loading`, `aiMemory.filters/loading`, `nav.collapseSidebar/expandSidebar`, `breadcrumb.new/edit`, `leads.subtitle/deleteSession/deleteSessionDesc/detail.viewConversation` |
+| `seo.*`       | 10  | `seo.{home,about,services,contact,journal}.{title,description}` (remplacées par `src/lib/seo.ts`)                                                                                                                                                                                                                             |
+| `service.N.*` | 8   | `service.{1..4}.{title,desc}` (remplacées par `services-fr.ts` / `services-en.ts`)                                                                                                                                                                                                                                            |
+| divers        | 7   | `about.stack.title`, `chat.contact.description`, `cta.start`, `footer.tag`, `home.services.cta`, `journal.related`, `trust.badge3`                                                                                                                                                                                            |
+| `marquee.*`   | 2   | `marquee.pause`, `marquee.play`                                                                                                                                                                                                                                                                                               |
+
+Soit **47 clés × 2 locales = 94 entrées** supprimées (105 lignes, dont 11 paires sur deux
+lignes). Parité stricte vérifiée après purge : 470 clés EN = 470 clés FR.
+
+**Test marquee adapté**
+
+`src/components/site/expertise-marquee.test.tsx` : les assertions négatives qui référençaient
+les clés `marquee.pause` / `marquee.play` ont été remplacées (approche 1) par des assertions
+sur les textes littéraux FR **et** EN extraits du dictionnaire avant suppression
+(`Mettre les animations en pause` / `Pause animations`, `Reprendre les animations` /
+`Play animations`). L'intention du test (aucun libellé de pause/play dans le DOM) est préservée.
+
+**Clés explicitement non supprimées (vérifiées vivantes)**
+
+`journal.filter.*`, `work.filter.*`, `admin.leads.filters.*`, `admin.aiMemory.deleteSession`
+et `admin.aiMemory.deleteSessionDesc` (utilisées par `admin/ai-memory/index.tsx`) restent
+présentes. Aucune source parallèle ni aucun composant n'a été modifié.
 
 ---
 

@@ -118,7 +118,7 @@ export function Contact() {
               className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-elevated)] sm:p-10"
             >
               <div className="mb-6">
-                <h3 className="text-2xl font-semibold tracking-tight">{t("contact.form.title")}</h3>
+                <h2 className="text-2xl font-semibold tracking-tight">{t("contact.form.title")}</h2>
                 <p className="text-sm text-muted-foreground">{t("contact.form.hint")}</p>
               </div>
               <div className="grid gap-5 sm:grid-cols-2">

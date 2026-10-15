@@ -8,9 +8,13 @@ import { useLocale } from "@/lib/locale-context";
 import { useTheme } from "@/lib/theme-context";
 
 export function LocaleSwitcher() {
-  const { locale, setLocale } = useLocale();
+  const { locale, setLocale, t } = useLocale();
   return (
-    <div className="inline-flex items-center rounded-full border border-border bg-background/40 p-0.5 text-xs font-medium backdrop-blur-md">
+    <div
+      role="group"
+      aria-label={t("header.locale.switch")}
+      className="inline-flex items-center rounded-full border border-border bg-background/40 p-0.5 text-xs font-medium backdrop-blur-md"
+    >
       {(["en", "fr"] as const).map((l) => (
         <button
           key={l}
@@ -20,7 +24,6 @@ export function LocaleSwitcher() {
               ? "bg-foreground text-background"
               : "text-muted-foreground hover:text-foreground"
           }`}
-          aria-label={`Switch to ${l.toUpperCase()}`}
           aria-pressed={locale === l}
         >
           {l.toUpperCase()}

@@ -13,6 +13,7 @@ export const translations: Record<Locale, Dict> = {
     "nav.journal": "Journal",
     "nav.contact": "Contact",
     "cta.book": "Book a call",
+    "header.locale.switch": "Switch language",
     "hero.eyebrow": "WEB · DESIGN · IA · AUTOMATISATION",
     "hero.title": "We create the digital tools that grow your business.",
     "hero.subtitle":
@@ -533,6 +534,7 @@ export const translations: Record<Locale, Dict> = {
     "nav.journal": "Journal",
     "nav.contact": "Contact",
     "cta.book": "Réserver un appel",
+    "header.locale.switch": "Changer de langue",
     "hero.eyebrow": "WEB · DESIGN · IA · AUTOMATISATION",
     "hero.title": "Nous créons les outils digitaux qui font évoluer votre entreprise.",
     "hero.subtitle":

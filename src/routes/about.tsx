@@ -240,7 +240,7 @@ function AboutPage() {
       </section>
 
       {/* Process */}
-      <section className="pt-14 pb-20 md:pt-20 md:pb-28">
+      <section id="process" className="pt-14 pb-20 md:pt-20 md:pb-28">
         <Container size="wide" className="px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
             {t("about.process.title")}

@@ -21,7 +21,7 @@ const navLinks = [
 ] as const;
 
 const anchorLinks = [
-  { key: "method", titleKey: "footer.nav.method" as const, href: "/about#realisations" },
+  { key: "method", titleKey: "footer.nav.method" as const, href: "/about#process" },
 ] as const;
 
 const solutionLinks = [

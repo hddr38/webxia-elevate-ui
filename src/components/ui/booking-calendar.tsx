@@ -261,7 +261,7 @@ export function BookingCalendar({
     <div className="h-full min-h-[480px]">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-2xl font-semibold tracking-tight">{t("booking.title")}</h3>
+          <h2 className="text-2xl font-semibold tracking-tight">{t("booking.title")}</h2>
           <p className="text-sm text-muted-foreground">{t("booking.subtitle")}</p>
         </div>
       </div>

@@ -5,10 +5,10 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
-import { render } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { LocaleProvider } from "@/lib/locale-context";
 import { ThemeProvider } from "@/lib/theme-context";
-import { Header } from "@/components/site/header";
+import { Header, LocaleSwitcher } from "@/components/site/header";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -66,5 +66,54 @@ describe("Header LOT 43 Phase 6 — opaque permanent", () => {
     const after = bar(container);
     expect(after.className).toContain("bg-background/60");
     expect(after.className).toContain("backdrop-blur-xl");
+  });
+});
+
+describe("LOT 6.3 — LocaleSwitcher : aria-label i18n (group), boutons distinguables", () => {
+  function renderSwitcher() {
+    return render(
+      <LocaleProvider>
+        <LocaleSwitcher />
+      </LocaleProvider>,
+    );
+  }
+
+  it("group avec aria-label generic localise (FR par defaut), pas de aria-label codé en dur par bouton", () => {
+    const { container } = renderSwitcher();
+    const group = container.querySelector('[role="group"]');
+    expect(group).toBeTruthy();
+    // Locale par defaut = fr.
+    expect(group?.getAttribute("aria-label")).toBe("Changer de langue");
+
+    // Les boutons n'ont PLUS de aria-label hardcoded "Switch to XX" : leur nom
+    // accessible est le texte visible "EN"/"FR" (distinguables).
+    const buttons = Array.from(container.querySelectorAll("button"));
+    expect(buttons.map((b) => b.textContent)).toEqual(["EN", "FR"]);
+    for (const b of buttons) {
+      expect(b.getAttribute("aria-label")).toBeNull();
+    }
+  });
+
+  it("aria-label suit la locale : 'Changer de langue' (fr) -> 'Switch language' (en)", () => {
+    const { container } = renderSwitcher();
+    const group = container.querySelector('[role="group"]');
+    expect(group?.getAttribute("aria-label")).toBe("Changer de langue");
+
+    // Bascule vers EN (bouton dont le texte visible est "EN").
+    fireEvent.click(screen.getByRole("button", { name: "EN" }));
+    expect(group?.getAttribute("aria-label")).toBe("Switch language");
+  });
+
+  it("aria-pressed reflete la locale active", () => {
+    renderSwitcher();
+    const en = screen.getByRole("button", { name: "EN" });
+    const fr = screen.getByRole("button", { name: "FR" });
+    // Defaut fr : FR est presse.
+    expect(fr.getAttribute("aria-pressed")).toBe("true");
+    expect(en.getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(en);
+    expect(en.getAttribute("aria-pressed")).toBe("true");
+    expect(fr.getAttribute("aria-pressed")).toBe("false");
   });
 });

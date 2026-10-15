@@ -76,7 +76,6 @@ export const translations: Record<Locale, Dict> = {
     "footer.legal.privacy": "Privacy Policy",
     "footer.legal.terms": "Terms of Use",
     "footer.madeby": "Designed and developed by WebXIA",
-    "floating.cta": "Let's talk",
 
     "chat.widget.title": "Chat with Webi",
     "chat.widget.subtitle": "Your AI assistant",
@@ -597,7 +596,6 @@ export const translations: Record<Locale, Dict> = {
     "footer.legal.privacy": "Politique de confidentialité",
     "footer.legal.terms": "Conditions générales d'utilisation",
     "footer.madeby": "Conçu et développé par WebXIA",
-    "floating.cta": "Discutons",
 
     "chat.widget.title": "Discutez avec Webi",
     "chat.widget.subtitle": "Votre assistant IA",

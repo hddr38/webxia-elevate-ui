@@ -21,23 +21,25 @@
 
 ## Vue d'ensemble
 
-| #   | Priorité | Titre                                                                            | Lot cible       | Statut                        | Date       |
-| --- | -------- | -------------------------------------------------------------------------------- | --------------- | ----------------------------- | ---------- |
-| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`     | résolu en production          | 2026-10-14 |
-| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`           | ouvert                        | 2026-10-14 |
-| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`     | résolu en production          | 2026-10-14 |
-| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`           | résolu en production          | 2026-10-15 |
-| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`           | ouvert                        | 2026-10-14 |
-| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir       | ouvert                        | 2026-10-14 |
-| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | `6.3`           | résolu en production          | 2026-10-15 |
-| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | `6.3`           | résolu en production          | 2026-10-15 |
-| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | à joindre à `6` | ouvert                        | 2026-10-15 |
-| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`         | résolu en production          | 2026-10-15 |
-| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`           | résolu                        | 2026-10-15 |
-| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`           | résolu en production          | 2026-10-15 |
-| 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test | `6.3`           | faux positif — non applicable | 2026-10-15 |
-| 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`           | résolu en production          | 2026-10-15 |
-| 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés              | `6.4-b`         | résolu en production          | 2026-10-15 |
+| #   | Priorité | Titre                                                                            | Lot cible   | Statut                        | Date       |
+| --- | -------- | -------------------------------------------------------------------------------- | ----------- | ----------------------------- | ---------- |
+| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b` | résolu en production          | 2026-10-14 |
+| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`       | ouvert                        | 2026-10-14 |
+| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b` | résolu en production          | 2026-10-14 |
+| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`       | résolu en production          | 2026-10-15 |
+| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`       | ouvert                        | 2026-10-14 |
+| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | `6.4-b V2`  | corrigé localement            | 2026-10-14 |
+| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | `6.3`       | résolu en production          | 2026-10-15 |
+| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | `6.3`       | résolu en production          | 2026-10-15 |
+| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | `6.4-b V2`  | corrigé localement            | 2026-10-15 |
+| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`     | résolu en production          | 2026-10-15 |
+| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`       | résolu                        | 2026-10-15 |
+| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`       | résolu en production          | 2026-10-15 |
+| 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test | `6.3`       | faux positif — non applicable | 2026-10-15 |
+| 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`       | résolu en production          | 2026-10-15 |
+| 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés             | `6.4-b`     | résolu en production          | 2026-10-15 |
+| 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a               | `6.4-b V2`  | corrigé localement            | 2026-10-15 |
+| 17  | P3       | `use-mobile.tsx` — à investiguer, bloqué sur décision shadcn keep/purge          | `6.4-b V2+` | à investiguer                 | 2026-10-15 |
 
 **Barème de priorité utilisé**
 
@@ -355,8 +357,10 @@ démontre un coût réel.
 ## 6 — Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16)
 
 - **Priorité** : `P3`
-- **Lot cible** : `à définir`
-- **Statut** : `ouvert`
+- **Lot cible** : `6.4-b V2`
+- **Statut** : `corrigé localement, non commité, non déployé` — revalidation V2-pre (read-only)
+  confirmée le `2026-10-15` ; suppressions et retrait d'export appliqués en local dans le
+  cadre du GO LOT 6.4-b V2. **Non poussé, non déployé.**
 - **Date** : `2026-10-14`
 
 **Contexte**
@@ -377,11 +381,18 @@ Attention de périmètre : le fichier `src/components/site/project-card.tsx` **r
 il exporte aussi `CTAStrip`, importé par `src/routes/services.tsx:4`. Seul l'export
 `ProjectCard` est mort.
 
-**Correction recommandée (non appliquée)**
+**Correction appliquée (LOT 6.4-b V2, 2026-10-15 — locale uniquement)**
 
-Supprimer l'export `ProjectCard`, puis `src/data/projects.ts` et `src/data/articles.ts`
-après avoir vérifié qu'aucun test ni spec e2e ne les référence (grep déjà effectué sur
-`src/` ; `e2e/` et `*.test.ts` à revérifier au moment de la suppression).
+1. `src/data/projects.ts` — supprimé (0 import de valeur ; seul usage = `import type` effacé
+   à la construction, réservé à `ProjectCard`).
+2. `src/data/articles.ts` — supprimé (0 import dans `src/` ; journal alimenté par Supabase,
+   slugs réels ≠ slugs statiques du fichier).
+3. `src/components/site/project-card.tsx` — export `ProjectCard` retiré (0 import externe,
+   0 runtime) ; `import type { Project }` devenu orphelin retiré.
+4. `DbRealisationCard` et `CTAStrip` **conservés intacts** (montés sur 3 et 7 routes
+   respectivement, vérifiés en local FR/EN).
+
+**Limite** : non commité, non poussé, non déployé — en attente du GO de commit V2.
 
 ---
 
@@ -484,8 +495,10 @@ EN.
 ## 9 — FloatingCTA non monté dans l'arborescence (composant obsolète)
 
 - **Priorité** : `P3`
-- **Lot cible** : `à joindre à l'item code mort (I-16, item #6)`
-- **Statut** : `ouvert`
+- **Lot cible** : `6.4-b V2`
+- **Statut** : `corrigé localement, non commité, non déployé` — revalidation V2-pre confirmée
+  (absence DOM prod 12/12 FR/EN, 0 import applicatif) ; fichier + test supprimés en local
+  dans le cadre du GO LOT 6.4-b V2. **Non poussé, non déployé.**
 - **Date** : `2026-10-15`
 
 **Contexte**
@@ -501,11 +514,14 @@ fonctionnellement par le lanceur `ChatWidget` (monté dans `src/routes/__root.ts
 (`src/components/site/floating-cta.tsx:6` — définition) et de son fichier de test. Aucun import
 dans une route, un layout ou un composant.
 
-**Action proposée**
+**Correction appliquée (LOT 6.4-b V2, 2026-10-15 — locale uniquement)**
 
-Joindre `src/components/site/floating-cta.tsx` et son test à la suppression de code mort de
-l'item **#6** (I-16), après confirmation éditoriale qu'aucune re-montée du CTA flottant n'est
-prévue (sinon, le remonter explicitement plutôt que le supprimer).
+`src/components/site/floating-cta.tsx` et `src/components/site/floating-cta.test.tsx`
+supprimés. Le launcher `ChatWidget` (monté dans `__root.tsx`) reste le seul CTA flottant
+de l'arborescence. La clé i18n `floating.cta` devenue morte est purgée séparément
+(item **#16**).
+
+**Limite** : non commité, non poussé, non déployé — en attente du GO de commit V2.
 
 ---
 
@@ -771,6 +787,58 @@ AI/observability, CSS `canvas-gpu`, dépendances) ; 8 décisions produit en atte
 
 ---
 
+## 16 — Purge clé i18n `floating.cta` (FR + EN)
+
+- **Priorité** : `P3`
+- **Lot cible** : `6.4-b V2`
+- **Statut** : `corrigé localement, non commité, non déployé` — purge appliquée en local dans
+  le cadre du GO LOT 6.4-b V2. **Non poussé, non déployé.**
+- **Date** : `2026-10-15`
+
+**Contexte**
+
+La suppression de `FloatingCTA` (item **#9**, V2-a) a rendu la clé `floating.cta` morte :
+elle n'était consommée que par `src/components/site/floating-cta.tsx:30`
+(`{t("floating.cta")}`). Aucun autre consommateur dans `src/`, `e2e/`, `scripts/` ou `docs/`
+(grep vérifié avant purge).
+
+**Correction appliquée (LOT 6.4-b V2-b, locale uniquement)**
+
+Suppression des 2 entrées dans `src/lib/locale-context.tsx` :
+
+- bloc `en` : `"floating.cta": "Let's talk"` (ex-l.79)
+- bloc `fr` : `"floating.cta": "Discutons"` (ex-l.600)
+
+Parité FR/EN stricte maintenue (test `locale-context.test.ts` vert après purge).
+
+---
+
+## 17 — `use-mobile.tsx` — à investiguer, bloqué sur décision shadcn keep/purge
+
+- **Priorité** : `P3`
+- **Lot cible** : `6.4-b V2+` (conditionné à la décision shadcn)
+- **Statut** : `à investiguer` — revalidation V2-pre établi que le fichier n'a **aucun usage
+  runtime ni framework**, mais qu'il est importé par `src/components/ui/sidebar.tsx:6`
+  (composant shadcn **non monté** : 0 import de `@/components/ui/sidebar` dans `src/`).
+  La suppression est conditionnée à la décision produit « shadcn keep/purge » (décision en
+  attente). Si purge shadcn → `sidebar.tsx` supprimé → `use-mobile` devient entièrement mort
+  et supprimable. Si keep → `use-mobile` reste consommé par `sidebar.tsx`.
+- **Date** : `2026-10-15`
+
+**Preuve V2-pre (read-only)**
+
+| Signal                      | Constat                                                                                                  |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Import applicatif direct    | 0 (hors `sidebar.tsx`)                                                                                   |
+| Barrel `src/hooks/index.ts` | re-export `useIsMobile` — barrel `@/hooks` jamais importé                                                |
+| `sidebar.tsx`               | importe `useIsMobile`, mais n'est lui-même importé nulle part                                            |
+| Runtime 390px               | responsive piloté par `useIsMobileViewport` (`src/lib/use-is-mobile-viewport.ts`), pas par `useIsMobile` |
+| Framework entry points      | absent                                                                                                   |
+
+Hook vivant distinct : `useIsMobileViewport` (consommé par 10 fichiers applicatifs).
+
+---
+
 ## Note complémentaire — clés manquantes supplémentaires
 
 Conformément à la consigne d'ajout, l'audit 5.2-pre-a a recherché toute clé i18n manquante
@@ -795,3 +863,5 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-15` — LOT 6.3 préparé localement (non commité, non déployé) : titres `/contact` en `h2`, `id="process"` + ancre footer `/about#process`, `LocaleSwitcher` `aria-label` i18n via `role=group`, finding `/services` infirmé (faux positif) + verrouillé par test. Items **#7**, **#8**, **#14** → `corrigé localement, non commité, non déployé` ; item **#13** → `faux positif — non applicable` (hiérarchie DOM réelle déjà `h1 → h2 → h3`, test de non-régression ajouté).
 - `2026-10-15` — push `988131b` (LOT 6.3), CI/E2E/Integration ✅. Vérifications production : `/contact` → hiérarchie servie `h1 → h2 → h2` puis `h3` footer (1 h1, 2 h2, 3 h3) ; `/about` → `id="process"` présent, footer pointant vers `/about#process`, ancien href `/about#realisations` absent. Items **#7**, **#8**, **#14** → `résolu en production` ; item **#13** confirmé `faux positif — non applicable`. Limite : libellé FR/EN du `LocaleSwitcher` non revérifié en production (SSR FR par défaut), bascule validée sur preview locale.
 - `2026-10-15` — push `8903194` (LOT 6.4-b V1), CI/E2E/Integration ✅ (runs 38792476886 / 38792477055 / 38792476935). Vérification production : 12/12 pages FR/EN OK (6 pages × 2 locales), CSS strictement inchangé, hash JS changé, aucune clé i18n brute. Item **#15** → `résolu en production`. Limites : routes `/admin/*` non vérifiées en production (pas de session réelle) ; réduction de bundle marginale (−1 octet client) — valeur principale = hygiène source.
+- `2026-10-15` — LOT 6.4-b V2-pre (read-only, `c600594`) : revalidation des 5 candidats V2. Verdicts : FloatingCTA `non utilisé` (0 import, absent DOM prod 12/12) ; `data/articles.ts` `non utilisé` (0 import, journal Supabase) ; `data/projects.ts` `non utilisé` (type-only effacé, `/work` Supabase) ; export `ProjectCard` `non utilisé` (0 import externe) ; `DbRealisationCard`/`CTAStrip` `montés` (3 + 7 routes) ; `use-mobile.tsx` `à investiguer` (importé par `sidebar.tsx` shadcn non monté, bloqué sur décision keep/purge). Aucune modification (read-only strict).
+- `2026-10-15` — LOT 6.4-b V2 préparé localement (non commité, non déployé) : suppression `floating-cta.tsx` + test, `data/articles.ts`, `data/projects.ts` ; retrait export `ProjectCard` + `import type { Project }` de `project-card.tsx` (`DbRealisationCard`/`CTAStrip` intacts) ; purge i18n `floating.cta` FR/EN. Items **#6**, **#9**, **#16** → `corrigé localement, non commité, non déployé` ; item **#17** (`use-mobile.tsx`) → `à investiguer` (bloqué décision shadcn). Garde-fous greps post-modif : 0 référence résiduelle. Tests/typecheck/build locaux à confirmer avant commit.

@@ -15,7 +15,6 @@ export const STATUS_BADGE: Record<string, string> = {
 // Lien validé : cal.com/webxia/30min (ne pas modifier sans valider le compte Cal).
 export const CAL_USERNAME = "webxia";
 export const CAL_EVENT_TYPE = "30min";
-export const CAL_LINK = `${CAL_USERNAME}/${CAL_EVENT_TYPE}`;
 export const CAL_BOOKING_BASE_URL = "https://cal.com";
 export const CAL_ORIGIN = "https://app.cal.com";
 export const CAL_EMBED_JS_URL = "https://app.cal.com/embed/embed.js";

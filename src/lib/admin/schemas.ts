@@ -4,27 +4,23 @@ import { z } from "zod";
 
 export const AdminIdSchema = z.string().uuid("Identifiant invalide");
 
-export const AdminPageSchema = z.coerce.number().int().min(1).default(1);
+const AdminPageSchema = z.coerce.number().int().min(1).default(1);
 
-export const AdminLimitSchema = z.coerce.number().int().min(1).max(100).default(20);
+const AdminLimitSchema = z.coerce.number().int().min(1).max(100).default(20);
 
-export const AdminSearchSchema = z
+const AdminSearchSchema = z
   .string()
   .trim()
   .max(100, "Recherche trop longue (100 caractères max)")
   .optional();
 
-export const ArticleStatusFilterSchema = z
-  .enum(["all", "draft", "published", "archived"])
-  .default("all");
+const ArticleStatusFilterSchema = z.enum(["all", "draft", "published", "archived"]).default("all");
 
-export const ArticleStatusSchema = z.enum(["draft", "published", "archived"]);
+const ArticleStatusSchema = z.enum(["draft", "published", "archived"]);
 
-export const RealisationStatusSchema = z.enum(["draft", "published", "archived"]);
+const RealisationStatusSchema = z.enum(["draft", "published", "archived"]);
 
 export const MemoryTypeSchema = z.enum(["conversation", "context", "knowledge", "preference"]);
-
-export const MemoryTypeFilterSchema = z.union([MemoryTypeSchema, z.literal("all")]).default("all");
 
 // Champs texte courants : on accepte les chaînes vides du formulaire,
 // on normalise en trim côté serveur.
@@ -79,9 +75,9 @@ export const PublicRealisationsSchema = z.object({
 
 // --- Contact : dépôt public (honeypot `website` inclus, jamais persisté) ---
 
-export const ContactMessageStatusSchema = z.enum(["new", "read"]);
+const ContactMessageStatusSchema = z.enum(["new", "read"]);
 
-export const ContactMessageStatusFilterSchema = z.enum(["all", "new", "read"]).default("all");
+const ContactMessageStatusFilterSchema = z.enum(["all", "new", "read"]).default("all");
 
 export const SubmitContactMessageSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -198,10 +194,6 @@ export const UpdateMemorySchema = z.object({
   expires_at: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
-export type ListArticlesInput = z.infer<typeof ListArticlesSchema>;
-export type ListRealisationsInput = z.infer<typeof ListRealisationsSchema>;
-export type ListMemoriesInput = z.infer<typeof ListMemoriesSchema>;
-
 // --- Dashboard stats (réponse getAdminStats, validée côté client) ---
 
 const CountBlockSchema = z.object({
@@ -222,5 +214,3 @@ export const AdminStatsSchema = z.object({
     })
     .default({ total: 0, sessions: 0 }),
 });
-
-export type AdminStats = z.infer<typeof AdminStatsSchema>;

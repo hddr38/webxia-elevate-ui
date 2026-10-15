@@ -31,7 +31,7 @@ import {
 } from "@/server/functions/contact";
 import { AdminStatsSchema } from "@/lib/admin/schemas";
 
-export const adminKeys = {
+const adminKeys = {
   // "v2" : la forme du payload est désormais validée par Zod (AdminStatsSchema).
   // Nouvelle clé = aucun cache d'une forme antérieure ne peut être réutilisé.
   stats: ["admin", "stats", "v2"] as const,
@@ -46,7 +46,7 @@ export const adminKeys = {
     ["admin", "messages", "list", params] as const,
 };
 
-export function adminStatsOptions() {
+function adminStatsOptions() {
   return queryOptions({
     queryKey: adminKeys.stats,
     // Validation à la frontière : un payload inattendu devient une erreur
@@ -57,7 +57,7 @@ export function adminStatsOptions() {
   });
 }
 
-export function articlesListOptions(params: { status?: string; search?: string; page: number }) {
+function articlesListOptions(params: { status?: string; search?: string; page: number }) {
   return queryOptions({
     queryKey: adminKeys.articlesList(params),
     queryFn: () => getArticles({ data: params }),
@@ -66,11 +66,7 @@ export function articlesListOptions(params: { status?: string; search?: string; 
   });
 }
 
-export function realisationsListOptions(params: {
-  status?: string;
-  search?: string;
-  page: number;
-}) {
+function realisationsListOptions(params: { status?: string; search?: string; page: number }) {
   return queryOptions({
     queryKey: adminKeys.realisationsList(params),
     queryFn: () => getRealisations({ data: params }),
@@ -79,7 +75,7 @@ export function realisationsListOptions(params: {
   });
 }
 
-export function memoriesListOptions(params: { type?: string; search?: string; page: number }) {
+function memoriesListOptions(params: { type?: string; search?: string; page: number }) {
   return queryOptions({
     queryKey: adminKeys.memoriesList(params),
     queryFn: () =>
@@ -95,7 +91,7 @@ export function memoriesListOptions(params: { type?: string; search?: string; pa
   });
 }
 
-export function memoryStatsOptions() {
+function memoryStatsOptions() {
   return queryOptions({
     queryKey: adminKeys.memoryStats,
     queryFn: () => getMemoryStats(),
@@ -123,7 +119,7 @@ export function useMemoryStats() {
   return useQuery(memoryStatsOptions());
 }
 
-export function messagesListOptions(params: { status?: string; search?: string; page: number }) {
+function messagesListOptions(params: { status?: string; search?: string; page: number }) {
   return queryOptions({
     queryKey: adminKeys.messagesList(params),
     queryFn: () => getContactMessages({ data: params }),

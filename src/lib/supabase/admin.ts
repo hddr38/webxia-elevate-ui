@@ -14,7 +14,7 @@ function getEnv(key: string): string | undefined {
 const supabaseUrl = getEnv("VITE_SUPABASE_URL");
 const supabaseServiceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-export const supabaseAdmin =
+const supabaseAdmin =
   supabaseUrl && supabaseServiceRoleKey
     ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
         auth: {

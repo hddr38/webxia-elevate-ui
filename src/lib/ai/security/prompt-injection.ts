@@ -5,7 +5,7 @@ export interface PromptInjectionConfig {
   stripInstructions: boolean;
 }
 
-export const DEFAULT_PROMPT_INJECTION_CONFIG: PromptInjectionConfig = {
+const DEFAULT_PROMPT_INJECTION_CONFIG: PromptInjectionConfig = {
   maxInputLength: 10000,
   blockedPatterns: [
     /ignore\s+(previous|above|all)\s+(instructions|prompts|rules)/i,

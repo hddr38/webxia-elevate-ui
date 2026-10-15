@@ -260,7 +260,7 @@ export class SkillExecutor {
   }
 }
 
-export class SkillExecutionError extends Error {
+class SkillExecutionError extends Error {
   public readonly errorInfo: SkillError;
 
   constructor(message: string, errorInfo: SkillError) {

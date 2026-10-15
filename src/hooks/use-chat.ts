@@ -473,8 +473,3 @@ export function useChat(): UseChatReturn {
     }, [clearMessages, setConversationId]),
   };
 }
-
-export function useChatStoreActions() {
-  const { sendMessage, ...rest } = useChat();
-  return { sendMessage, rest };
-}

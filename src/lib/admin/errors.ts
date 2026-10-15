@@ -10,14 +10,14 @@ interface DbErrorLike {
 const NOT_FOUND_CODES = new Set(["PGRST116"]);
 const NOT_FOUND_HINTS = ["no rows", "not found", "0 rows"];
 
-export function isUniqueViolation(error: DbErrorLike | null | undefined): boolean {
+function isUniqueViolation(error: DbErrorLike | null | undefined): boolean {
   if (!error) return false;
   if (error.code === "23505") return true;
   const msg = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
   return msg.includes("duplicate key") || msg.includes("already exists");
 }
 
-export function isNotFoundError(error: DbErrorLike | null | undefined): boolean {
+function isNotFoundError(error: DbErrorLike | null | undefined): boolean {
   if (!error) return false;
   if (error.code && NOT_FOUND_CODES.has(error.code)) return true;
   const msg = (error.message ?? "").toLowerCase();

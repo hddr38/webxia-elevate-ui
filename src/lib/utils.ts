@@ -25,7 +25,7 @@ export function parseCookies(cookieHeader: string | null): Record<string, string
   return cookies;
 }
 
-export function getAuthCookieName(cookieHeader: string | null): string | null {
+function getAuthCookieName(cookieHeader: string | null): string | null {
   const cookies = parseCookies(cookieHeader);
   return Object.keys(cookies).find((k) => k.startsWith("sb-") && k.endsWith("-auth-token")) ?? null;
 }
@@ -34,7 +34,7 @@ export function getAuthCookieName(cookieHeader: string | null): string | null {
  * Noms des cookies d'auth Supabase, en gérant le chunking SSR
  * (`sb-xxx-auth-token`, `sb-xxx-auth-token.0`, `sb-xxx-auth-token.1`, ...).
  */
-export function getAuthCookieNames(cookieHeader: string | null): string[] {
+function getAuthCookieNames(cookieHeader: string | null): string[] {
   const cookies = parseCookies(cookieHeader);
   const base = getAuthCookieName(cookieHeader);
   if (!base) return [];
@@ -97,7 +97,7 @@ export function extractAccessToken(request: Request): string | null {
   }
 }
 
-export function sanitizeIlike(input: string): string {
+function sanitizeIlike(input: string): string {
   return input.replace(/[\\%_]/g, (match) => `\\${match}`);
 }
 

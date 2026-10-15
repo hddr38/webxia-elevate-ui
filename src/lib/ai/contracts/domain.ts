@@ -489,29 +489,6 @@ export interface AgentError extends Error {
   details?: Record<string, unknown>;
 }
 
-export function createAgentError(
-  code: AgentErrorCode,
-  message: string,
-  options: {
-    recoverable?: boolean;
-    provider?: string;
-    toolName?: string;
-    requestId?: string;
-    conversationId?: string;
-    details?: Record<string, unknown>;
-  } = {},
-): AgentError {
-  const error = new Error(message) as AgentError;
-  error.code = code;
-  error.recoverable = options.recoverable ?? false;
-  error.provider = options.provider;
-  error.toolName = options.toolName;
-  error.requestId = options.requestId;
-  error.conversationId = options.conversationId;
-  error.details = options.details;
-  return error;
-}
-
 export interface AgentLimits {
   maxAgentSteps: number;
   maxToolCalls: number;

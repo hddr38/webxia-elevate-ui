@@ -8,14 +8,14 @@ import {
 import { deleteLead, listLeads } from "@/server/functions/leads";
 import type { ListLeadsInput } from "@/server/functions/leads";
 
-export const leadKeys = {
+const leadKeys = {
   list: (params: ListLeadsInput & { dateRange?: string; hasEmail?: boolean; hasPhone?: boolean }) =>
     ["admin", "leads", "list", params] as const,
   detail: (id: string) => ["admin", "leads", "detail", id] as const,
   count: ["admin", "leads", "count"] as const,
 };
 
-export function leadsListOptions(
+function leadsListOptions(
   params: ListLeadsInput & { dateRange?: string; hasEmail?: boolean; hasPhone?: boolean },
 ) {
   return queryOptions({
@@ -26,7 +26,7 @@ export function leadsListOptions(
   });
 }
 
-export function leadsCountOptions() {
+function leadsCountOptions() {
   return queryOptions({
     queryKey: leadKeys.count,
     queryFn: () => listLeads({ data: { page: 1, limit: 1 } }),

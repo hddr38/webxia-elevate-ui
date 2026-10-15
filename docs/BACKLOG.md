@@ -21,22 +21,22 @@
 
 ## Vue d'ensemble
 
-| #   | Priorité | Titre                                                                            | Lot cible       | Statut                                       | Date       |
-| --- | -------- | -------------------------------------------------------------------------------- | --------------- | -------------------------------------------- | ---------- |
-| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`     | résolu en production                         | 2026-10-14 |
-| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`           | ouvert                                       | 2026-10-14 |
-| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`     | résolu en production                         | 2026-10-14 |
-| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`           | résolu en production                         | 2026-10-15 |
-| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`           | ouvert                                       | 2026-10-14 |
-| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir       | ouvert                                       | 2026-10-14 |
-| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | `6.3`           | corrigé localement, non commité, non déployé | 2026-10-15 |
-| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | `6.3`           | corrigé localement, non commité, non déployé | 2026-10-15 |
-| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | à joindre à `6` | ouvert                                       | 2026-10-15 |
-| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`         | résolu en production                         | 2026-10-15 |
-| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`           | résolu                                       | 2026-10-15 |
-| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`           | résolu en production                         | 2026-10-15 |
-| 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test | `6.3`           | faux positif — non applicable                | 2026-10-15 |
-| 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`           | corrigé localement, non commité, non déployé | 2026-10-15 |
+| #   | Priorité | Titre                                                                            | Lot cible       | Statut                        | Date       |
+| --- | -------- | -------------------------------------------------------------------------------- | --------------- | ----------------------------- | ---------- |
+| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`     | résolu en production          | 2026-10-14 |
+| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`           | ouvert                        | 2026-10-14 |
+| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`     | résolu en production          | 2026-10-14 |
+| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`           | résolu en production          | 2026-10-15 |
+| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`           | ouvert                        | 2026-10-14 |
+| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir       | ouvert                        | 2026-10-14 |
+| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | `6.3`           | résolu en production          | 2026-10-15 |
+| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | `6.3`           | résolu en production          | 2026-10-15 |
+| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | à joindre à `6` | ouvert                        | 2026-10-15 |
+| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`         | résolu en production          | 2026-10-15 |
+| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`           | résolu                        | 2026-10-15 |
+| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`           | résolu en production          | 2026-10-15 |
+| 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test | `6.3`           | faux positif — non applicable | 2026-10-15 |
+| 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`           | résolu en production          | 2026-10-15 |
 
 **Barème de priorité utilisé**
 
@@ -388,9 +388,10 @@ après avoir vérifié qu'aucun test ni spec e2e ne les référence (grep déjà
 
 - **Priorité** : `P2`
 - **Lot cible** : `6.3`
-- **Statut** : `corrigé localement, non commité, non déployé` — corrigé par LOT 6.3 le
-  `2026-10-15`, gates verts (prettier/eslint/tsc/693 tests/build), vérifié sur preview locale
-  `http://localhost:4173` FR+EN. **Rien n'est poussé ni déployé.**
+- **Statut** : `résolu en production` — push `988131b` sur `origin/main` le `2026-10-15`,
+  CI/E2E/Integration ✅, vérification Netlify `HTTP 200`. **Preuve production** : hiérarchie
+  servie `h1 → h2 → h2`, puis `h3` footer (`Parlez-nous de votre projet.` → `Prendre rendez-vous`
+  → `Envoyez-nous un message` → `Navigation`/`Solutions`/`Contact`), sans saut `h1 → h3`.
 - **Date** : `2026-10-14`
 
 **Contexte**
@@ -433,8 +434,10 @@ périmètre de cet item (ils suivent un `h2`, pas un saut depuis le `h1`).
 
 - **Priorité** : `P3`
 - **Lot cible** : `6.3`
-- **Statut** : `corrigé localement, non commité, non déployé` — corrigé par LOT 6.3 le
-  `2026-10-15`, gates verts, vérifié sur preview locale FR+EN. **Rien n'est poussé ni déployé.**
+- **Statut** : `résolu en production` — push `988131b` sur `origin/main` le `2026-10-15`,
+  CI/E2E/Integration ✅, vérification Netlify `HTTP 200`. **Preuve production** : `id="process"`
+  présent, footer pointant vers `/about#process`, ancien href `/about#realisations` **absent**
+  du footer.
 - **Date** : `2026-10-14`
 
 **Contexte**
@@ -650,8 +653,12 @@ locale FR et EN.
 
 - **Priorité** : `P3`
 - **Lot cible** : `6.3`
-- **Statut** : `corrigé localement, non commité, non déployé` — corrigé par LOT 6.3 le
-  `2026-10-15`, gates verts, vérifié sur preview locale FR+EN. **Rien n'est poussé ni déployé.**
+- **Statut** : `résolu en production` — push `988131b` sur `origin/main` le `2026-10-15`,
+  CI/E2E/Integration ✅, vérification Netlify `HTTP 200`. **Déviation assumée** : `role="group"`,
+  `aria-label` localisé et `aria-pressed` (voir ci-dessous). **Limite** : la vérification en
+  production du libellé FR/EN du `LocaleSwitcher` n'a **pas** été rapportée dans le run de push
+  (le HTML servi en SSR est rendu en FR par défaut ; la bascule FR/EN du libellé a été validée
+  sur preview locale uniquement).
 - **Date** : `2026-10-15`
 
 **Contexte**
@@ -687,7 +694,7 @@ la distinction entre les deux boutons est laissée à leur texte visible (« EN 
 s'agit d'une amélioration d'accessibilité intentionnelle ; **aucun changement visuel ni
 comportemental** n'est recherché au-delà de la sémantique d'accessibilité.
 
-**Statut** : `corrigé localement, non commité, non déployé`.
+**Statut** : `résolu en production` (commit `988131b`).
 
 **Contrôles** — `header.test.tsx` : `role=group` + `aria-label` FR par défaut, bascule
 FR→EN suivie par l'`aria-label`, absence d'`aria-label` par bouton, `aria-pressed` cohérent.
@@ -717,3 +724,4 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-15` — push `21a28ac` (LOT 5.2), vérification prod SSR 8/8 pages OK.
 - `2026-10-15` — push `e433832` (LOT 6.1), purge 47 dead keys, CI/E2E/Integration ✅, vérif prod FR/EN OK (admin non vérifié, sans session).
 - `2026-10-15` — LOT 6.3 préparé localement (non commité, non déployé) : titres `/contact` en `h2`, `id="process"` + ancre footer `/about#process`, `LocaleSwitcher` `aria-label` i18n via `role=group`, finding `/services` infirmé (faux positif) + verrouillé par test. Items **#7**, **#8**, **#14** → `corrigé localement, non commité, non déployé` ; item **#13** → `faux positif — non applicable` (hiérarchie DOM réelle déjà `h1 → h2 → h3`, test de non-régression ajouté).
+- `2026-10-15` — push `988131b` (LOT 6.3), CI/E2E/Integration ✅. Vérifications production : `/contact` → hiérarchie servie `h1 → h2 → h2` puis `h3` footer (1 h1, 2 h2, 3 h3) ; `/about` → `id="process"` présent, footer pointant vers `/about#process`, ancien href `/about#realisations` absent. Items **#7**, **#8**, **#14** → `résolu en production` ; item **#13** confirmé `faux positif — non applicable`. Limite : libellé FR/EN du `LocaleSwitcher` non revérifié en production (SSR FR par défaut), bascule validée sur preview locale.

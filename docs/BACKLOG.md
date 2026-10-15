@@ -37,6 +37,7 @@
 | 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`           | résolu en production          | 2026-10-15 |
 | 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test | `6.3`           | faux positif — non applicable | 2026-10-15 |
 | 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`           | résolu en production          | 2026-10-15 |
+| 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés              | `6.4-b`         | résolu en production          | 2026-10-15 |
 
 **Barème de priorité utilisé**
 
@@ -702,6 +703,74 @@ Vérifié sur preview locale FR et EN (26/26 contrôles verts).
 
 ---
 
+## 15 — LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés
+
+- **Priorité** : `P3`
+- **Lot cible** : `6.4-b` (V1 — isolation des exports morts)
+- **Statut** : `résolu en production` — push `8903194` sur `origin/main` le `2026-10-15`,
+  CI ✅, E2E ✅, Integration ✅. Vérification production Netlify : **12/12 pages FR/EN OK**
+  (6 pages publiques × 2 locales, locale forcée via `localStorage["webxia-locale"]`),
+  `HTTP 200` sur chacune, **CSS strictement inchangé** (SHA256 identique baseline `0993f61` ↔
+  V1 : `styles-BaCpWVTQ.css`), hash JS changé (`index-DRYD--No.js` → `index-CgWIJ1mk.js`),
+  **aucune clé i18n brute détectée**. Contrôles ciblés : `/services` (9 h2 ≥ 7 expertises),
+  `/journal` (7 filtres + 2 articles), `/about` (`#process` 4 cartes + `#realisations`),
+  `/contact` (formulaire + booking).
+  **Limites** : (1) **admin non vérifié en production faute de session réelle** ; (2) **réduction
+  de bundle marginale** (−1 octet client total) — la valeur principale de V1 est l'hygiène
+  source (conformité Knip, zéro nouveau warning), pas la taille de bundle : les exports
+  supprimés/privatisés étaient majoritairement effacés par la minification/tree-shaking.
+- **Date** : `2026-10-15`
+
+**Contexte**
+
+LOT 6.4-a (audit Knip read-only) a identifié 108 exports morts, 73 types morts et 43 fichiers
+morts dans la base de code. LOT 6.4-b V1 traite le premier sous-ensemble isolé et sans risque
+runtime : les exports morts et les symboles devenus internes après privatisation. Les vagues
+suivantes (fichiers morts, barrels, exports AI/observability, CSS, dépendances) restent hors
+périmètre et non autorisées.
+
+**Traitement LOT 6.4-b V1 — commit `8903194`**
+
+12 fichiers modifiés (+26 / −79 lignes) :
+
+- **Exports supprimés** (4) : `createAgentError` et `MemoryTypeFilterSchema` (devenu sans
+  usage interne après privatisation), `useChatStoreActions`, constante `CAL_LINK`.
+- **Symboles privatisés** (22) : exports devenus `const`/`function`/`type` internes dans
+  `src/lib/utils.ts`, `src/hooks/use-chat.ts`, `src/components/chat/constants.ts`,
+  `src/lib/supabase/admin.ts`, `src/lib/ai/skills/executor.ts`,
+  `src/lib/ai/security/prompt-injection.ts`, `src/lib/admin/errors.ts`,
+  `src/lib/admin/schemas.ts`, `src/features/admin/queries.ts`,
+  `src/features/admin/leads-queries.ts`, `src/lib/constants.ts`,
+  `src/lib/ai/contracts/domain.ts`.
+- **Types supprimés** (4 + `MemoryTypeFilterSchema`) : types morts sans usage interne.
+
+**Déviation assumée** : `MemoryTypeFilterSchema` supprimé entièrement (et non simplement
+privatisé) — après privatisation, il devenait un warning ESLint nouveau, ce qui violait la
+contrainte « aucun warning nouveau ».
+
+**Validation (avant commit)** : Prettier clean (12 fichiers) ; ESLint ciblé = 0 erreur +
+2 warnings préexistants (`executor.ts`, confirmés via `git stash`) ; `npm run lint` = 0 erreur
+/ 77 warnings (identique baseline) ; `npm run typecheck` = 0 erreur ; `npm run test` = 62
+fichiers / 692 tests passés + 1 todo (identique baseline) ; `npm run build` vert (warning
+`INEFFECTIVE_DYNAMIC_IMPORT` préexistant).
+
+**Cross-check bundles (signature « pure cleanup »)**
+
+- CSS : SHA256 strictement identique entre la baseline `0993f61` et V1 (`styles-BaCpWVTQ.css`,
+  126 713 octets) ; fichier servi en production octet-à-octet égal au build local V1.
+- JS : hash changé ; ancien fichier baseline en 404 (remplacé par le deploy).
+- Taille : total client −1 octet ; `vendor-zod` −15 o, `constants` −15 o, `badge` −49 o.
+  La faiblesse de la réduction est attendue : les mots-clés `export` et les types sont
+  effacés par la minification ; la valeur de V1 est l'hygiène source, pas le bundle.
+
+**Limite admin (documentée)** : aucune vérification des routes `/admin/*` en production —
+pas de session réelle disponible. Conforme à la pratique des lots précédents (items #1, #12).
+
+**Non réalisé (hors périmètre V1)** : vagues V2–V6 (fichiers morts, barrels, exports
+AI/observability, CSS `canvas-gpu`, dépendances) ; 8 décisions produit en attente.
+
+---
+
 ## Note complémentaire — clés manquantes supplémentaires
 
 Conformément à la consigne d'ajout, l'audit 5.2-pre-a a recherché toute clé i18n manquante
@@ -725,3 +794,4 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-15` — push `e433832` (LOT 6.1), purge 47 dead keys, CI/E2E/Integration ✅, vérif prod FR/EN OK (admin non vérifié, sans session).
 - `2026-10-15` — LOT 6.3 préparé localement (non commité, non déployé) : titres `/contact` en `h2`, `id="process"` + ancre footer `/about#process`, `LocaleSwitcher` `aria-label` i18n via `role=group`, finding `/services` infirmé (faux positif) + verrouillé par test. Items **#7**, **#8**, **#14** → `corrigé localement, non commité, non déployé` ; item **#13** → `faux positif — non applicable` (hiérarchie DOM réelle déjà `h1 → h2 → h3`, test de non-régression ajouté).
 - `2026-10-15` — push `988131b` (LOT 6.3), CI/E2E/Integration ✅. Vérifications production : `/contact` → hiérarchie servie `h1 → h2 → h2` puis `h3` footer (1 h1, 2 h2, 3 h3) ; `/about` → `id="process"` présent, footer pointant vers `/about#process`, ancien href `/about#realisations` absent. Items **#7**, **#8**, **#14** → `résolu en production` ; item **#13** confirmé `faux positif — non applicable`. Limite : libellé FR/EN du `LocaleSwitcher` non revérifié en production (SSR FR par défaut), bascule validée sur preview locale.
+- `2026-10-15` — push `8903194` (LOT 6.4-b V1), CI/E2E/Integration ✅ (runs 38792476886 / 38792477055 / 38792476935). Vérification production : 12/12 pages FR/EN OK (6 pages × 2 locales), CSS strictement inchangé, hash JS changé, aucune clé i18n brute. Item **#15** → `résolu en production`. Limites : routes `/admin/*` non vérifiées en production (pas de session réelle) ; réduction de bundle marginale (−1 octet client) — valeur principale = hygiène source.

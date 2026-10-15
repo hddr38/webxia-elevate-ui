@@ -21,20 +21,20 @@
 
 ## Vue d'ensemble
 
-| #   | Priorité | Titre                                                                            | Lot cible       | Statut                                       | Date       |
-| --- | -------- | -------------------------------------------------------------------------------- | --------------- | -------------------------------------------- | ---------- |
-| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`     | résolu en production                         | 2026-10-14 |
-| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`           | ouvert                                       | 2026-10-14 |
-| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`     | résolu en production                         | 2026-10-14 |
-| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`           | résolu en production                         | 2026-10-15 |
-| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`           | ouvert                                       | 2026-10-14 |
-| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir       | ouvert                                       | 2026-10-14 |
-| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | à définir       | ouvert                                       | 2026-10-14 |
-| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | à définir       | ouvert                                       | 2026-10-14 |
-| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | à joindre à `6` | ouvert                                       | 2026-10-15 |
-| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`         | résolu en production                         | 2026-10-15 |
-| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`           | résolu                                       | 2026-10-15 |
-| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`           | corrigé localement, non commité, non déployé | 2026-10-15 |
+| #   | Priorité | Titre                                                                            | Lot cible       | Statut               | Date       |
+| --- | -------- | -------------------------------------------------------------------------------- | --------------- | -------------------- | ---------- |
+| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`     | résolu en production | 2026-10-14 |
+| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`           | ouvert               | 2026-10-14 |
+| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`     | résolu en production | 2026-10-14 |
+| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`           | résolu en production | 2026-10-15 |
+| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`           | ouvert               | 2026-10-14 |
+| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | à définir       | ouvert               | 2026-10-14 |
+| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | à définir       | ouvert               | 2026-10-14 |
+| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | à définir       | ouvert               | 2026-10-14 |
+| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | à joindre à `6` | ouvert               | 2026-10-15 |
+| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`         | résolu en production | 2026-10-15 |
+| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`           | résolu               | 2026-10-15 |
+| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`           | résolu en production | 2026-10-15 |
 
 **Barème de priorité utilisé**
 
@@ -536,9 +536,13 @@ TanStack Router + providers + lazy), le test lit le fichier source du module.
 
 - **Priorité** : `P3`
 - **Lot cible** : `6.1`
-- **Statut** : `corrigé localement, non commité, non déployé` — le diff existe sur la branche
-  locale `main` et tous les contrôles du lot sont verts, **mais rien n'est poussé ni visible
-  en production**. Ne pas déclarer résolu en production avant push et vérification.
+- **Statut** : `résolu en production` — commit `e433832` poussé sur `origin/main` le
+  `2026-10-15`. CI ✅ (run 38731923947), E2E ✅ (run 38731923928), Integration ✅ (run
+  38731923930). Vérification production Netlify `HTTP 200` + Playwright FR/EN sur `/`,
+  `/about`, `/services`, `/journal`, `/work`, `/contact` : aucune des 47 clés supprimées
+  n'est visible dans le DOM, aucun token sentinelle de clé brute, contenu services/journal
+  et piste marquee (`marquee-track`) intacts. **Vérification production admin non réalisée
+  faute de session réelle** : les 20 clés `admin.*` ne sont visibles qu'authentifié.
 - **Date** : `2026-10-15`
 
 **Décision D-6-1 (option A)**
@@ -601,3 +605,4 @@ découverte hors couverture de l'item global **#1**.
 
 - `2026-10-14` — push `4f481dc`, vérification production `/about` EN OK.
 - `2026-10-15` — push `21a28ac` (LOT 5.2), vérification prod SSR 8/8 pages OK.
+- `2026-10-15` — push `e433832` (LOT 6.1), purge 47 dead keys, CI/E2E/Integration ✅, vérif prod FR/EN OK (admin non vérifié, sans session).

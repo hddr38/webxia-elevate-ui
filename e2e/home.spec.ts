@@ -379,7 +379,13 @@ test.describe("Accueil", () => {
 
   // TODO(LOT-backlog): DNS timeout on e2e-dummy.supabase.co (~5s) in CI; mock or fulfill in future
 
-  test("LOT 42 — mobile 390px : 0 canvas, fallback CSS, contenu < 3 s, CTA < 300 ms", async ({
+  // LOT 6.4-b — kill-switch VITE_ENABLE_MOBILE_CANVAS : variable d'environnement
+  // Vite compilee a la build (import.meta.env), donc NON simulable a l'execution
+  // dans Playwright (l'E2E tourne sur `npm run build && vite preview`, cf.
+  // playwright.config.ts). Aucun test kill-switch : rollback = definir
+  // VITE_ENABLE_MOBILE_CANVAS=false dans Netlify UI + redeployer (~2 min).
+
+  test("LOT 6.4-b — mobile 390px : canvas réactivé, fallback masqué, contenu < 3 s, CTA < 300 ms", async ({
     page,
   }) => {
     const pageErrors: string[] = [];
@@ -396,14 +402,21 @@ test.describe("Accueil", () => {
     expect(Date.now() - t0).toBeLessThan(threshold);
     await waitForHydration(page);
 
-    // Pas de canvas sur mobile : fallback CSS (memes dimensions -> CLS = 0).
-    await expect(page.locator("section").first().locator("canvas")).toHaveCount(0);
-    const fallback = page.getByTestId("hero-fallback");
-    await expect(fallback).toBeVisible();
-    expect(await fallback.evaluate((el) => getComputedStyle(el).position)).toBe("absolute");
-    expect(await fallback.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
+    // LOT 6.4-b — canvas reactive sur mobile (params allleges). Le className
+    // porte sur l'element <canvas> lui-meme (pas de wrapper) : il ne doit pas
+    // contenir `hidden` (l'ancien `hidden md:block` a ete retire de hero.tsx).
+    const canvas = page.locator("section").first().locator("canvas");
+    await expect(canvas).toHaveCount(1);
+    await expect(canvas).toBeVisible();
+    expect(await canvas.evaluate((el) => el.className)).not.toMatch(/(^|\s)hidden(\s|$)/);
 
-    // Stabilite geometrique hero (fallback absolute comme le canvas).
+    // Le fallback .matrix-css-fallback est masque (classe `hidden`) car le
+    // canvas est actif (kill-switch VITE_ENABLE_MOBILE_CANVAS actif par defaut).
+    const fallback = page.locator(".matrix-css-fallback");
+    await expect(fallback).toHaveClass(/(^|\s)hidden(\s|$)/);
+    expect(await fallback.evaluate((el) => getComputedStyle(el).display)).toBe("none");
+
+    // Stabilite geometrique hero (canvas/fallback en absolute, CLS = 0).
     const rect = (el: HTMLElement) => {
       const r = el.getBoundingClientRect();
       return { top: Math.round(r.top), h: Math.round(r.height) };

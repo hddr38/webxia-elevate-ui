@@ -40,6 +40,7 @@
 | 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés             | `6.4-b`     | résolu en production          | 2026-10-15 |
 | 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a               | `6.4-b V2`  | résolu en production          | 2026-10-15 |
 | 17  | P3       | `use-mobile.tsx` — à investiguer, bloqué sur décision shadcn keep/purge          | `6.4-b V2+` | à investiguer                 | 2026-10-15 |
+| 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`  | corrigé localement            | 2026-10-15 |
 
 **Barème de priorité utilisé**
 
@@ -838,6 +839,58 @@ Hook vivant distinct : `useIsMobileViewport` (consommé par 10 fichiers applicat
 
 ---
 
+## 18 — LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés
+
+- **Priorité** : `P3`
+- **Lot cible** : `6.4-b V3`
+- **Statut** : `corrigé localement, non commité, non déployé` — suppressions et purge
+  appliquées en local dans le cadre du GO LOT 6.4-b V3. **Non poussé, non déployé.**
+- **Date** : `2026-10-15`
+
+**Contexte**
+
+L'audit Knip LOT 6.4-a a identifié plusieurs barrels `index.ts` sans consommateur et
+6 exports morts dans `src/lib/ai/skills/index.ts`. La décision shadcn restant en attente,
+les barrels liés à shadcn (`src/hooks/index.ts`) et à l'organisation du code
+(`src/types/index.ts`, `src/types/admin.ts`) sont conservés.
+
+**Barrels supprimés (7)**
+
+| Barrel                             | Raison                                                                                |
+| ---------------------------------- | ------------------------------------------------------------------------------------- |
+| `src/components/chat/index.ts`     | 0 import applicatif (consommateurs via `@/components/chat/ChatWidget` profond)        |
+| `src/lib/ai/index.ts`              | 0 import applicatif (consommateurs via chemins profonds `@/lib/ai/*`)                 |
+| `src/lib/auth/index.ts`            | 0 import applicatif (consommateurs via `@/lib/auth/session`, `@/lib/auth/middleware`) |
+| `src/lib/ai/agent/index.ts`        | 0 import applicatif (consommateurs via `@/lib/ai/agent/orchestrator`)                 |
+| `src/lib/ai/conversation/index.ts` | 0 import applicatif (consommateurs via `@/lib/ai/conversation/conversation-service`)  |
+| `src/lib/ai/memory/index.ts`       | 0 import applicatif                                                                   |
+| `src/lib/ai/security/index.ts`     | 0 import applicatif (consommateurs via `@/lib/ai/security/rate-limiter`)              |
+
+**Barrels conservés (explicite)**
+
+- `src/hooks/index.ts` — lié à la décision shadcn (re-export `useIsMobile` consommé par
+  `sidebar.tsx`, shadcn conservé).
+- `src/types/index.ts`, `src/types/admin.ts` — organisation du code, hors périmètre V3.
+- `src/lib/ai/skills/index.ts` — contient des exports vivants (voir purge ci-dessous).
+
+**Purge exports `skills/index.ts`**
+
+Exports morts retirés (0 consommateur via barrel, uniquement imports profonds ou mock
+objects) : `registerSkill`, `unregisterSkill`, `getSkill`, `listSkills`, `hasSkill`,
+`getSkillsByPermission`.
+
+Exports vivants **conservés impérativement** (importés via le barrel `../skills` /
+`@/lib/ai/skills`) : `initializeSkills` (`src/server/functions/chat.ts:14`),
+`skillRegistry` + `getAllToolDefinitions` + `skillExecutor`
+(`src/lib/ai/agent/orchestrator.ts:3-4`).
+
+**Décision shadcn** : toujours en attente — aucun composant shadcn, ni `use-mobile.tsx`,
+ni `sidebar.tsx` supprimés.
+
+**Limite** : non commité, non poussé, non déployé — en attente du GO de commit V3.
+
+---
+
 ## Note complémentaire — clés manquantes supplémentaires
 
 Conformément à la consigne d'ajout, l'audit 5.2-pre-a a recherché toute clé i18n manquante
@@ -865,3 +918,4 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-15` — LOT 6.4-b V2-pre (read-only, `c600594`) : revalidation des 5 candidats V2. Verdicts : FloatingCTA `non utilisé` (0 import, absent DOM prod 12/12) ; `data/articles.ts` `non utilisé` (0 import, journal Supabase) ; `data/projects.ts` `non utilisé` (type-only effacé, `/work` Supabase) ; export `ProjectCard` `non utilisé` (0 import externe) ; `DbRealisationCard`/`CTAStrip` `montés` (3 + 7 routes) ; `use-mobile.tsx` `à investiguer` (importé par `sidebar.tsx` shadcn non monté, bloqué sur décision keep/purge). Aucune modification (read-only strict).
 - `2026-10-15` — LOT 6.4-b V2 préparé localement (non commité, non déployé) : suppression `floating-cta.tsx` + test, `data/articles.ts`, `data/projects.ts` ; retrait export `ProjectCard` + `import type { Project }` de `project-card.tsx` (`DbRealisationCard`/`CTAStrip` intacts) ; purge i18n `floating.cta` FR/EN. Items **#6**, **#9**, **#16** → `corrigé localement, non commité, non déployé` ; item **#17** (`use-mobile.tsx`) → `à investiguer` (bloqué décision shadcn). Garde-fous greps post-modif : 0 référence résiduelle. Tests/typecheck/build locaux à confirmer avant commit.
 - `2026-10-15` — push `d2418d9` + `a1e5c1d` (LOT 6.4-b V2-a + V2-b), CI/E2E/Integration ✅ (runs 38804280520 / 38804280607 / 38804280967). Vérification production : 3 pages (`/`, `/about`, `/journal`) → HTTP 200, `DbRealisationCard` (liens `/work/`) et `CTAStrip` (`py-24`) présents, filtres journal intacts, 0 clé i18n brute. Déviation CSS attendue : hash modifié (`styles-BaCpWVTQ.css` → `styles-DZvJAZxe.css`) par rescan Tailwind après suppression de `floating-cta.tsx` — classes critiques des composants restants vérifiées présentes (`rounded-card`, `aspect-[4/3]`, `object-cover`, `py-24`, `md:py-32`, `group-hover:rotate-45`, `line-clamp`). Items **#6**, **#9**, **#16** → `résolu en production` ; item **#17** maintenu `à investiguer` (bloqué décision shadcn keep/purge).
+- `2026-10-15` — LOT 6.4-b V3 préparé localement (non commité, non déployé) : suppression de 7 barrels morts (`components/chat`, `lib/ai`, `lib/auth`, `lib/ai/agent`, `lib/ai/conversation`, `lib/ai/memory`, `lib/ai/security`) + purge de 6 exports morts de `ai/skills/index.ts` (`registerSkill`, `unregisterSkill`, `getSkill`, `listSkills`, `hasSkill`, `getSkillsByPermission`); conservés : `initializeSkills`, `skillRegistry`, `getAllToolDefinitions`, `skillExecutor` (vivants via barrel). Barrels conservés : `hooks/index.ts`, `types/index.ts`, `types/admin.ts`, `skills/index.ts` + shadcn. Item **#18** → `corrigé localement, non commité, non déployé`.

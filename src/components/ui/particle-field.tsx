@@ -9,6 +9,21 @@ interface ParticleFieldProps {
   particleCount?: number;
   /** Active le suivi souris/tactile. Défaut true. */
   interactive?: boolean;
+  /**
+   * Délai minimal entre deux frames (ms). Défaut 66 (~15 fps, LOT 41 P1).
+   * LOT 6.4-b V3 — laissé à 66 sur mobile pour rester fluide mais safe.
+   */
+  frameMs?: number;
+  /**
+   * Rayon du halo (`ctx.shadowBlur`). Défaut 4. LOT 6.4-b V3 — forcé à 0 sur
+   * mobile : le flou d'ombre est extrêmement coûteux sur iOS (LOT 41 P1).
+   */
+  shadowBlur?: number;
+  /**
+   * Mode mobile (viewport < 768 px). LOT 6.4-b V3 — force le DPR cap à 1.0
+   * au lieu de 1.5/2 pour économiser la puissance GPU sur iOS Retina.
+   */
+  mobile?: boolean;
 }
 
 // Charte WebXIA light : brand bleu #1D4ED8, accent violet #9333EA.
@@ -50,6 +65,9 @@ const ParticleField: FC<ParticleFieldProps> = ({
   className,
   particleCount = 9,
   interactive = true,
+  frameMs = 66,
+  shadowBlur = 4,
+  mobile = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduceMotion = useReducedMotion();
@@ -111,9 +129,11 @@ const ParticleField: FC<ParticleFieldProps> = ({
       const parent = canvas.parentElement;
       const w = parent?.clientWidth ?? window.innerWidth;
       const h = parent?.clientHeight ?? window.innerHeight;
-      // LOT 41 P1 — DPR cap adaptatif : 1.5 sur mobile (< 768 px), 2 desktop.
+      // LOT 6.4-b V3 — DPR cap 3 paliers (Option B) : mobile 1.0 (iOS Retina),
+      // tablette < 1024px 1.5, desktop 2.0. Desktop garde son DPR d'origine
+      // (aucune régression visuelle).
       const viewportWidth = window.innerWidth || w;
-      const dprCap = viewportWidth < 768 ? 1.5 : 2;
+      const dprCap = mobile ? 1.0 : viewportWidth < 1024 ? 1.5 : 2;
       const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
       canvas.width = Math.max(1, Math.floor(w * dpr));
       canvas.height = Math.max(1, Math.floor(h * dpr));
@@ -126,6 +146,9 @@ const ParticleField: FC<ParticleFieldProps> = ({
     const drawFrame = (cursorX: number, cursorY: number) => {
       const w = canvas.clientWidth || window.innerWidth;
       const h = canvas.clientHeight || window.innerHeight;
+      // LOT 6.4-b V3 — sur mobile, shadowBlur est force a 0 (le flou d'ombre
+      // est extremement couteux sur iOS) quel que soit le prop passe.
+      const blur = mobile ? 0 : shadowBlur;
       ctx.clearRect(0, 0, w, h);
       for (const p of particles) {
         const px = p.bx + cursorX * p.dampening;
@@ -135,9 +158,7 @@ const ParticleField: FC<ParticleFieldProps> = ({
         ctx.globalAlpha = p.alpha;
         ctx.fillStyle = p.color;
         ctx.shadowColor = p.color;
-        // LOT 41 P1 — shadowBlur divise par 2 (8 -> 4) : le flou d'ombre est
-        // extremement couteux sur iOS, impact visuel mineur sur fond clair.
-        ctx.shadowBlur = 4 * p.scale;
+        ctx.shadowBlur = blur * p.scale;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius * p.scale, 0, Math.PI * 2);
         ctx.fill();
@@ -157,9 +178,8 @@ const ParticleField: FC<ParticleFieldProps> = ({
       return () => observer.disconnect();
     }
 
-    // LOT 41 P1 — fps clamp ~15 fps (66 ms) comme la matrix : le rAF tourne
-    // a 60 fps par defaut, on saute les frames trop rapprochees.
-    const frameMs = 66;
+    // LOT 41 P1 — fps clamp ~15 fps (66 ms par defaut). LOT 6.4-b V3 —
+    // frameMs parametrable (mobile/desktop) pour ajuster le cout main-thread.
     let lastFrame = 0;
     const tick = (now: number = 0) => {
       ticking = false;
@@ -284,7 +304,7 @@ const ParticleField: FC<ParticleFieldProps> = ({
       interactiveTarget.removeEventListener("pointermove", onPointerMove as EventListener);
       interactiveTarget.removeEventListener("touchmove", onTouchMove as EventListener);
     };
-  }, [particleCount, interactive, reduceMotion]);
+  }, [particleCount, interactive, frameMs, shadowBlur, mobile, reduceMotion]);
 
   return (
     <canvas

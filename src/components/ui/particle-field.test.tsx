@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "@testing-library/react";
+import type { ComponentProps } from "react";
 
 import ParticleField from "./particle-field";
 
@@ -148,10 +149,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function renderParticles() {
+function renderParticles(props: ComponentProps<typeof ParticleField> = {}) {
   return render(
     <section data-testid="hero">
-      <ParticleField />
+      <ParticleField {...props} />
     </section>,
   );
 }
@@ -159,6 +160,24 @@ function renderParticles() {
 function ioOfCanvas(): MockIntersectionObserver {
   expect(MockIntersectionObserver.instances).toHaveLength(1);
   return MockIntersectionObserver.instances[0];
+}
+
+// ---------------------------------------------------------------------------
+// Tracker les assignments de ctx.shadowBlur (reset a 0 en fin de frame, donc
+// on capture toutes les valeurs ecrites pendant le dessin).
+// ---------------------------------------------------------------------------
+function trackShadowBlur() {
+  const values: number[] = [];
+  let current = 0;
+  Object.defineProperty(ctx2d, "shadowBlur", {
+    configurable: true,
+    get: () => current,
+    set: (v: number) => {
+      current = v;
+      values.push(v);
+    },
+  });
+  return { values };
 }
 
 describe("ParticleField — gating canvas (LOT 39 P1)", () => {
@@ -322,28 +341,76 @@ describe("ParticleField — gating canvas (LOT 39 P1)", () => {
   });
 });
 
-describe("ParticleField — allegement LOT 41 (mobile)", () => {
-  it("cap DPR a 1.5 sur mobile (< 768 px)", () => {
+describe("ParticleField — allegement LOT 41 + params mobile (LOT 6.4-b V3)", () => {
+  it("DPR 3 paliers : mobile 1.0, tablette 1.5, desktop 2.0", () => {
     const origDPR = window.devicePixelRatio;
     const origIW = window.innerWidth;
     try {
       Object.defineProperty(window, "devicePixelRatio", { configurable: true, value: 3 });
+
+      // (1) Mobile : prop mobile=true → cap 1.0 (iOS Retina).
       Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
-      const { container, unmount } = renderParticles();
-      const canvas = container.querySelector("canvas") as HTMLCanvasElement;
+      const first = renderParticles({ mobile: true });
+      const canvas = first.container.querySelector("canvas") as HTMLCanvasElement;
       const parent = canvas.parentElement as HTMLElement;
       Object.defineProperty(parent, "clientWidth", { configurable: true, value: 390 });
       Object.defineProperty(parent, "clientHeight", { configurable: true, value: 700 });
       MockResizeObserver.instances[0].fire();
-      expect(canvas.width).toBe(Math.floor(390 * 1.5));
-      unmount();
+      // 390 * 1.0 = 390 (cap mobile).
+      expect(canvas.width).toBe(Math.floor(390 * 1.0));
+      first.unmount();
+
+      // (2) Tablette : mobile=false, innerWidth 900 < 1024 → cap 1.5.
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: 900 });
+      const second = renderParticles({ mobile: false });
+      const canvas2 = second.container.querySelector("canvas") as HTMLCanvasElement;
+      const parent2 = canvas2.parentElement as HTMLElement;
+      Object.defineProperty(parent2, "clientWidth", { configurable: true, value: 900 });
+      Object.defineProperty(parent2, "clientHeight", { configurable: true, value: 700 });
+      MockResizeObserver.instances[1].fire();
+      // 900 * 1.5 = 1350 (cap tablette).
+      expect(canvas2.width).toBe(Math.floor(900 * 1.5));
+      second.unmount();
+
+      // (3) Desktop : mobile=false, innerWidth 1440 >= 1024 → cap 2.0.
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440 });
+      const third = renderParticles({ mobile: false });
+      const canvas3 = third.container.querySelector("canvas") as HTMLCanvasElement;
+      const parent3 = canvas3.parentElement as HTMLElement;
+      Object.defineProperty(parent3, "clientWidth", { configurable: true, value: 1440 });
+      Object.defineProperty(parent3, "clientHeight", { configurable: true, value: 900 });
+      MockResizeObserver.instances[2].fire();
+      // 1440 * 2.0 = 2880 (cap desktop, aucune regression).
+      expect(canvas3.width).toBe(Math.floor(1440 * 2.0));
+      third.unmount();
     } finally {
       Object.defineProperty(window, "devicePixelRatio", { configurable: true, value: origDPR });
       Object.defineProperty(window, "innerWidth", { configurable: true, value: origIW });
     }
   });
 
-  it("clamp fps a ~15 fps (66 ms entre frames)", () => {
+  it("mobile : shadowBlur force a 0 (flou d'ombre tres couteux sur iOS)", () => {
+    const seen = trackShadowBlur();
+    renderParticles({ mobile: true, interactive: false });
+    ioOfCanvas().fire(true);
+    flushRaf(1000);
+    expect(ctx2d.arc).toHaveBeenCalled();
+    // Chaque particule a shadowBlur = 0 * scale = 0 : jamais de valeur > 0.
+    expect(seen.values.length).toBeGreaterThan(0);
+    expect(seen.values.every((v) => v === 0)).toBe(true);
+  });
+
+  it("desktop : shadowBlur par defaut 4 * scale (positif pendant le dessin)", () => {
+    const seen = trackShadowBlur();
+    renderParticles({ mobile: false });
+    ioOfCanvas().fire(true);
+    flushRaf(1000);
+    expect(ctx2d.arc).toHaveBeenCalled();
+    // Au moins un shadowBlur > 0 pendant le dessin (reset a 0 en fin de frame).
+    expect(seen.values.some((v) => v > 0)).toBe(true);
+  });
+
+  it("clamp fps a ~15 fps (66 ms entre frames, defaut)", () => {
     renderParticles();
     ioOfCanvas().fire(true);
     vi.advanceTimersByTime(160);
@@ -354,6 +421,22 @@ describe("ParticleField — allegement LOT 41 (mobile)", () => {
     expect(ctx2d.arc.mock.calls.length).toBe(draws);
     expect(pendingRaf()).toBe(1);
     flushRaf(1100);
+    expect(ctx2d.arc.mock.calls.length).toBeGreaterThan(draws);
+  });
+
+  it("frameMs personnalisable (100 ms → pas de dessin a +80 ms)", () => {
+    renderParticles({ frameMs: 100 });
+    ioOfCanvas().fire(true);
+    vi.advanceTimersByTime(200);
+    flushRaf(1000);
+    const draws = ctx2d.arc.mock.calls.length;
+    expect(draws).toBeGreaterThan(0);
+    // +80 ms < 100 ms : pas de nouveau dessin.
+    flushRaf(1080);
+    expect(ctx2d.arc.mock.calls.length).toBe(draws);
+    expect(pendingRaf()).toBe(1);
+    // +120 ms >= 100 ms : nouveau dessin.
+    flushRaf(1120);
     expect(ctx2d.arc.mock.calls.length).toBeGreaterThan(draws);
   });
 

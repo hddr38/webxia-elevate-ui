@@ -41,6 +41,7 @@
 | 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a               | `6.4-b V2`  | résolu en production          | 2026-10-15 |
 | 17  | P3       | `use-mobile.tsx` — à investiguer, bloqué sur décision shadcn keep/purge          | `6.4-b V2+` | à investiguer                 | 2026-10-15 |
 | 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`  | corrigé localement            | 2026-10-15 |
+| 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+` | corrigé localement            | 2026-10-15 |
 
 **Barème de priorité utilisé**
 
@@ -887,7 +888,61 @@ Exports vivants **conservés impérativement** (importés via le barrel `../skil
 **Décision shadcn** : toujours en attente — aucun composant shadcn, ni `use-mobile.tsx`,
 ni `sidebar.tsx` supprimés.
 
-**Limite** : non commité, non poussé, non déployé — en attente du GO de commit V3.
+**Limite** : committé en local (`a380786`), non poussé, non déployé — en attente du GO de push V3.
+
+---
+
+## 19 — Hero canvas mobile — réactivation avec params allégés + kill-switch
+
+- **Priorité** : `P2`
+- **Lot cible** : `6.4-b V3+`
+- **Statut** : `corrigé localement, non commité, non déployé` — réactivation appliquée
+  en local dans le cadre du GO LOT 6.4-b V3 + Hero Canvas Mobile. **Non poussé, non déployé.**
+- **Date** : `2026-10-15`
+
+**Contexte**
+
+Les 2 canvas du hero (`MatrixRain` en thème dark, `ParticleField` en thème light) avaient
+été démontés sur mobile (LOT 42 P2) car ils saturaient le main thread iOS (taps + paint
+bloqués). Un fallback CSS animé (`.matrix-css-fallback`, GPU pur) était servi à la place.
+Ce lot réactive les canvas sur mobile avec des params allégés, tout en gardant un
+kill-switch de rollback.
+
+**Changements**
+
+- `hero.tsx` : retrait du gating `!isMobile` + des classes `hidden md:block` sur les
+  wrappers canvas. Canvas affiché sur desktop **et** mobile. Le fallback reste rendu
+  (SSR) mais est masqué (classe `hidden`) quand le canvas est actif ; il n'est
+  réaffiché que si le kill-switch est désactivé sur mobile (repli LOT 42/44).
+- `matrix-code.tsx` : props `frameMs` (défaut 66) + `mobile`. DPR cap 3 paliers.
+- `particle-field.tsx` : props `frameMs` (défaut 66) + `shadowBlur` (défaut 4) + `mobile`.
+  DPR cap 3 paliers. `shadowBlur` forcé à 0 sur mobile (flou d'ombre très coûteux sur iOS).
+
+**DPR cap 3 paliers (Option B — aucun régression desktop)**
+
+`dprCap = mobile ? 1.0 : viewportWidth < 1024 ? 1.5 : 2`
+
+| Palier   | Viewport      | DPR   | Rationale                                  |
+| -------- | ------------- | ----- | ------------------------------------------ |
+| Mobile   | `< 768 px`    | `1.0` | iOS Retina — économie GPU                  |
+| Tablette | `768–1023 px` | `1.5` | inchangé (valeur LOT 41)                   |
+| Desktop  | `≥ 1024 px`   | `2.0` | DPR d'origine préservé (aucune régression) |
+
+**Params mobile allégés** (via `hero.tsx`) : `fontSize` 22→16, `speed` 0.9→0.6 (MatrixRain) ;
+`particleCount` 9→5, `shadowBlur` 4→0, `interactive={false}` (ParticleField) ;
+`frameMs` 66 (mobile et desktop).
+
+**Kill-switch** : `const MOBILE_CANVAS_ENABLED = import.meta.env.VITE_ENABLE_MOBILE_CANVAS !== "false";`
+dans `hero.tsx`, utilisé comme `(!isMobile || MOBILE_CANVAS_ENABLED)`. Rollback possible via
+variable d'environnement Netlify (`VITE_ENABLE_MOBILE_CANVAS=false`) **sans redéploiement de
+code**. Défaut : actif.
+
+**Tests** : `hero.test.tsx` (mobile/desktop → 1 canvas, fallback masqué) ;
+`matrix-code.test.tsx` + `particle-field.test.tsx` (DPR 3 paliers, frameMs, shadowBlur).
+
+**Limite** : **mesure iOS réelle sur iPhone non réalisée dans ce lot** — requise avant
+validation définitive (LOT 42 P2 / LOT 44 P0 partiellement inversés). Non commité, non poussé,
+non déployé.
 
 ---
 
@@ -919,3 +974,5 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-15` — LOT 6.4-b V2 préparé localement (non commité, non déployé) : suppression `floating-cta.tsx` + test, `data/articles.ts`, `data/projects.ts` ; retrait export `ProjectCard` + `import type { Project }` de `project-card.tsx` (`DbRealisationCard`/`CTAStrip` intacts) ; purge i18n `floating.cta` FR/EN. Items **#6**, **#9**, **#16** → `corrigé localement, non commité, non déployé` ; item **#17** (`use-mobile.tsx`) → `à investiguer` (bloqué décision shadcn). Garde-fous greps post-modif : 0 référence résiduelle. Tests/typecheck/build locaux à confirmer avant commit.
 - `2026-10-15` — push `d2418d9` + `a1e5c1d` (LOT 6.4-b V2-a + V2-b), CI/E2E/Integration ✅ (runs 38804280520 / 38804280607 / 38804280967). Vérification production : 3 pages (`/`, `/about`, `/journal`) → HTTP 200, `DbRealisationCard` (liens `/work/`) et `CTAStrip` (`py-24`) présents, filtres journal intacts, 0 clé i18n brute. Déviation CSS attendue : hash modifié (`styles-BaCpWVTQ.css` → `styles-DZvJAZxe.css`) par rescan Tailwind après suppression de `floating-cta.tsx` — classes critiques des composants restants vérifiées présentes (`rounded-card`, `aspect-[4/3]`, `object-cover`, `py-24`, `md:py-32`, `group-hover:rotate-45`, `line-clamp`). Items **#6**, **#9**, **#16** → `résolu en production` ; item **#17** maintenu `à investiguer` (bloqué décision shadcn keep/purge).
 - `2026-10-15` — LOT 6.4-b V3 préparé localement (non commité, non déployé) : suppression de 7 barrels morts (`components/chat`, `lib/ai`, `lib/auth`, `lib/ai/agent`, `lib/ai/conversation`, `lib/ai/memory`, `lib/ai/security`) + purge de 6 exports morts de `ai/skills/index.ts` (`registerSkill`, `unregisterSkill`, `getSkill`, `listSkills`, `hasSkill`, `getSkillsByPermission`); conservés : `initializeSkills`, `skillRegistry`, `getAllToolDefinitions`, `skillExecutor` (vivants via barrel). Barrels conservés : `hooks/index.ts`, `types/index.ts`, `types/admin.ts`, `skills/index.ts` + shadcn. Item **#18** → `corrigé localement, non commité, non déployé`.
+- `2026-10-15` — commit local `a380786` (LOT 6.4-b V3) : 7 barrels supprimés + purge exports `skills/index.ts` + backlog. Non poussé, non déployé.
+- `2026-10-15` — LOT 6.4-b V3+ Hero canvas mobile préparé localement (non commité, non déployé) : réactivation des 2 canvas du hero sur mobile (`MatrixRain` dark + `ParticleField` light) avec params allégés — DPR cap 3 paliers (mobile 1.0 / tablette 1.5 / desktop 2.0, aucun régression desktop), `frameMs` 66, `shadowBlur` 0 mobile, `fontSize` 16 / `particleCount` 5 / `interactive=false` mobile. Kill-switch `VITE_ENABLE_MOBILE_CANVAS` (rollback sans redéploiement). Fallback `.matrix-css-fallback` masqué quand canvas actif. Tests : DPR 3 paliers, frameMs, shadowBlur, 1 canvas + fallback masqué (desktop et mobile). Item **#19** → `corrigé localement, non commité, non déployé`. **Limite : mesure iOS réelle sur iPhone non réalisée dans ce lot — requise avant validation définitive.**

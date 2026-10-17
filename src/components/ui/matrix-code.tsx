@@ -10,6 +10,16 @@ interface MatrixRainProps {
   characters?: string;
   fadeOpacity?: number;
   speed?: number;
+  /**
+   * Délai minimal entre deux frames (ms). Défaut 66 (~15 fps, LOT 41 P1).
+   * LOT 6.4-b V3 — laissé à 66 sur mobile pour rester fluide mais safe.
+   */
+  frameMs?: number;
+  /**
+   * Mode mobile (viewport < 768 px). LOT 6.4-b V3 — force le DPR cap à 1.0
+   * au lieu de 1.5 pour économiser la puissance GPU sur iOS Retina.
+   */
+  mobile?: boolean;
   className?: string;
 }
 
@@ -33,6 +43,8 @@ const MatrixRain: FC<MatrixRainProps> = ({
   characters = "01",
   fadeOpacity = 0.12,
   speed = 0.8,
+  frameMs = 66,
+  mobile = false,
   className,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -58,10 +70,13 @@ const MatrixRain: FC<MatrixRainProps> = ({
       const parent = canvas.parentElement;
       const width = parent?.clientWidth ?? window.innerWidth;
       const height = parent?.clientHeight ?? window.innerHeight;
-      // P1 perf home — DPR cap uniforme a 1.5, mobile comme desktop :
-      // la matrix est un fond decoratif flou (voile + masque par-dessus),
-      // -44 % de pixels/frame vs DPR 2 sur desktop, invisible a l'oeil.
-      const dprCap = 1.5;
+      // P1 perf home — DPR cap 3 paliers (LOT 6.4-b V3, Option B) :
+      // mobile 1.0 (iOS Retina), tablette < 1024px 1.5, desktop 2.0.
+      // Desktop garde son DPR d'origine (aucune régression visuelle).
+      // La matrix est un fond decoratif flou (voile + masque par-dessus),
+      // invisible a l'oeil.
+      const viewportWidth = window.innerWidth || width;
+      const dprCap = mobile ? 1.0 : viewportWidth < 1024 ? 1.5 : 2;
       const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
       // Cap DPR to keep the animation cheap on retina screens.
       const newW = Math.max(1, Math.floor(width * dpr));
@@ -129,10 +144,9 @@ const MatrixRain: FC<MatrixRainProps> = ({
 
     // QW-1 — gated rAF loop with fps clamp, driven by rAF timestamps and
     // paused whenever the hero is offscreen or the tab is hidden (CPU cost
-    // ≈ 0). LOT 41 P1 — cadence reduite a ~15 fps (66 ms) : -45 % de frames
-    // vs ~27 fps avant (33/speed). Chute plus lente/zen, divise le cout
-    // main-thread par ~2.7 cumule au DPR cap + fontSize 22.
-    const frameMs = 66;
+    // ≈ 0). LOT 41 P1 — cadence reduite a ~15 fps (66 ms par defaut). LOT
+    // 6.4-b V3 — frameMs parametrable (mobile/desktop) pour ajuster le cout
+    // main-thread sans toucher au composant.
     let rafId = 0;
     let ticking = false;
     let lastFrame = 0; // rAF timestamp of the last drawn frame
@@ -199,7 +213,7 @@ const MatrixRain: FC<MatrixRainProps> = ({
       if (ticking) cancelAnimationFrame(rafId);
       clearTimeout(inViewTimeout);
     };
-  }, [fontSize, color, characters, fadeOpacity, speed, reduceMotion]);
+  }, [fontSize, color, characters, fadeOpacity, speed, frameMs, mobile, reduceMotion]);
 
   return (
     <canvas

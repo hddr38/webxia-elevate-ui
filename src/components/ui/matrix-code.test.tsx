@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "@testing-library/react";
+import type { ComponentProps } from "react";
 
 import MatrixRain from "./matrix-code";
 
@@ -152,10 +153,10 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-function renderMatrix() {
+function renderMatrix(props: ComponentProps<typeof MatrixRain> = {}) {
   return render(
     <section data-testid="hero">
-      <MatrixRain />
+      <MatrixRain {...props} />
     </section>,
   );
 }
@@ -357,33 +358,48 @@ describe("MatrixRain — gating canvas (LOT 39 P1)", () => {
   });
 });
 
-describe("MatrixRain — allegement LOT 41 (mobile)", () => {
-  it("cap DPR a 1.5 sur mobile comme sur desktop (P1 perf home)", () => {
+describe("MatrixRain — allegement LOT 41 + DPR 3 paliers (LOT 6.4-b V3)", () => {
+  it("DPR 3 paliers : mobile 1.0, tablette 1.5, desktop 2.0", () => {
     const origDPR = window.devicePixelRatio;
     const origIW = window.innerWidth;
     try {
       Object.defineProperty(window, "devicePixelRatio", { configurable: true, value: 3 });
+
+      // (1) Mobile : prop mobile=true → cap 1.0 (iOS Retina).
       Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
-      const { container, unmount } = renderMatrix();
-      const canvas = container.querySelector("canvas") as HTMLCanvasElement;
+      const first = renderMatrix({ mobile: true });
+      const canvas = first.container.querySelector("canvas") as HTMLCanvasElement;
       const parent = canvas.parentElement as HTMLElement;
       Object.defineProperty(parent, "clientWidth", { configurable: true, value: 390 });
       Object.defineProperty(parent, "clientHeight", { configurable: true, value: 700 });
       MockResizeObserver.instances[0].fire();
-      // 390 * 1.5 = 585 (vs 780 avec l'ancien cap 2).
-      expect(canvas.width).toBe(Math.floor(390 * 1.5));
-      unmount();
+      // 390 * 1.0 = 390 (cap mobile).
+      expect(canvas.width).toBe(Math.floor(390 * 1.0));
+      first.unmount();
 
-      Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440 });
-      const second = renderMatrix();
+      // (2) Tablette : mobile=false, innerWidth 900 < 1024 → cap 1.5.
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: 900 });
+      const second = renderMatrix({ mobile: false });
       const canvas2 = second.container.querySelector("canvas") as HTMLCanvasElement;
       const parent2 = canvas2.parentElement as HTMLElement;
-      Object.defineProperty(parent2, "clientWidth", { configurable: true, value: 1440 });
-      Object.defineProperty(parent2, "clientHeight", { configurable: true, value: 900 });
+      Object.defineProperty(parent2, "clientWidth", { configurable: true, value: 900 });
+      Object.defineProperty(parent2, "clientHeight", { configurable: true, value: 700 });
       MockResizeObserver.instances[1].fire();
-      // 1440 * 1.5 = 2160 (cap desktop uniforme P1 perf home).
-      expect(canvas2.width).toBe(Math.floor(1440 * 1.5));
+      // 900 * 1.5 = 1350 (cap tablette).
+      expect(canvas2.width).toBe(Math.floor(900 * 1.5));
       second.unmount();
+
+      // (3) Desktop : mobile=false, innerWidth 1440 >= 1024 → cap 2.0.
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440 });
+      const third = renderMatrix({ mobile: false });
+      const canvas3 = third.container.querySelector("canvas") as HTMLCanvasElement;
+      const parent3 = canvas3.parentElement as HTMLElement;
+      Object.defineProperty(parent3, "clientWidth", { configurable: true, value: 1440 });
+      Object.defineProperty(parent3, "clientHeight", { configurable: true, value: 900 });
+      MockResizeObserver.instances[2].fire();
+      // 1440 * 2.0 = 2880 (cap desktop, aucune regression).
+      expect(canvas3.width).toBe(Math.floor(1440 * 2.0));
+      third.unmount();
     } finally {
       Object.defineProperty(window, "devicePixelRatio", { configurable: true, value: origDPR });
       Object.defineProperty(window, "innerWidth", { configurable: true, value: origIW });

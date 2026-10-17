@@ -10,12 +10,20 @@ import { useTheme } from "@/lib/theme-context";
 import { ExpertiseMarquee } from "@/components/site/expertise-marquee";
 import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
+// LOT 6.4-b V3 (Hero Canvas mobile) — kill-switch de rollback : permet de
+// désactiver les canvas mobiles via une variable d'environnement Netlify
+// (`VITE_ENABLE_MOBILE_CANVAS=false`) sans redéployer de code. Défaut : actif.
+const MOBILE_CANVAS_ENABLED = import.meta.env.VITE_ENABLE_MOBILE_CANVAS !== "false";
+
 export function Hero() {
   const { t } = useLocale();
   const { theme } = useTheme();
-  // LOT 42 P2 — sur mobile le canvas sature le main thread iOS (bloque taps
-  // + paint) : on le retire et on sert un fallback CSS anime (GPU pur).
+  // LOT 6.4-b V3 — les canvas sont réactivés sur mobile avec des params allégés
+  // (DPR 1.0, fontSize/particleCount réduits, shadowBlur 0, non-interactif).
+  // isMobile sert uniquement à sélectionner les params, plus à démonter le canvas.
   const isMobile = useIsMobileViewport();
+  // Canvas affiché : desktop toujours, mobile si le kill-switch est actif.
+  const showCanvas = !isMobile || MOBILE_CANVAS_ENABLED;
 
   return (
     <section
@@ -24,37 +32,41 @@ export function Hero() {
       // le navigateur garde le controle du touch-scroll meme si le canvas rame.
       style={{ touchAction: "pan-y" }}
     >
-      {/* Background — LOT 44 P0 : le fallback est TOUJOURS rendu (SSR inclus)
-          et affiché < 768px via CSS (`md:hidden`, miroir exact du
-          `max-width: 767px` de `useIsMobileViewport`). Le canvas desktop est
-          masqué < 768px via CSS (`hidden md:block`) ET démonté côté client
-          par `isMobile` : sur mobile, zéro paint du canvas dès le 1er paint,
-          zéro swap visible à l'hydratation (le fallback ne bouge pas, seul
-          l'attribut `data-testid` est posé après mount). Mêmes dimensions
-          partout (absolute inset-0 -z-10) : CLS = 0. */}
+      {/* Background — LOT 6.4-b V3 : le canvas est affiché sur desktop ET
+          mobile (kill-switch `MOBILE_CANVAS_ENABLED`). Le fallback
+          `matrix-css-fallback` reste rendu (SSR) mais est masqué (classe
+          `hidden`) quand le canvas est actif ; il n'est réaffiché que si le
+          kill-switch est désactivé sur mobile (repli LOT 42/44). Mêmes
+          dimensions partout (absolute inset-0 -z-10) : CLS = 0. */}
       <div
         data-testid={isMobile ? "hero-fallback" : undefined}
         aria-hidden="true"
-        className="matrix-css-fallback md:hidden"
+        className={showCanvas ? "matrix-css-fallback hidden" : "matrix-css-fallback md:hidden"}
       />
-      {!isMobile && theme === "dark" ? (
+      {showCanvas && theme === "dark" ? (
         <>
           <MatrixRain
-            className="absolute inset-0 -z-10 hidden opacity-60 md:block"
+            className="absolute inset-0 -z-10 opacity-60"
             characters="01"
-            fontSize={22}
+            fontSize={isMobile ? 16 : 22}
             fadeOpacity={0.08}
-            speed={0.9}
+            speed={isMobile ? 0.6 : 0.9}
+            frameMs={66}
+            mobile={isMobile}
           />
           {/* Readability veil: keeps the centered title legible over the rain */}
-          <div className="absolute inset-0 -z-10 hidden bg-background/70 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_45%,black,transparent)] md:block" />
+          <div className="absolute inset-0 -z-10 bg-background/70 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_45%,black,transparent)]" />
         </>
-      ) : !isMobile ? (
-        <div className="absolute inset-0 -z-10 hidden md:block">
+      ) : showCanvas ? (
+        <div className="absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-grid opacity-30 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
           <ParticleField
             className="absolute inset-0 opacity-70 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_35%,black,transparent)]"
-            particleCount={9}
+            particleCount={isMobile ? 5 : 9}
+            interactive={!isMobile}
+            frameMs={66}
+            shadowBlur={isMobile ? 0 : 4}
+            mobile={isMobile}
           />
         </div>
       ) : null}

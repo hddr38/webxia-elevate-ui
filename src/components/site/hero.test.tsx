@@ -58,11 +58,12 @@ describe("Hero SSR (LOT 39 P3 — QW-7)", () => {
 });
 
 /**
- * LOT 42 — retrait du canvas sur mobile (fallback CSS anime).
- * Desktop (>= 768 px) : canvas comme avant. Mobile (< 768 px) : aucun
- * canvas, fallback `.matrix-css-fallback` (memes dimensions, CLS = 0).
+ * LOT 6.4-b V3 — canvas reactif sur mobile avec params allanges (kill-switch
+ * MOBILE_CANVAS_ENABLED actif par defaut). Desktop et mobile servent tous les
+ * deux 1 canvas ; le fallback `.matrix-css-fallback` est rendu mais masque
+ * (classe `hidden`) quand le canvas est actif.
  */
-describe("Hero LOT 42 — canvas desktop, fallback mobile", () => {
+describe("Hero LOT 6.4-b V3 — canvas actif desktop + mobile (kill-switch)", () => {
   const origMatchMedia = window.matchMedia;
 
   function mockMatchMedia(matches: boolean) {
@@ -162,19 +163,25 @@ describe("Hero LOT 42 — canvas desktop, fallback mobile", () => {
     expect(getByTestId("probe").textContent).toBe("desktop");
   });
 
-  it("mobile : AUCUN canvas, fallback present (memes dimensions)", () => {
+  it("mobile : 1 canvas present, fallback masque (params allanges)", () => {
     mockMatchMedia(true);
     const { container } = renderHero();
-    expect(container.querySelectorAll("canvas")).toHaveLength(0);
+    // LOT 6.4-b V3 — le canvas est reactif sur mobile (kill-switch actif par defaut).
+    expect(container.querySelectorAll("canvas")).toHaveLength(1);
     const fallback = container.querySelector('[data-testid="hero-fallback"]');
     expect(fallback).not.toBeNull();
     expect(fallback?.className).toContain("matrix-css-fallback");
+    // Fallback masque quand le canvas est actif (classe hidden).
+    expect(fallback?.className).toContain("hidden");
   });
 
-  it("desktop : canvas present, pas de fallback", () => {
+  it("desktop : canvas present, fallback masque", () => {
     mockMatchMedia(false);
     const { container } = renderHero();
     expect(container.querySelectorAll("canvas")).toHaveLength(1);
-    expect(container.querySelector('[data-testid="hero-fallback"]')).toBeNull();
+    // data-testid n'est pose que sur mobile ; sur desktop on query par classe.
+    const fallback = container.querySelector(".matrix-css-fallback");
+    expect(fallback).not.toBeNull();
+    expect(fallback?.className).toContain("hidden");
   });
 });

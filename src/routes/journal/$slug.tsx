@@ -2,10 +2,10 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { getArticleBySlug } from "@/server/functions/articles";
-import { articleToDisplay, type DisplayArticle } from "@/lib/mappers";
+import { articleToDisplay } from "@/lib/mappers";
 import { CTAStrip } from "@/components/site/project-card";
 import { Container } from "@/components/ui/container";
 

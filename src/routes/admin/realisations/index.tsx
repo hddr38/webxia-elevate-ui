@@ -46,7 +46,6 @@ import {
   FolderKanban,
   Star,
   Loader2,
-  Image,
   Eye,
 } from "lucide-react";
 import { STATUS_LABELS, STATUS_BADGE } from "@/lib/constants";

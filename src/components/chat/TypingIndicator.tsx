@@ -1,10 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MessageCircle, Loader2, Bot } from "lucide-react";
+import { Bot } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
 interface TypingIndicatorProps {
   className?: string;

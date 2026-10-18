@@ -133,7 +133,7 @@ function AdminLogo() {
  * Mémoire IA) et le menu utilisateur.
  */
 export function AdminHeader() {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);

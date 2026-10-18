@@ -1,18 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
-import {
-  useDeleteLeadMutation,
-  useLeadsQuery,
-  useLeadsCount,
-} from "@/features/admin/leads-queries";
+import { useDeleteLeadMutation, useLeadsQuery } from "@/features/admin/leads-queries";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { ListErrorBanner } from "@/components/admin/list-error-banner";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -28,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,7 +42,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, SearchX, Trash2, Eye, Loader2, Mail, Phone, Calendar } from "lucide-react";
+import { Search, SearchX, Trash2, Loader2, Mail, Phone } from "lucide-react";
 import type { LeadRow } from "@/server/functions/leads";
 import { useLocale } from "@/lib/locale-context";
 
@@ -70,13 +65,6 @@ export const Route = createFileRoute("/admin/leads")({
   }),
   component: LeadsPage,
 });
-
-const dateRangeLabels: Record<string, string> = {
-  last7: "last7",
-  last30: "last30",
-  last90: "last90",
-  all: "all",
-};
 
 function formatAdminDate(value: string, locale: string): string {
   const date = new Date(value);
@@ -130,7 +118,6 @@ function LeadsPage() {
     hasEmail: search.hasEmail,
     hasPhone: search.hasPhone,
   });
-  const countQuery = useLeadsCount();
   const deleteMutation = useDeleteLeadMutation();
 
   const allLeads = listQuery.data?.data ?? [];
@@ -140,8 +127,6 @@ function LeadsPage() {
   const isLoading = listQuery.isLoading;
   const isFetching = listQuery.isFetching && !listQuery.isLoading;
   const showSkeleton = isLoading && allLeads.length === 0;
-
-  const totalCount = countQuery.data ?? 0;
 
   const hasFilters = search.dateRange !== "all" || search.hasEmail || search.hasPhone;
   const clearFilters = () => {
@@ -319,7 +304,7 @@ function LeadsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredLeads.map((lead, index) => {
+                    filteredLeads.map((lead) => {
                       const isDeleting = deletingId === lead.id;
                       return (
                         <TableRow

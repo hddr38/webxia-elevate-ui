@@ -31,7 +31,7 @@ export const Route = createFileRoute("/")({
       return { work: [] };
     }
   },
-  head: (ctx) => {
+  head: () => {
     const locale = (typeof window !== "undefined" && localStorage.getItem("webxia-locale")) || "fr";
     const s = locale === "en" ? seo.en.home : seo.fr.home;
     return {

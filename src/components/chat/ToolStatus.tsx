@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Bot, Search, Loader2, Database, Globe, FileText, Sparkles } from "lucide-react";
+import { Bot, Search, FileText } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { cn } from "@/lib/utils";
 

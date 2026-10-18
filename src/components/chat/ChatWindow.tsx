@@ -39,7 +39,6 @@ export function ChatWindow() {
     errorCode,
     canRetry,
     messages,
-    conversationId,
     messageCount,
     maxMessages,
     isNearLimit,

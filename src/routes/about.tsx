@@ -64,18 +64,6 @@ const process = [
   { titleKey: "about.process.4.title", descKey: "about.process.4.desc" },
 ] as const;
 
-const stack = [
-  "React 19",
-  "TanStack Start",
-  "TypeScript",
-  "Tailwind v4",
-  "Edge runtimes",
-  "Supabase",
-  "OpenAI / Anthropic",
-  "Figma",
-  "Framer Motion",
-];
-
 const KNOWN_FILTERS = ["web", "app", "ai", "brand"] as const;
 
 function AboutPage() {

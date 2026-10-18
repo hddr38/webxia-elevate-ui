@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/admin/empty-state";
 import { RecentItem } from "@/components/admin/recent-item";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, FolderKanban, Brain, Plus, Users } from "lucide-react";
+import { FileText, FolderKanban, Plus, Users } from "lucide-react";
 import { STATUS_LABELS } from "@/lib/constants";
 import { useLocale, type Locale } from "@/lib/locale-context";
 

@@ -177,9 +177,9 @@ aucun `npm prune/dedupe`, aucune réécriture de migrations ou d'historique
 uniques). État actuel (post LOT 6.4-b, 2026-10-18) : la classe A a été en
 grande partie consommée (V1–V5 : 19 symboles AI morts, fichiers/data V2,
 7 barrels V3, imports morts orchestrateur/RAG V4-b2a, 72 privatisations,
-5 symboles test-only V4-c, `bun.lock` V5) ; restent 45 warnings ESLint et
-43 signaux tsc à classer (dont 25 warnings hors tests en src — voir T4) ;
-G=0 maintenu.
+5 symboles test-only V4-c, `bun.lock` V5) ; lint 45 → 22 après T4 (18
+tests + 2 e2e + 2 exhaustive-deps intentionnels, 0 warning prod) et 43
+signaux tsc à classer ; G=0 maintenu.
 **B, C et E se conservent et se documentent** : ils ne sont jamais une
 preuve de suppression.
 
@@ -228,10 +228,12 @@ preuve de suppression.
 - Objectif : réduire les warnings sans toucher au design system.
 - Condition : micro-vagues par fichier, build obligatoire.
 - Risque : imports dynamiques, routes TanStack, composants shadcn.
-- **Statut : à traiter** (réévalué 2026-10-18) — V4-b2a n'a pas touché
-  routes/UI ; `leads.tsx` (10), `ToolStatus.tsx` (4), `TypingIndicator.tsx`
-  (3) et imports d'icônes portent encore les 25 warnings hors tests en
-  src (27 hors `*.test.*` avec `e2e/`) → micro-vague dédiée à ouvrir.
+- **Statut : RÉSOLU** (2026-10-18, `bcda75e`) — nettoyage des 23 warnings
+  `no-unused-vars` UI sur 10 fichiers, 0 warning restant en prod (hors les
+  2 `exhaustive-deps` intentionnels de `leads.tsx`) ; lint global 45 → 22
+  (18 tests + 2 e2e + 2 intentionnels). Contexte : `leads.tsx` (10),
+  `ToolStatus.tsx` (4), `TypingIndicator.tsx` (3), imports d'icônes et
+  variables mortes diverses ; cascade `countQuery`/`useLeadsCount` purgée.
 
 ### T5 — Décider du double lockfile npm/Bun
 

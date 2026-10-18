@@ -42,6 +42,7 @@
 | 17  | P3       | `use-mobile.tsx` — à investiguer, bloqué sur décision shadcn keep/purge          | `6.4-b V2+` | à investiguer                 | 2026-10-15 |
 | 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`  | corrigé localement            | 2026-10-15 |
 | 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+` | résolu en production          | 2026-10-18 |
+| 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)              | `6.4-b`     | en cours                      | 2026-10-18 |
 
 **Barème de priorité utilisé**
 
@@ -785,6 +786,8 @@ pas de session réelle disponible. Conforme à la pratique des lots précédents
 **Non réalisé (hors périmètre V1)** : vagues V2–V6 (fichiers morts, barrels, exports
 AI/observability, CSS `canvas-gpu`, dépendances) ; 8 décisions produit en attente.
 
+- **Suite** : Vague IA/observabilité migrée dans l'item #20 (V4-a, V4-b1, V4-b2, V4-c).
+
 ---
 
 ## 16 — Purge clé i18n `floating.cta` (FR + EN)
@@ -966,6 +969,62 @@ Limites documentées :
 - Le **kill-switch `VITE_ENABLE_MOBILE_CANVAS`** reste disponible en cas de régression future
   (ex. nouvelle version d'iOS) : `false` dans Netlify UI + redeploy (~2 min). Compilé à la
   build, donc **non simulable en E2E** — aucune couverture de test automatisé pour ce chemin.
+
+---
+
+## 20 — LOT 6.4-b V4 — IA + observabilité (exports morts AI)
+
+- **Priorité** : `P2`
+- **Lot cible** : `6.4-b` (V4 — exports morts IA / observability)
+- **Statut** : `en cours` — V4-a corrigé et poussé (`3f38d75`), V4-b1 corrigé localement
+  (`3218958`), non poussé.
+- **Date** : `2026-10-18`
+
+**Contexte**
+
+La vague « exports AI/observability » différée par l'item #15 (l.745, l.786) est traitée ici,
+via deux sous-ensembles : V4-a (module `observability`) et V4-b1 (19 symboles morts totaux de
+la couche IA + purge du star-export `skills/index.ts`). Cet item sert d'ombrelle pour les
+vagues V4 restantes (V4-b2, V4-c).
+
+**V4-a — réduction `observability.ts` — corrigé, poussé (`3f38d75`)**
+
+- `src/lib/observability.ts` réduit 319 → 152 lignes (−167, −52 %).
+- Supprimés : `StructuredLogger`, `logger`, `MetricData`, `LogEntry`, 10 `record*`.
+- Privatisés : `HealthChecker` (classe), `HealthCheckResult` (type), `healthChecker` (instance).
+- Conservé : `EventEmitter`, `MetricsCollector`, `metrics` (seul export restant).
+- Retiré : import `healthChecker` mort dans `src/server/functions/health.ts:4`
+  (`import { metrics } from "@/lib/observability"` conservé).
+- Note : vérif FR seulement justifiée (fichiers server-only, aucun impact bundle client —
+  hash JS client inchangé après push).
+
+**V4-b1 — 19 symboles morts + purge star-export — corrigé localement (`3218958`), non poussé**
+
+- 19 symboles morts totaux supprimés (7 fonctions/constantes + 11 schemas/constantes + 1 type).
+- `checkContextSize` supprimé entièrement (branche `entire` : 0 appel interne, 0 importeur —
+  copie privée distincte dans `orchestrator.ts`, hors périmètre V4-b1).
+- Purge du star-export `export * from "./registry"` dans `src/lib/ai/skills/index.ts`.
+- Conserve (exports nommés) : `initializeSkills`, `skillRegistry`, `getAllToolDefinitions`.
+- Conserve (vivants/garde-fous) : `ChatMessageSchema`, `ChatHistorySchema`,
+  `MAX_CONVERSATION_HISTORY`, `sanitizeInput`, `validateAndSanitize`, `isValidationError`,
+  `ValidationError`.
+- Gates locaux : prettier OK, lint 0 err / 76 warn, typecheck OK, 692 tests + 1 todo,
+  build OK, `git diff --check` OK. Diff : 11 fichiers, +2 / −163.
+
+**Reste à faire**
+
+- V4-b2 : privatisations des ~62 exports à usage interne (dont imports morts consommateurs
+  signalés par ESLint, ex. `chat.ts`).
+- V4-c : décision sur les 42 symboles test-only (ex. `SearchKnowledgeInputSchema`,
+  `SummarizeInputSchema`).
+
+**Notes transversales**
+
+- Décision shadcn toujours en attente (`hooks/index.ts`, `types/index.ts`, `types/admin.ts`
+  conservés).
+- `skills/index.ts` conservé (`initializeSkills` + `skillRegistry` vivants).
+- Vérif Playwright FR+EN obligatoire avant push V4-b1 (code client potentiellement impacté
+  via `chat.ts`).
 
 ---
 

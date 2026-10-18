@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requestMiddleware } from "./conversations";
-import { healthChecker, metrics } from "@/lib/observability";
+import { metrics } from "@/lib/observability";
 import { NvidiaProvider } from "@/lib/ai/providers/nvidia";
 
 type HealthCheck = { status: "pass" | "warn" | "fail"; message: string };

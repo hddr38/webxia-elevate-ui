@@ -41,7 +41,7 @@
 | 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a               | `6.4-b V2`  | résolu en production          | 2026-10-15 |
 | 17  | P3       | `use-mobile.tsx` — à investiguer, bloqué sur décision shadcn keep/purge          | `6.4-b V2+` | à investiguer                 | 2026-10-15 |
 | 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`  | corrigé localement            | 2026-10-15 |
-| 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+` | corrigé localement            | 2026-10-15 |
+| 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+` | résolu en production          | 2026-10-18 |
 
 **Barème de priorité utilisé**
 
@@ -896,9 +896,10 @@ ni `sidebar.tsx` supprimés.
 
 - **Priorité** : `P2`
 - **Lot cible** : `6.4-b V3+`
-- **Statut** : `corrigé localement, non commité, non déployé` — réactivation appliquée
-  en local dans le cadre du GO LOT 6.4-b V3 + Hero Canvas Mobile. **Non poussé, non déployé.**
-- **Date** : `2026-10-15`
+- **Statut** : `résolu en production` (validation complète) — réactivation poussée avec le
+  commit Hero `908b99c`, assertion E2E alignée avec le commit `e836983`, **validée sur iPhone
+  réel par l'utilisateur le `2026-10-18`**.
+- **Date** : `2026-10-15` (ouverture) → `2026-10-18` (résolution)
 
 **Contexte**
 
@@ -940,9 +941,31 @@ code**. Défaut : actif.
 **Tests** : `hero.test.tsx` (mobile/desktop → 1 canvas, fallback masqué) ;
 `matrix-code.test.tsx` + `particle-field.test.tsx` (DPR 3 paliers, frameMs, shadowBlur).
 
-**Limite** : **mesure iOS réelle sur iPhone non réalisée dans ce lot** — requise avant
-validation définitive (LOT 42 P2 / LOT 44 P0 partiellement inversés). Non commité, non poussé,
-non déployé.
+**Résolution en production (GO #2 + clôture documentaire, 2026-10-18)**
+
+Commits : `908b99c` (Hero — réactivation) + `e836983` (E2E — assertion alignée).
+
+Preuves :
+
+- CI / E2E / Integration **success** sur `e836983` (runs 39076465367 / 39076465376 /
+  39076465378 ; E2E 231 s).
+- **40 tests E2E verts** (4 skippés), dont le test mobile `LOT 6.4-b` mis à jour
+  (1 canvas visible, fallback masqué, contenu < 3 s, CTA < 300 ms) et le test desktop
+  `LOT 42` inchangé.
+- Vérification prod Playwright : canvas présent (`count 1`, visible, non `hidden`),
+  **DPR 1.0 mobile** (390/390), **DPR 2.0 desktop** (2880/1440 sous `deviceScaleFactor` 3),
+  fallback `.matrix-css-fallback` en `hidden` + `display: none`, 0 clé i18n brute sur
+  5 pages, hash CSS inchangé / hash JS changé.
+- **Validation iOS réelle par l'utilisateur le `2026-10-18`** : fluide, **pas de saturation**
+  du main thread.
+
+Limites documentées :
+
+- LOT 42 P2 / LOT 44 P0 (désactivation du canvas mobile) sont **officiellement inversés** et
+  remplacés par l'approche « params allégés » (DPR 1.0, `frameMs` 66, `shadowBlur` 0).
+- Le **kill-switch `VITE_ENABLE_MOBILE_CANVAS`** reste disponible en cas de régression future
+  (ex. nouvelle version d'iOS) : `false` dans Netlify UI + redeploy (~2 min). Compilé à la
+  build, donc **non simulable en E2E** — aucune couverture de test automatisé pour ce chemin.
 
 ---
 
@@ -976,3 +999,5 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-15` — LOT 6.4-b V3 préparé localement (non commité, non déployé) : suppression de 7 barrels morts (`components/chat`, `lib/ai`, `lib/auth`, `lib/ai/agent`, `lib/ai/conversation`, `lib/ai/memory`, `lib/ai/security`) + purge de 6 exports morts de `ai/skills/index.ts` (`registerSkill`, `unregisterSkill`, `getSkill`, `listSkills`, `hasSkill`, `getSkillsByPermission`); conservés : `initializeSkills`, `skillRegistry`, `getAllToolDefinitions`, `skillExecutor` (vivants via barrel). Barrels conservés : `hooks/index.ts`, `types/index.ts`, `types/admin.ts`, `skills/index.ts` + shadcn. Item **#18** → `corrigé localement, non commité, non déployé`.
 - `2026-10-15` — commit local `a380786` (LOT 6.4-b V3) : 7 barrels supprimés + purge exports `skills/index.ts` + backlog. Non poussé, non déployé.
 - `2026-10-15` — LOT 6.4-b V3+ Hero canvas mobile préparé localement (non commité, non déployé) : réactivation des 2 canvas du hero sur mobile (`MatrixRain` dark + `ParticleField` light) avec params allégés — DPR cap 3 paliers (mobile 1.0 / tablette 1.5 / desktop 2.0, aucun régression desktop), `frameMs` 66, `shadowBlur` 0 mobile, `fontSize` 16 / `particleCount` 5 / `interactive=false` mobile. Kill-switch `VITE_ENABLE_MOBILE_CANVAS` (rollback sans redéploiement). Fallback `.matrix-css-fallback` masqué quand canvas actif. Tests : DPR 3 paliers, frameMs, shadowBlur, 1 canvas + fallback masqué (desktop et mobile). Item **#19** → `corrigé localement, non commité, non déployé`. **Limite : mesure iOS réelle sur iPhone non réalisée dans ce lot — requise avant validation définitive.**
+- `2026-10-15` — push `a380786` (LOT 6.4-b V3), CI/E2E/Integration ✅. Item **#18** → `résolu en production`.
+- `2026-10-18` — push `908b99c` (Hero canvas mobile) + `e836983` (E2E assertion alignée), CI/E2E/Integration ✅ (runs 39076465367 / 39076465376 / 39076465378). Vérification production : canvas mobile actif (1 canvas visible, fallback masqué), DPR 1.0 mobile / 2.0 desktop, 0 clé i18n brute sur 5 pages, hash CSS inchangé / hash JS changé. E2E 40 tests verts dont le test mobile `LOT 6.4-b` mis à jour. **Validation iOS réelle par l'utilisateur le 2026-10-18 : fluide, pas de saturation.** Item **#19** → `résolu en production`. LOT 42 P2 / LOT 44 P0 officiellement inversés (remplacés par les params allégés) ; kill-switch `VITE_ENABLE_MOBILE_CANVAS` maintenu pour régression future.

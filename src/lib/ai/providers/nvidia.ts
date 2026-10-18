@@ -10,7 +10,6 @@ import {
   FinishReason,
   ToolCall,
   ToolDefinition,
-  ProviderCapabilities,
   ToolChoice,
 } from "./types";
 import { ProviderError, ProviderErrorCode, mapHttpErrorToProviderError } from "./errors";

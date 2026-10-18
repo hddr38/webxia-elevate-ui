@@ -79,4 +79,5 @@ export function isValidationError(error: unknown): error is ValidationError {
   return error instanceof ValidationError;
 }
 
-export const MAX_CONVERSATION_HISTORY = 50;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- internal guardrail (chat transcript budget), kept for reference in chat-history.ts / use-chat.ts docs
+const MAX_CONVERSATION_HISTORY = 50;

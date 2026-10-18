@@ -28,8 +28,6 @@ export function createSecureToolExecutor<TInput extends SkillInput, TOutput exte
   const finalConfig = { ...DEFAULT_TOOL_CONFIG, ...config };
 
   return async (context: SkillContext, input: TInput): Promise<SkillResult<TOutput>> => {
-    const startTime = Date.now();
-
     if (finalConfig.requireAuth && !context.userId) {
       await auditLogger.logSecurityEvent("unauthorized_tool_access", {
         severity: "high",

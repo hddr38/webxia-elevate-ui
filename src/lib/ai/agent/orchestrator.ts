@@ -1,7 +1,6 @@
 import { AgentConfig, createAgentConfig, validateLimits } from "./agent-limits";
 import { buildAgentContext, truncateContext } from "./context-builder";
 import { skillExecutor, SkillExecutor } from "../skills";
-import { skillRegistry, getAllToolDefinitions } from "../skills";
 import { eventBus } from "../events";
 import { auditLogger } from "../security/audit-log";
 import { hasContactInfo } from "./contact-detector";
@@ -15,16 +14,11 @@ import {
   AgentErrorCode,
   ToolCall,
   ToolResult,
-  ToolDefinition,
-  ToolMessage,
-  StreamEvent,
   TypedStreamEvent,
   ToolStartEvent,
   ToolResultEvent,
   CitationEvent,
-  StreamChunk,
   Message,
-  MessageRole,
   LLMProvider,
   ProviderRequest,
   ProviderResponse,
@@ -899,8 +893,6 @@ export class AgentOrchestrator {
             }
           }
         }
-
-        const llmDuration = Date.now() - llmStartTime;
 
         let agentError: AgentError;
 

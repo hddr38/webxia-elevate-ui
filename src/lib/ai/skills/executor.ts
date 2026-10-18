@@ -5,9 +5,7 @@ import {
   SkillError,
   SkillErrorCode,
   SkillExecutionResult,
-  ToolCall,
   ToolResult,
-  ToolPermission,
 } from "./types";
 import { skillRegistry } from "./registry";
 import { SkillValidator, SkillValidationError } from "./validator";

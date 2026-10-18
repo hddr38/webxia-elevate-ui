@@ -7,7 +7,6 @@ import { ContextBuilder } from "./context-builder";
 import { NoOpReranker, type Reranker } from "./reranker";
 import { eventBus } from "../events";
 import type { RAGContext, RetrievalStrategy, ScoredDocument } from "../contracts";
-import { ProviderError, ProviderErrorCode } from "../providers/errors";
 
 export interface RAGEngineConfig {
   topK?: number;

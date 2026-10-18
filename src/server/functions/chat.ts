@@ -6,11 +6,8 @@ import {
   getConversationHistory,
   getOrCreateConversation,
 } from "@/lib/ai/conversation/conversation-service";
-import { AgentOrchestrator, AgentRunResult } from "@/lib/ai/agent/orchestrator";
+import { AgentRunResult } from "@/lib/ai/agent/orchestrator";
 import { stripInlineToolCalls } from "@/lib/ai/agent/strip-inline-tool-calls";
-import { ModelRouter } from "@/lib/ai/providers/model-router";
-import { NvidiaProvider } from "@/lib/ai/providers/nvidia";
-import { RAGEngine } from "@/lib/ai/rag/rag-engine";
 import { initializeSkills } from "@/lib/ai/skills";
 import type { SessionUser } from "@/lib/auth/session";
 import { ChatMessageSchema } from "@/lib/ai/security/validation";

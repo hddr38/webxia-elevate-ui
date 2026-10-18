@@ -1,9 +1,4 @@
-import type {
-  ScoredDocument,
-  DocumentSource,
-  DocumentMetadata,
-  RetrievalStrategy,
-} from "../contracts";
+import type { DocumentSource, DocumentMetadata, RetrievalStrategy } from "../contracts";
 import type { KnowledgeDocType } from "./repository";
 
 export type { KnowledgeDocType };

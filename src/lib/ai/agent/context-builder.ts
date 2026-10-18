@@ -1,13 +1,4 @@
-import {
-  AgentContext,
-  Message,
-  MemoryContext,
-  RAGContext,
-  ToolDefinition,
-  ScoredDocument,
-  ConversationSummary,
-  SessionInfo,
-} from "../contracts";
+import { AgentContext, Message, MemoryContext, RAGContext, ToolDefinition } from "../contracts";
 import { RAGEngine } from "../rag";
 import type { BuiltKnowledgeContext } from "../rag";
 import { createMemoryService } from "../memory/memory-service";
@@ -58,27 +49,6 @@ function buildRagQuery(userMessage: string, conversationHistory: Message[]): str
   const lastPrior = prior[prior.length - 1];
   if (!lastPrior || lastPrior.content.trim().length === 0) return userMessage;
   return `${lastPrior.content}\n${userMessage}`;
-}
-
-function formatMessageForContext(msg: Message): string {
-  let roleLabel: string;
-  if (msg.role === "user") {
-    roleLabel = "User";
-  } else if (msg.role === "assistant") {
-    roleLabel = "Assistant";
-  } else if (msg.role === "system") {
-    roleLabel = "System";
-  } else if (msg.role === "tool") {
-    roleLabel = `Tool (${msg.toolName})`;
-  } else {
-    roleLabel = "Unknown";
-  }
-  return `[${roleLabel}] ${msg.content}`;
-}
-
-function formatRAGDocument(doc: ScoredDocument): string {
-  const source = doc.source.url ? ` (${doc.source.url})` : "";
-  return `[Doc: ${doc.title}${source}] Score: ${doc.score.toFixed(2)}\n${doc.content}`;
 }
 
 /**

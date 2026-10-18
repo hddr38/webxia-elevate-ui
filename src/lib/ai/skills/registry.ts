@@ -1,5 +1,4 @@
 import { Skill, SkillRegistry, ToolDefinition, ToolPermission } from "./types";
-import { SkillErrorCode } from "./types";
 
 export class InMemorySkillRegistry implements SkillRegistry {
   private skills = new Map<string, Skill>();
@@ -54,22 +53,10 @@ export function unregisterSkill(name: string): void {
   skillRegistry.unregister(name);
 }
 
-export function getSkill(name: string): Skill | undefined {
-  return skillRegistry.get(name);
-}
-
-export function listSkills(): Skill[] {
-  return skillRegistry.getAll();
-}
-
 export function hasSkill(name: string): boolean {
   return skillRegistry.has(name);
 }
 
 export function getAllToolDefinitions(): ToolDefinition[] {
   return skillRegistry.getToolDefinitions();
-}
-
-export function getSkillsByPermission(permission: ToolPermission): Skill[] {
-  return skillRegistry.getByPermission(permission);
 }

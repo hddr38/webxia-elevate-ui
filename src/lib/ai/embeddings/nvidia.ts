@@ -3,7 +3,6 @@ import {
   EmbeddingProvider,
   ProviderConfig,
   ProviderError,
-  ProviderErrorCode,
   mapHttpErrorToProviderError,
 } from "../providers";
 import { EMBEDDING_CONFIG, assertEmbeddingDimensions, resolveEmbeddingModel } from "./config";

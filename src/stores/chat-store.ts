@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { ChatMessage, Citation, ToolResult } from "@/components/chat/types";
+import type { ChatMessage } from "@/components/chat/types";
 
 interface ChatState {
   // UI State

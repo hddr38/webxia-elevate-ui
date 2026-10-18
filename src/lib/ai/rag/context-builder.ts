@@ -1,4 +1,4 @@
-import type { ScoredDocument, DocumentSource, RAGContext, RetrievalStrategy } from "../contracts";
+import type { DocumentSource, RAGContext } from "../contracts";
 import type { RetrieveResult } from "./retriever";
 
 export interface ContextBuilderOptions {
@@ -29,33 +29,6 @@ export class ContextBuilder {
     const { documents, strategy } = retrieveResult;
 
     const limitedDocs = documents.slice(0, this.options.maxDocuments);
-
-    const formattedDocs = limitedDocs.map((doc, index) => {
-      let formatted = this.options.template
-        .replace("{index}", String(index + 1))
-        .replace("{title}", doc.title)
-        .replace("{source}", this.formatSource(doc.source))
-        .replace("{score}", this.options.includeScore ? doc.score.toFixed(3) : "")
-        .replace("{content}", doc.content);
-
-      if (!this.options.includeSource) {
-        formatted = formatted.replace(`Source: ${this.formatSource(doc.source)}\n`, "");
-      }
-      if (!this.options.includeScore) {
-        formatted = formatted.replace(`Score: ${doc.score.toFixed(3)}\n`, "");
-      }
-
-      return formatted.trim();
-    });
-
-    const fullContext = formattedDocs.join("\n---\n");
-
-    const estimatedTokens = this.estimateTokens(fullContext);
-    let finalContext = fullContext;
-
-    if (estimatedTokens > this.options.maxContextTokens) {
-      finalContext = this.truncateToTokenLimit(fullContext, this.options.maxContextTokens);
-    }
 
     return {
       documents: limitedDocs,

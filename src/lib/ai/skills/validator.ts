@@ -1,5 +1,5 @@
 import { ZodSchema, ZodError } from "zod";
-import { Skill, SkillInput, SkillError, SkillErrorCode } from "./types";
+import { Skill, SkillInput, SkillErrorCode } from "./types";
 
 export class SkillValidator {
   static validate<T extends SkillInput>(skill: Skill, input: unknown): T {

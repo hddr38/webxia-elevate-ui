@@ -14,7 +14,7 @@
 | Redirects              | `/api/*` → `/.netlify/functions/server` (fonction server unique)           |
 | Config                 | `netlify.toml` (racine) + plugin Netlify dans `vite.config.ts`             |
 | Node                   | 22 (`.nvmrc`)                                                              |
-| Alternative documentée | Vercel ou Cloudflare Pages (`ARCHITECTURE.md`) — non configurées           |
+| Alternative documentée | Vercel ou Cloudflare Pages (`docs/WEBI_ARCHITECTURE.md`) — non configurées |
 
 La fonction Netlify générée (`@netlify/vite-plugin server handler`, `path: /*`,
 `preferStatic: true`) délégué à `dist/server/server.js` (export `fetch`).
@@ -109,7 +109,7 @@ curl -fsS -o /dev/null -w "%{http_code}\n" https://<domaine>/admin   # 200 ou 30
 
 | Commande           | Rôle                                                                   |
 | ------------------ | ---------------------------------------------------------------------- |
-| `npm test`         | Vitest unitaire/intégration (438 tests) — requis par CI                |
+| `npm test`         | Vitest unitaire/intégration (692 tests + 1 todo) — requis par CI       |
 | `npm run test:e2e` | Playwright (accueil, chat mocké, admin, health) — requis par `e2e.yml` |
 | `npm run build`    | Build de production (détecte les régressions TS/bundle)                |
 
@@ -125,7 +125,8 @@ aucun appel LLM réel).
   exposé depuis le **LOT 29** par la route `GET /api/health` — voir « Health
   check » ci-dessous (la route appelle l'export plat `collectHealthSnapshot`,
   même corps que `healthDetailed`).
-- **Métriques** : `src/lib/observability.ts` (TTFT émis par l'event bus).
+- **Métriques** : `src/lib/observability.ts` (réduit de 52 % en V4-a —
+  n'expose plus que `metrics`, TTFT émis par l'event bus).
 - **Erreurs runtime** : pas de Sentry/équivalent branché (Option C du LOT 26).
 
 ### Health check (LOT 29)

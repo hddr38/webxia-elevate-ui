@@ -63,5 +63,5 @@ Règles : Server Functions seules pour le RPC, RLS obligatoire, Zod sur toutes l
 ## Docs
 
 - `AGENTS.md` — règles d’ingénierie + statuts Webi
-- `ARCHITECTURE.md`, `docs/WEBI_ARCHITECTURE.md`, `docs/RAG.md`, `docs/DATABASE_SCHEMA.md`
+- `docs/WEBI_ARCHITECTURE.md`, `docs/RAG.md`, `docs/DATABASE_SCHEMA.md`
 - `CONTRIBUTING.md` — workflow Git pro (branches, PR, reviews)

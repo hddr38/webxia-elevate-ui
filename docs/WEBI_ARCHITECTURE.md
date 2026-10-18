@@ -454,8 +454,6 @@ FINAL    TOOL CALL
 
 ---
 
-## 10. Current Repository State (Post-Prompt 0)
-
 ## 10. Current Repository State (Post-Prompt 9)
 
 ### 10.1 Created Files
@@ -477,8 +475,7 @@ src/lib/ai/agent/
 ├── orchestrator.ts       # Agent orchestrator with loop
 ├── context-builder.ts    # Context builder for agent
 ├── agent-limits.ts       # Agent limits configuration
-├── system-prompt.ts      # System prompt builder
-├── index.ts              # Barrel export
+└── system-prompt.ts      # System prompt builder
 
 src/lib/ai/skills/
 ├── types.ts              # Skill types & contracts
@@ -487,7 +484,8 @@ src/lib/ai/skills/
 ├── validator.ts          # Skill validation (Zod)
 ├── search-knowledge.ts   # RAG search skill
 ├── summarize.ts          # Summarization skill
-├── index.ts              # Barrel export
+├── save-lead.ts          # Lead capture skill
+└── index.ts              # Barrel export
 
 src/lib/ai/rag/
 ├── rag-engine.ts        # RAG engine
@@ -499,14 +497,7 @@ src/lib/ai/rag/
 
 src/lib/ai/embeddings/
 ├── nvidia.ts            # NVIDIA embedding provider
-├── index.ts             # Barrel export
-
-src/lib/ai/providers/
-├── nvidia.ts            # NVIDIA provider
-├── model-router.ts      # Provider registry
-├── types.ts             # Provider types
-├── errors.ts            # Provider errors
-├── index.ts             # Barrel export
+└── index.ts             # Barrel export
 
 src/lib/ai/security/
 ├── rate-limiter.ts      # Rate limiting (token bucket + sliding window)
@@ -515,12 +506,10 @@ src/lib/ai/security/
 ├── audit-log.ts         # Audit logging
 ├── middleware.ts        # Security middleware
 ├── tool-security.ts     # Tool authorization
-├── headers.ts           # Security headers
-├── index.ts             # Barrel export
+└── headers.ts           # Security headers
 
 src/lib/ai/memory/
-├── memory-service.ts    # Memory service
-├── index.ts             # Barrel export
+└── memory-service.ts    # Memory service
 
 src/lib/ai/events/
 ├── event-bus.ts         # Event bus
@@ -537,7 +526,7 @@ src/lib/ai/__tests__/
 ├── memory-event-bus.test.ts # Memory/Event bus tests
 ├── test-utils.ts            # Test utilities
 
-src/lib/observability.ts       # Observability (metrics, logging, health)
+src/lib/observability.ts       # Observability (metrics — seul export, V4-a)
 src/lib/auth/session.ts        # Session management
 src/lib/auth/middleware.ts     # Auth middleware
 
@@ -558,19 +547,17 @@ src/components/chat/
 ├── TypingIndicator.tsx  # Typing indicator
 ├── ToolStatus.tsx       # Tool status display
 ├── Citation.tsx         # Citation display
-├── types.ts             # Chat types
-├── index.ts             # Barrel export
+└── types.ts             # Chat types
 
 src/hooks/
 ├── use-chat.ts          # Chat hook with SSE
-├── use-mobile.ts        # Mobile detection
+├── use-mobile.tsx       # Mobile detection
 
 src/lib/locale-context.tsx   # Locale context
 src/lib/theme-context.tsx    # Theme context
 src/lib/supabase/client.ts   # Browser Supabase client
 src/lib/supabase/server.ts   # Server Supabase client
 src/lib/supabase/admin.ts    # Admin Supabase client
-src/lib/supabase/index.ts    # Barrel export
 
 src/lib/ai/contracts/index.ts  # Barrel export
 src/lib/ai/contracts/domain.ts # Domain types

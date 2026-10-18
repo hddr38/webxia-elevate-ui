@@ -59,7 +59,7 @@ validation manuelle + `build` vert.
 `src/start.ts`, `src/router.tsx`, `src/lib/supabase/admin.ts`,
 `supabase/migrations/**`, `supabase/schema.sql`, `scripts/ingest-knowledge.ts`,
 `.env*`, `netlify.toml`, `vite.config.ts`, `vitest.config.ts`,
-`package-lock.json`, `bun.lock`, `public/**`, `e2e/**`, `.github/**`,
+`package-lock.json`, `public/**`, `e2e/**`, `.github/**`,
 `knowledge/**`.
 
 ## 6. Faux positifs connus (croiser avec Knip avant toute conclusion)
@@ -107,9 +107,8 @@ Vague 2), `@lovable.dev/vite-tanstack-config`.
 - **Vague 0** (ici) : baseline + rapports d'audit classés, zéro suppression.
 - **Vague 1** : imports, variables, paramètres, logs `console.log("[Webi]…")`
   manifestement inutiles — preuves `certain` uniquement.
-- **Vague 2** : dépendances (`dotenv`, `date-fns`, double lockfile
-  `package-lock.json` / `bun.lock` à trancher en équipe) + vérification
-  lockfile et build.
+- **Vague 2** : dépendances (`dotenv`, `date-fns`) + vérification lockfile
+  et build.
 - **Vague 3** : exports non référencés, fichiers orphelins (ex. `mappers.ts`
   à vérifier, doublon PNG) — revalidation routes/migrations/scripts/assets
   obligatoire.
@@ -131,12 +130,13 @@ aucun `npm prune/dedupe`, aucune réécriture de migrations ou d'historique
 
 | Métrique                                            |      Avant |               Après |
 | --------------------------------------------------- | ---------: | ------------------: |
-| Warnings ESLint                                     |        100 |                  73 |
-| Signaux `tsc --noUnusedLocals --noUnusedParameters` |         97 |                  71 |
-| Tests Vitest                                        | 630 passés | 638 passés + 1 todo |
+| Warnings ESLint                                     |        100 |                  45 |
+| Signaux `tsc --noUnusedLocals --noUnusedParameters` |         97 |                  43 |
+| Tests Vitest                                        | 630 passés | 692 passés + 1 todo |
 | Build client + SSR                                  |       vert |                vert |
 
-- Aucun changement de dépendance, aucun lockfile modifié.
+- Aucun changement de dépendance ; `bun.lock` supprimé le 2026-10-18
+  (`ec385c1`), `package-lock.json` = lockfile unique.
 - Aucun fichier de production supprimé.
 - Correctifs fonctionnels réalisés : budget RAG (`22e8521`), filtrage des
   tools (`195e245`).
@@ -173,7 +173,13 @@ aucun `npm prune/dedupe`, aucune réécriture de migrations ou d'historique
 | F — dette de design         | Export/barrel/helper sans usage mais structurel       | Décision produit/architecture        |
 | G — anomalie réelle         | Dépendance manquante, import invalide, incohérence    | Ticket prioritaire                   |
 
-État : A=55, B=8, C=5, D=4, E=5, F=1, G=0 (78 signaux uniques).
+État baseline (Vague 0) : A=55, B=8, C=5, D=4, E=5, F=1, G=0 (78 signaux
+uniques). État actuel (post LOT 6.4-b, 2026-10-18) : la classe A a été en
+grande partie consommée (V1–V5 : 19 symboles AI morts, fichiers/data V2,
+7 barrels V3, imports morts orchestrateur/RAG V4-b2a, 72 privatisations,
+5 symboles test-only V4-c, `bun.lock` V5) ; restent 45 warnings ESLint et
+43 signaux tsc à classer (dont 25 warnings hors tests en src — voir T4) ;
+G=0 maintenu.
 **B, C et E se conservent et se documentent** : ils ne sont jamais une
 preuve de suppression.
 
@@ -212,12 +218,20 @@ preuve de suppression.
 - Objectif : réduire les signaux TypeScript restants.
 - Condition : revue humaine, build et tests obligatoires.
 - Risque : modules cœur, imports dynamiques, architecture agent.
+- **Statut : résolu** (LOT 6.4-b V4-b2a, `909530b` — imports morts retirés
+  de `orchestrator.ts`, `rag/context-builder.ts`, `rag-engine.ts`,
+  `rag/types.ts` ; 0 warning `no-unused-vars` restant dans `agent/` et
+  `rag/` hors fichiers de test).
 
 ### T4 — Nettoyer les imports morts des routes et composants UI
 
 - Objectif : réduire les warnings sans toucher au design system.
 - Condition : micro-vagues par fichier, build obligatoire.
 - Risque : imports dynamiques, routes TanStack, composants shadcn.
+- **Statut : à traiter** (réévalué 2026-10-18) — V4-b2a n'a pas touché
+  routes/UI ; `leads.tsx` (10), `ToolStatus.tsx` (4), `TypingIndicator.tsx`
+  (3) et imports d'icônes portent encore les 25 warnings hors tests en
+  src (27 hors `*.test.*` avec `e2e/`) → micro-vague dédiée à ouvrir.
 
 ### T5 — Décider du double lockfile npm/Bun
 
@@ -225,6 +239,8 @@ preuve de suppression.
   CI, `bun.lock` potentiellement périmé).
 - Condition : décision d'équipe.
 - Risque : CI npm, développeurs Bun, résolution de dépendances.
+- **Statut : résolu** (2026-10-18, `ec385c1` — `bun.lock` supprimé,
+  `package-lock.json` reste le lockfile unique de référence).
 
 ### T6 — Documenter les faux positifs structurels
 

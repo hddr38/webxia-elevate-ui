@@ -90,13 +90,6 @@ export interface SkillRegistry {
   getToolDefinitions(): ToolDefinition[];
 }
 
-export interface SkillExecutorOptions {
-  context: SkillContext;
-  skillName: string;
-  arguments: Record<string, unknown>;
-  requestId: string;
-}
-
 export interface SkillExecutionResult {
   result: ToolResult;
   skillResult: SkillResult;

@@ -299,13 +299,6 @@ function estimateContextSize(context: AgentContext): number {
   return size;
 }
 
-export function checkContextSize(
-  context: AgentContext,
-  maxTokens: number = DEFAULT_AGENT_LIMITS.maxContextTokens,
-): boolean {
-  return estimateContextSize(context) <= maxTokens;
-}
-
 export function truncateContext(
   context: AgentContext,
   maxTokens: number = DEFAULT_AGENT_LIMITS.maxContextTokens,

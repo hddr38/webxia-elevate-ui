@@ -58,18 +58,3 @@ export function handleCorsPreflight(request: Request): Response | null {
   }
   return null;
 }
-
-export function addCorsHeaders(response: Response, origin?: string): Response {
-  const headers = new Headers(response.headers);
-  const corsHeaders = createCorsHeaders(origin);
-
-  for (const [key, value] of Object.entries(corsHeaders)) {
-    headers.set(key, value);
-  }
-
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}

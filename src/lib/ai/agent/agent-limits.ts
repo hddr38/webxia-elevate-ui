@@ -16,14 +16,6 @@ export function createAgentConfig(overrides: Partial<AgentConfig> = {}): AgentCo
   };
 }
 
-export const AGENT_LIMITS_SCHEMA = {
-  maxAgentSteps: { type: "number", minimum: 1, maximum: 50, default: 10 },
-  maxToolCalls: { type: "number", minimum: 1, maximum: 20, default: 5 },
-  globalTimeoutMs: { type: "number", minimum: 5000, maximum: 300000, default: 120000 },
-  maxContextTokens: { type: "number", minimum: 1000, maximum: 200000, default: 128000 },
-  maxToolResultTokens: { type: "number", minimum: 500, maximum: 50000, default: 8000 },
-} as const;
-
 export function validateLimits(limits: Partial<AgentLimits>): AgentLimits {
   const validated: AgentLimits = { ...DEFAULT_AGENT_LIMITS };
 

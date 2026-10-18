@@ -53,16 +53,3 @@ export function getAIConfig(): AIConfig {
     },
   };
 }
-
-export function createProviderConfigs(
-  config: AIConfig,
-): Record<string, { apiKey: string; baseUrl: string; timeout: number; maxRetries: number }> {
-  return {
-    nvidia: {
-      apiKey: config.nvidia.apiKey,
-      baseUrl: config.nvidia.baseUrl,
-      timeout: config.limits.timeoutMs,
-      maxRetries: config.limits.maxRetries,
-    },
-  };
-}

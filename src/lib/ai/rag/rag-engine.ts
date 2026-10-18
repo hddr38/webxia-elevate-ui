@@ -204,10 +204,3 @@ export class RAGEngine {
     return this.embeddingProvider;
   }
 }
-
-export function createRAGEngine(
-  embeddingProvider: EmbeddingProvider,
-  config?: RAGEngineConfig,
-): RAGEngine {
-  return new RAGEngine(embeddingProvider, config);
-}

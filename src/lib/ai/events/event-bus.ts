@@ -134,13 +134,3 @@ export function createEventBus(): EventBus {
 
 /** Default module-level instance. */
 export const eventBus: EventBus = createEventBus();
-
-/**
- * System debug listener (reserved onAny usage): logs type + requestId only,
- * never payloads, so no user content or secret can leak into logs.
- */
-export function createEventLogger(): () => void {
-  return eventBus.onAny((event) => {
-    console.log(`[EventBus] ${event.type} (request ${event.requestId})`);
-  });
-}

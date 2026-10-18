@@ -1,4 +1,4 @@
-import { registerSkill, skillRegistry } from "./registry";
+import { registerSkill } from "./registry";
 import { createSaveLeadSkill } from "./save-lead";
 import { createSummarizeSkill } from "./summarize";
 import { createSearchKnowledgeSkill } from "./search-knowledge";
@@ -25,9 +25,4 @@ export function initializeSkills(
   registerSkill(createSearchKnowledgeSkill(ragEngine));
 
   skillsInitialized = true;
-}
-
-export function resetSkillsForTesting(): void {
-  skillRegistry.clear();
-  skillsInitialized = false;
 }

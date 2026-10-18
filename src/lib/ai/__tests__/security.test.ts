@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { z } from "zod";
 import {
   InMemoryRateLimiter,
   SlidingWindowRateLimiter,
@@ -9,8 +10,6 @@ import {
 import {
   validateAndSanitize,
   ChatMessageSchema,
-  SearchKnowledgeInputSchema,
-  SummarizeInputSchema,
   isValidationError,
   ValidationError,
   sanitizeInput,
@@ -26,6 +25,26 @@ import {
   SECURITY_HEADERS,
 } from "../security/prompt-injection";
 import { auditLogger } from "../security/audit-log";
+import { KNOWLEDGE_SOURCE_TYPES } from "../rag/types";
+
+const SearchKnowledgeInputSchema = z
+  .object({
+    query: z.string().min(1).max(500),
+    topK: z.number().int().min(1).max(20).default(5),
+    similarityThreshold: z.number().min(0).max(1).default(0.7),
+    // Only filters the RPC actually applies (filter_locale /
+    // filter_source_type). Strict: anything else is rejected, never dropped.
+    locale: z.string().min(2).max(10).optional(),
+    sourceType: z.enum(KNOWLEDGE_SOURCE_TYPES).optional(),
+  })
+  .strict();
+
+const SummarizeInputSchema = z.object({
+  text: z.string().min(1).max(50000),
+  maxLength: z.number().int().min(50).max(2000).default(500),
+  style: z.enum(["concise", "detailed", "bullet-points"]).default("concise"),
+  focus: z.string().max(100).optional(),
+});
 
 const mockAdminLookup = vi.hoisted(() => ({
   row: null as { id: string; role: string } | null,

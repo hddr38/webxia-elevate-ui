@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { KNOWLEDGE_SOURCE_TYPES } from "../rag/types";
 
 export const ChatMessageSchema = z.object({
   message: z.string().min(1).max(10000),
@@ -28,25 +27,6 @@ export const ChatHistorySchema = z.object({
   sessionId: z.unknown().optional(),
   conversationId: z.unknown().optional(),
   limit: z.unknown().optional(),
-});
-
-export const SearchKnowledgeInputSchema = z
-  .object({
-    query: z.string().min(1).max(500),
-    topK: z.number().int().min(1).max(20).default(5),
-    similarityThreshold: z.number().min(0).max(1).default(0.7),
-    // Only filters the RPC actually applies (filter_locale /
-    // filter_source_type). Strict: anything else is rejected, never dropped.
-    locale: z.string().min(2).max(10).optional(),
-    sourceType: z.enum(KNOWLEDGE_SOURCE_TYPES).optional(),
-  })
-  .strict();
-
-export const SummarizeInputSchema = z.object({
-  text: z.string().min(1).max(50000),
-  maxLength: z.number().int().min(50).max(2000).default(500),
-  style: z.enum(["concise", "detailed", "bullet-points"]).default("concise"),
-  focus: z.string().max(100).optional(),
 });
 
 export function sanitizeInput(input: string, maxLength: number = 10000): string {

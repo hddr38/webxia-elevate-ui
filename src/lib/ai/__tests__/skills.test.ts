@@ -4,18 +4,20 @@ import {
   InMemorySkillRegistry,
   skillRegistry,
   registerSkill,
-  unregisterSkill,
-  hasSkill,
   getAllToolDefinitions,
 } from "../skills/registry";
 import { SkillExecutor } from "../skills/executor";
 import { auditLogger } from "../security/audit-log";
-import { SkillValidator, createSkillSchema, SkillValidationError } from "../skills/validator";
+import { SkillValidator, SkillValidationError } from "../skills/validator";
 import { SearchKnowledgeSkill, createSearchKnowledgeSkill } from "../skills/search-knowledge";
 import { SummarizeSkill, createSummarizeSkill } from "../skills/summarize";
 import { Skill, SkillContext, SkillInput, ToolPermission, ToolDefinition } from "../skills/types";
 import type { RAGEngine } from "../rag";
 import type { LLMProvider } from "../providers";
+
+function createSkillSchema<T extends SkillInput>(schema: z.ZodSchema<T>) {
+  return SkillValidator.createZodValidator(schema);
+}
 
 function createMockSkillContext(overrides: Partial<SkillContext> = {}): SkillContext {
   return {
@@ -171,8 +173,8 @@ describe("Global Skill Registry Functions", () => {
       execute: vi.fn(),
     };
     registerSkill(skill as Skill<Record<string, unknown>, Record<string, unknown>>);
-    expect(hasSkill("global_test")).toBe(true);
-    unregisterSkill("global_test");
+    expect(skillRegistry.has("global_test")).toBe(true);
+    skillRegistry.unregister("global_test");
   });
 
   it("getAllToolDefinitions returns all definitions", () => {

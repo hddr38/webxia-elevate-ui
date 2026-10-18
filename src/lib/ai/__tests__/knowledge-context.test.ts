@@ -5,7 +5,7 @@ import type { RetrievalResult, VectorStore } from "../rag/types";
 import type { EmbeddingProvider } from "../embeddings";
 import { EMBEDDING_CONFIG } from "../embeddings/config";
 import { eventBus } from "../events";
-import { registerSkill, unregisterSkill } from "../skills/registry";
+import { registerSkill, skillRegistry } from "../skills/registry";
 import { createSearchKnowledgeSkill } from "../skills/search-knowledge";
 import type { AgentContext } from "../contracts";
 
@@ -96,7 +96,7 @@ describe("knowledge context", () => {
 
   afterEach(() => {
     eventBus.clear();
-    unregisterSkill("search_knowledge");
+    skillRegistry.unregister("search_knowledge");
   });
 
   it("injects KNOWLEDGE only when retrieval finds pertinent documents", async () => {

@@ -49,14 +49,6 @@ export function registerSkill(skill: Skill): void {
   skillRegistry.register(skill);
 }
 
-export function unregisterSkill(name: string): void {
-  skillRegistry.unregister(name);
-}
-
-export function hasSkill(name: string): boolean {
-  return skillRegistry.has(name);
-}
-
 export function getAllToolDefinitions(): ToolDefinition[] {
   return skillRegistry.getToolDefinitions();
 }

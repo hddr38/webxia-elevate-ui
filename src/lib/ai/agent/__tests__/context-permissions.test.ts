@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { buildAgentContext } from "../context-builder";
-import { skillRegistry, registerSkill, unregisterSkill } from "../../skills/registry";
+import { skillRegistry, registerSkill } from "../../skills/registry";
 import { SkillExecutor } from "../../skills/executor";
 import type { Skill, SkillContext, SkillInput, ToolPermission } from "../../skills/types";
 import type { RAGEngine } from "../../rag";
@@ -22,7 +22,7 @@ const registered: string[] = [];
 
 afterEach(() => {
   for (const name of registered.splice(0)) {
-    if (skillRegistry.has(name)) unregisterSkill(name);
+    if (skillRegistry.has(name)) skillRegistry.unregister(name);
   }
 });
 

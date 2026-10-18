@@ -69,7 +69,3 @@ export class SkillValidationError extends Error {
     this.zodErrors = zodErrors;
   }
 }
-
-export function createSkillSchema<T extends SkillInput>(schema: ZodSchema<T>) {
-  return SkillValidator.createZodValidator(schema);
-}

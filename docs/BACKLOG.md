@@ -1046,6 +1046,22 @@ vagues V4 restantes (V4-b2, V4-c).
 - Vérif Playwright FR+EN obligatoire avant push V4-b1 (code client potentiellement impacté
   via `chat.ts`).
 
+**V5 — CSS canvas-gpu**
+
+- **Statut** : corrigé, poussé (`2bafd45`)
+- Suppression de `@utility canvas-gpu` (`src/styles.css`, −10 lignes)
+- 0 usage code confirmé (grep) ; faux positif prose BACKLOG documenté
+- Note : gate Prettier waivé sur `styles.css` (dérive préexistante `--shadow-*`, hors périmètre)
+
+**Clôture LOT 6.4-b**
+
+- **V3** (barrels morts) : poussé
+- **V4** (IA + observabilité) : poussé (V4-a, V4-b1, V4-b2a, V4-b2b, V4-c)
+- **V5** (CSS canvas-gpu) : poussé (`2bafd45`)
+- **V6** (dépendances) : reporté (décision shadcn en attente)
+- **Backlog large** : items i18n parallèles, backdrop-blur, docs obsolètes, `bun.lock`
+  restent ouverts.
+
 ---
 
 ## Note complémentaire — clés manquantes supplémentaires

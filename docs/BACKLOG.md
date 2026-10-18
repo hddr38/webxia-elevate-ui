@@ -42,7 +42,7 @@
 | 17  | P3       | `use-mobile.tsx` — à investiguer, bloqué sur décision shadcn keep/purge          | `6.4-b V2+` | à investiguer                 | 2026-10-15 |
 | 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`  | corrigé localement            | 2026-10-15 |
 | 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+` | résolu en production          | 2026-10-18 |
-| 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)              | `6.4-b`     | en cours                      | 2026-10-18 |
+| 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)              | `6.4-b`     | terminé, poussé               | 2026-10-18 |
 
 **Barème de priorité utilisé**
 
@@ -976,8 +976,8 @@ Limites documentées :
 
 - **Priorité** : `P2`
 - **Lot cible** : `6.4-b` (V4 — exports morts IA / observability)
-- **Statut** : `en cours` — V4-a corrigé et poussé (`3f38d75`), V4-b1 corrigé localement
-  (`3218958`), non poussé.
+- **Statut** : `terminé, poussé` — V4-a (`3f38d75`), V4-b1 (`3218958`), V4-b2a (`909530b`),
+  V4-b2b (`be9c52e`), V4-c (`e694b8c`) poussés sur `main`.
 - **Date** : `2026-10-18`
 
 **Contexte**
@@ -998,7 +998,7 @@ vagues V4 restantes (V4-b2, V4-c).
 - Note : vérif FR seulement justifiée (fichiers server-only, aucun impact bundle client —
   hash JS client inchangé après push).
 
-**V4-b1 — 19 symboles morts + purge star-export — corrigé localement (`3218958`), non poussé**
+**V4-b1 — 19 symboles morts + purge star-export — corrigé, poussé (`3218958`)**
 
 - 19 symboles morts totaux supprimés (7 fonctions/constantes + 11 schemas/constantes + 1 type).
 - `checkContextSize` supprimé entièrement (branche `entire` : 0 appel interne, 0 importeur —
@@ -1011,12 +1011,32 @@ vagues V4 restantes (V4-b2, V4-c).
 - Gates locaux : prettier OK, lint 0 err / 76 warn, typecheck OK, 692 tests + 1 todo,
   build OK, `git diff --check` OK. Diff : 11 fichiers, +2 / −163.
 
-**Reste à faire**
+**V4-b2a — Nettoyage imports + bonus**
 
-- V4-b2 : privatisations des ~62 exports à usage interne (dont imports morts consommateurs
-  signalés par ESLint, ex. `chat.ts`).
-- V4-c : décision sur les 42 symboles test-only (ex. `SearchKnowledgeInputSchema`,
-  `SummarizeInputSchema`).
+- **Statut** : corrigé, poussé (`909530b`)
+- 27 imports morts retirés (12 fichiers)
+- 5 fns/vars mortes supprimées
+- `MAX_CONVERSATION_HISTORY` privatisé, 3 fonctions registry supprimées
+- Lint : 76 → 45 warnings
+
+**V4-b2b — Privatisations massives**
+
+- **Statut** : corrigé, poussé (`be9c52e`)
+- 72 symboles privatisés sur 23 fichiers
+- 0 code supprimé, `domain.ts` intact, 0 import externe cassé
+
+**V4-c — Déplacement TEST_ONLY**
+
+- **Statut** : corrigé, poussé (`e694b8c`)
+- 5 symboles test-only déplacés dans les tests (`SearchKnowledgeInputSchema`,
+  `SummarizeInputSchema`, `createSkillSchema`, `hasSkill`, `unregisterSkill`)
+- 39 CONSERVER intacts
+
+**Dette technique identifiée (hors périmètre V4)**
+
+- 39 symboles TEST_ONLY conservés (dont sécurité/RAG) : câblage à revoir
+- Doublons identifiés : `applySecurityHeaders` / `addSecurityHeaders`, CSP, middlewares admin
+- `getAIConfig` vs env direct dans `chat.ts`
 
 **Notes transversales**
 

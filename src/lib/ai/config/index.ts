@@ -1,4 +1,4 @@
-export interface AIConfig {
+interface AIConfig {
   nvidia: {
     apiKey: string;
     baseUrl: string;

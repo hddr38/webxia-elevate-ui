@@ -1,4 +1,4 @@
-export interface PromptInjectionConfig {
+interface PromptInjectionConfig {
   maxInputLength: number;
   blockedPatterns: RegExp[];
   allowSystemPromptOverride: boolean;
@@ -31,7 +31,7 @@ const DEFAULT_PROMPT_INJECTION_CONFIG: PromptInjectionConfig = {
   stripInstructions: true,
 };
 
-export interface InjectionDetectionResult {
+interface InjectionDetectionResult {
   detected: boolean;
   patterns: string[];
   sanitized: string;

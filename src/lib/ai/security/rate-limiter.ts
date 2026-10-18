@@ -1,18 +1,18 @@
-export interface RateLimitConfig {
+interface RateLimitConfig {
   windowMs: number;
   maxRequests: number;
   keyPrefix: string;
   burstAllowance?: number;
 }
 
-export interface RateLimitResult {
+interface RateLimitResult {
   allowed: boolean;
   remaining: number;
   resetTime: number;
   totalRequests: number;
 }
 
-export interface RateLimiter {
+interface RateLimiter {
   checkLimit(key: string): Promise<RateLimitResult>;
   resetLimit(key: string): Promise<void>;
 }
@@ -105,7 +105,7 @@ export class InMemoryRateLimiter implements RateLimiter {
   }
 }
 
-export interface SlidingWindowConfig {
+interface SlidingWindowConfig {
   windowMs: number;
   maxRequests: number;
   keyPrefix: string;
@@ -208,7 +208,7 @@ export function getClientIdentifier(request: Request, userId?: string): string {
   return `ip:${ip}`;
 }
 
-export interface RateLimitHeaders {
+interface RateLimitHeaders {
   "X-RateLimit-Limit": string;
   "X-RateLimit-Remaining": string;
   "X-RateLimit-Reset": string;

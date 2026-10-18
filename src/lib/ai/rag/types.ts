@@ -67,7 +67,7 @@ export interface KnowledgeDocument {
   embeddings?: number[][];
 }
 
-export interface KnowledgeChunk {
+interface KnowledgeChunk {
   id: string;
   documentId: string;
   chunkIndex: number;

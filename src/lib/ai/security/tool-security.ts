@@ -9,7 +9,7 @@ import {
 import { auditLogger } from "./audit-log";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-export interface ToolSecurityConfig {
+interface ToolSecurityConfig {
   requireAuth: boolean;
   requiredPermissions: ToolPermission[];
   allowedRoles: string[];
@@ -175,7 +175,7 @@ export function createSecureToolExecutor<TInput extends SkillInput, TOutput exte
   };
 }
 
-export interface DataAccessContext {
+interface DataAccessContext {
   userId: string;
   sessionId: string;
   conversationId?: string;
@@ -197,7 +197,7 @@ export async function assertMemoryAccess(
   }
 }
 
-export interface RagAdminContext {
+interface RagAdminContext {
   /** Authenticated Supabase user id (admin_users.user_id). Absent = anonymous. */
   userId?: string;
   sessionId: string;

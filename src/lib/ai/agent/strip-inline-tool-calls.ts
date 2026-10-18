@@ -3,7 +3,7 @@
  * dans le canal `content` du LLM (notamment en fallback sur Nemotron Lightning).
  */
 
-export interface StripOptions {
+interface StripOptions {
   /**
    * Lorsque `trim` est faux, préserve les espaces de début et de fin
    * (indispensable lors du streaming temps réel pour ne pas fusionner les mots).

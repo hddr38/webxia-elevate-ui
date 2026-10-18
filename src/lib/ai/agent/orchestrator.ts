@@ -25,20 +25,20 @@ import {
 } from "../contracts";
 import { ProviderError, ProviderErrorCode, isRetryableError } from "../providers";
 
-export interface AuthContext {
+interface AuthContext {
   userId?: string;
   isAuthenticated: boolean;
   isAdmin: boolean;
 }
 
-export interface AgentDependencies {
+interface AgentDependencies {
   llmProvider: LLMProvider;
   ragEngine: RAGEngine;
   skillExecutor?: SkillExecutor;
   config?: Partial<AgentConfig>;
 }
 
-export interface AgentRunOptions {
+interface AgentRunOptions {
   conversationId: string;
   sessionId: string;
   userId?: string;
@@ -82,7 +82,7 @@ export interface AgentRunResult {
  * carried in AgentError.details.cause, never exposed on the SSE wire
  * (StreamErrorEvent.data only has code/message/recoverable).
  */
-export type GenerationFailureCause = AgentErrorCode | "EMPTY_RESPONSE";
+type GenerationFailureCause = AgentErrorCode | "EMPTY_RESPONSE";
 
 export class AgentOrchestrator {
   private llmProvider: LLMProvider;

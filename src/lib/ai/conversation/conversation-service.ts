@@ -2,21 +2,21 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import type { Conversation, ConversationStatus, Message, MessageRole } from "@/lib/ai/contracts";
 
-export type ConversationRole = MessageRole;
+type ConversationRole = MessageRole;
 
-export interface ConversationContext {
+interface ConversationContext {
   sessionId: string;
   userId?: string;
 }
 
-export interface AddMessageInput {
+interface AddMessageInput {
   role: ConversationRole;
   content: string;
   metadata?: Record<string, unknown>;
 }
 
-export type ConversationRow = Database["public"]["Tables"]["conversations"]["Row"];
-export type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
+type ConversationRow = Database["public"]["Tables"]["conversations"]["Row"];
+type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 
 export class ConversationNotFoundError extends Error {
   readonly conversationId: string;

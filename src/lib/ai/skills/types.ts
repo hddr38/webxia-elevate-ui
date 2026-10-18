@@ -19,7 +19,7 @@ export interface SkillOutput {
   [key: string]: unknown;
 }
 
-export interface SkillMetadata {
+interface SkillMetadata {
   category?: string;
   tags?: string[];
   version?: string;
@@ -28,7 +28,7 @@ export interface SkillMetadata {
   examples?: SkillExample[];
 }
 
-export interface SkillExample {
+interface SkillExample {
   input: SkillInput;
   output: SkillOutput;
   description: string;
@@ -73,7 +73,7 @@ export type SkillErrorCode =
   | "PROVIDER_ERROR"
   | "INTERNAL_ERROR";
 
-export interface SkillCitation {
+interface SkillCitation {
   source: string;
   excerpt: string;
   relevance: number;

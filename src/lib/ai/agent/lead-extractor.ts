@@ -3,7 +3,7 @@
  * côté serveur (contourne la non-déterminisme LLM).
  */
 
-export interface ExtractedLead {
+interface ExtractedLead {
   firstName?: string;
   email?: string;
   phone?: string;

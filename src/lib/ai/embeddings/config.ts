@@ -8,7 +8,7 @@
  */
 
 /** Central embedding configuration. Immutable by construction. */
-export interface EmbeddingConfig {
+interface EmbeddingConfig {
   /** Embedding provider id. Only "nvidia" is supported. */
   readonly provider: "nvidia";
   /** Exact NIM model id sent to POST /v1/embeddings. */

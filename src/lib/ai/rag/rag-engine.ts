@@ -8,7 +8,7 @@ import { NoOpReranker, type Reranker } from "./reranker";
 import { eventBus } from "../events";
 import type { RAGContext, RetrievalStrategy, ScoredDocument } from "../contracts";
 
-export interface RAGEngineConfig {
+interface RAGEngineConfig {
   topK?: number;
   similarityThreshold?: number;
   maxContextTokens?: number;
@@ -16,7 +16,7 @@ export interface RAGEngineConfig {
   defaultStrategy?: RetrievalStrategy;
 }
 
-export interface RAGQueryOptions extends Partial<RetrieveOptions> {
+interface RAGQueryOptions extends Partial<RetrieveOptions> {
   /** Correlation id for agent.rag.* telemetry. Omitted -> no events. */
   requestId?: string;
 }

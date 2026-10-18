@@ -12,14 +12,14 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/database.types";
 import { auditLogger } from "../security/audit-log";
 
-export interface SaveLeadInput extends SkillInput {
+interface SaveLeadInput extends SkillInput {
   first_name: string;
   email?: string | null;
   phone?: string | null;
   summary: string;
 }
 
-export interface SaveLeadOutput extends SkillOutput {
+interface SaveLeadOutput extends SkillOutput {
   leadId: string;
   createdAt: string;
   // LOT 38a quinquies: true when an existing lead was returned instead of a

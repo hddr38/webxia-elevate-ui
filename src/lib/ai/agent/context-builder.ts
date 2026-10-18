@@ -7,7 +7,7 @@ import { skillRegistry, getAllToolDefinitions } from "../skills";
 import { DEFAULT_AGENT_LIMITS } from "../contracts";
 import { WEBi_SYSTEM_PROMPT } from "./system-prompt";
 
-export interface ContextBuilderOptions {
+interface ContextBuilderOptions {
   conversationId: string;
   sessionId: string;
   userId?: string;
@@ -21,7 +21,7 @@ export interface ContextBuilderOptions {
   maxMemoryEntries?: number;
 }
 
-export interface BuiltContext {
+interface BuiltContext {
   agentContext: AgentContext;
   memoryCount: number;
   systemPrompt: string;

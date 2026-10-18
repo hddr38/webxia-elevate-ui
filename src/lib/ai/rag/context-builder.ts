@@ -1,7 +1,7 @@
 import type { DocumentSource, RAGContext } from "../contracts";
 import type { RetrieveResult } from "./retriever";
 
-export interface ContextBuilderOptions {
+interface ContextBuilderOptions {
   maxContextTokens?: number;
   maxDocuments?: number;
   includeScore?: boolean;

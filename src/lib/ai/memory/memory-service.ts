@@ -2,12 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { AIMemoryType } from "@/types/database";
 
-export type DbClient = SupabaseClient<Database>;
-export type MemoryRow = Database["public"]["Tables"]["ai_memory"]["Row"];
-export type MemoryType = AIMemoryType;
+type DbClient = SupabaseClient<Database>;
+type MemoryRow = Database["public"]["Tables"]["ai_memory"]["Row"];
+type MemoryType = AIMemoryType;
 
 /** Agent-facing memory record. `content` lives in the row's `value.content`. */
-export interface MemoryEntry {
+interface MemoryEntry {
   id: string;
   sessionId: string;
   userId?: string;
@@ -21,12 +21,12 @@ export interface MemoryEntry {
   updatedAt: string;
 }
 
-export interface MemoryMatch extends MemoryEntry {
+interface MemoryMatch extends MemoryEntry {
   /** Cosine similarity when ranked semantically, otherwise 1 (filter match). */
   score: number;
 }
 
-export interface CreateMemoryEntry {
+interface CreateMemoryEntry {
   sessionId: string;
   userId?: string;
   content: string;
@@ -34,28 +34,28 @@ export interface CreateMemoryEntry {
   metadata?: Record<string, unknown>;
 }
 
-export interface MemorySearchFilters {
+interface MemorySearchFilters {
   sessionId?: string;
   memoryType?: MemoryType;
   search?: string;
 }
 
-export interface MemorySearchOptions {
+interface MemorySearchOptions {
   topK?: number;
   threshold?: number;
   filters?: MemorySearchFilters;
 }
 
-export type MemoryUpdates = Partial<
+type MemoryUpdates = Partial<
   Pick<MemoryEntry, "content" | "embedding" | "metadata" | "memoryType" | "key" | "expiresAt">
 >;
 
-export interface MemoryServiceDeps {
+interface MemoryServiceDeps {
   /** Text→vector embedder. Absent → keyword/filter listing, embeddings stored as given. */
   embedText?: (text: string) => Promise<number[]>;
 }
 
-export interface MemoryService {
+interface MemoryService {
   searchMemory(query: string, options?: MemorySearchOptions): Promise<MemoryMatch[]>;
   createMemory(entry: CreateMemoryEntry): Promise<MemoryEntry>;
   updateMemory(sessionId: string, id: string, updates: MemoryUpdates): Promise<MemoryEntry>;

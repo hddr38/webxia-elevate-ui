@@ -39,7 +39,7 @@ export type WebiEventMap = {
 
 export type WebiEventType = keyof WebiEventMap;
 
-export interface WebiEvent<K extends WebiEventType> {
+interface WebiEvent<K extends WebiEventType> {
   type: K;
   /** ISO 8601 */
   timestamp: string;
@@ -47,9 +47,9 @@ export interface WebiEvent<K extends WebiEventType> {
   payload: WebiEventMap[K];
 }
 
-export type WebiEventListener<K extends WebiEventType> = (event: WebiEvent<K>) => void;
+type WebiEventListener<K extends WebiEventType> = (event: WebiEvent<K>) => void;
 
-export interface EventBus {
+interface EventBus {
   emit<K extends WebiEventType>(type: K, requestId: string, payload: WebiEventMap[K]): void;
   on<K extends WebiEventType>(type: K, listener: WebiEventListener<K>): () => void;
   once<K extends WebiEventType>(type: K, listener: WebiEventListener<K>): () => void;

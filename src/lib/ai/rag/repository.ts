@@ -8,14 +8,14 @@ import {
   serializeEmbedding,
 } from "../embeddings/config";
 
-export type KnowledgeDbClient = SupabaseClient<Database>;
+type KnowledgeDbClient = SupabaseClient<Database>;
 export type KnowledgeDocType = Database["public"]["Enums"]["knowledge_doc_type"];
 type DocumentRow = Database["public"]["Tables"]["knowledge_documents"]["Row"];
 type ChunkRow = Database["public"]["Tables"]["knowledge_chunks"]["Row"];
 type MatchRow = Database["public"]["Functions"]["match_knowledge_chunks"]["Returns"][number];
 
 /** Input for creating a knowledge document (ingestion). */
-export interface KnowledgeDocumentInput {
+interface KnowledgeDocumentInput {
   /** Explicit id (compat/migration paths). Omitted -> database generates one. */
   id?: string;
   title: string;
@@ -27,7 +27,7 @@ export interface KnowledgeDocumentInput {
 }
 
 /** Patch for updating a knowledge document. */
-export interface KnowledgeDocumentPatch {
+interface KnowledgeDocumentPatch {
   title?: string;
   content?: string;
   source?: DocumentSource;
@@ -51,7 +51,7 @@ export interface StoredKnowledgeDocument {
 }
 
 /** Input for persisting one chunk (embedding validated against EmbeddingConfig). */
-export interface NewKnowledgeChunk {
+interface NewKnowledgeChunk {
   chunkIndex: number;
   content: string;
   embedding: number[];
@@ -59,7 +59,7 @@ export interface NewKnowledgeChunk {
 }
 
 /** Domain view of a stored knowledge chunk (vectors never leave the DB). */
-export interface StoredKnowledgeChunk {
+interface StoredKnowledgeChunk {
   id: string;
   documentId: string;
   chunkIndex: number;
@@ -83,7 +83,7 @@ export interface KnowledgeMatch {
 }
 
 /** Bounded search parameters (server clamps topK/threshold). */
-export interface ChunkSearchParams {
+interface ChunkSearchParams {
   embedding: number[];
   topK?: number;
   threshold?: number;
@@ -91,12 +91,12 @@ export interface ChunkSearchParams {
   sourceType?: KnowledgeDocType;
 }
 
-export interface DocumentListFilters {
+interface DocumentListFilters {
   locale?: string;
   sourceType?: KnowledgeDocType;
 }
 
-export type KnowledgeRepositoryErrorCode = "NOT_FOUND" | "DB_ERROR" | "DIMENSION_MISMATCH";
+type KnowledgeRepositoryErrorCode = "NOT_FOUND" | "DB_ERROR" | "DIMENSION_MISMATCH";
 
 export class KnowledgeRepositoryError extends Error {
   readonly code: KnowledgeRepositoryErrorCode;

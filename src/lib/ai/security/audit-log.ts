@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/database.types";
 
-export type AuditEventType =
+type AuditEventType =
   | "auth_failure"
   | "rate_limit_exceeded"
   | "unauthorized_tool_access"
@@ -18,9 +18,9 @@ export type AuditEventType =
   | "suspicious_activity"
   | "lead_created";
 
-export type AuditSeverity = "low" | "medium" | "high" | "critical";
+type AuditSeverity = "low" | "medium" | "high" | "critical";
 
-export interface AuditLogEntry {
+interface AuditLogEntry {
   event_type: AuditEventType;
   severity: AuditSeverity;
   user_id?: string;
@@ -34,7 +34,7 @@ export interface AuditLogEntry {
   created_at?: string;
 }
 
-export class AuditLogger {
+class AuditLogger {
   private static instance: AuditLogger;
   private buffer: AuditLogEntry[] = [];
   private flushInterval: ReturnType<typeof setInterval> | null = null;

@@ -12,7 +12,7 @@ import { RAGEngine } from "../rag";
 import type { DocumentMetadata } from "../contracts";
 import { KNOWLEDGE_SOURCE_TYPES, type KnowledgeDocType } from "../rag/types";
 
-export interface SearchKnowledgeInput extends SkillInput {
+interface SearchKnowledgeInput extends SkillInput {
   query: string;
   topK?: number;
   similarityThreshold?: number;
@@ -28,13 +28,13 @@ export interface SearchKnowledgeInput extends SkillInput {
   sourceType?: KnowledgeDocType;
 }
 
-export interface SearchKnowledgeOutput extends SkillOutput {
+interface SearchKnowledgeOutput extends SkillOutput {
   results: SearchKnowledgeResult[];
   query: string;
   totalFound: number;
 }
 
-export interface SearchKnowledgeResult {
+interface SearchKnowledgeResult {
   id: string;
   title: string;
   content: string;

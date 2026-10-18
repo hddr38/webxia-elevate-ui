@@ -12,7 +12,7 @@
  * their index plus character offsets for traceability.
  */
 
-export interface ChunkerOptions {
+interface ChunkerOptions {
   /** Maximum characters per chunk. Default 2000. */
   maxChars?: number;
   /** Overlap reseeded from the previous chunk. Default 200. */
@@ -24,7 +24,7 @@ export const DEFAULT_CHUNKER_OPTIONS: Required<ChunkerOptions> = {
   overlapChars: 200,
 };
 
-export interface TextChunk {
+interface TextChunk {
   index: number;
   content: string;
   charStart: number;

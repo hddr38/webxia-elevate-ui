@@ -16,13 +16,13 @@ export interface IngestionSourceInput {
   priority?: number;
 }
 
-export interface IngestionDeps {
+interface IngestionDeps {
   repository: KnowledgeRepository;
   /** Batch embedder (embedding provider). Must emit EMBEDDING_CONFIG.dimensions. */
   embedTexts: (texts: string[]) => Promise<number[][]>;
 }
 
-export interface IngestionOptions {
+interface IngestionOptions {
   /** Delete and rebuild an existing document instead of skipping it. */
   forceReindex?: boolean;
   /** Max texts per embedding batch (bounds payload size). */
@@ -31,9 +31,9 @@ export interface IngestionOptions {
   overlapChars?: number;
 }
 
-export type IngestionStatus = "created" | "already_exists" | "reindexed";
+type IngestionStatus = "created" | "already_exists" | "reindexed";
 
-export interface IngestionResult {
+interface IngestionResult {
   documentId: string;
   title: string;
   status: IngestionStatus;
@@ -41,7 +41,7 @@ export interface IngestionResult {
   contentHash: string;
 }
 
-export type IngestionErrorCode = "EMPTY_CONTENT" | "EMBEDDING_FAILED" | "PERSIST_FAILED";
+type IngestionErrorCode = "EMPTY_CONTENT" | "EMBEDDING_FAILED" | "PERSIST_FAILED";
 
 export class IngestionError extends Error {
   readonly code: IngestionErrorCode;

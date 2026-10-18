@@ -10,14 +10,14 @@ import {
 } from "./types";
 import { LLMProvider } from "../providers";
 
-export interface SummarizeInput extends SkillInput {
+interface SummarizeInput extends SkillInput {
   text: string;
   maxLength?: number;
   style?: "concise" | "detailed" | "bullet-points";
   focus?: string;
 }
 
-export interface SummarizeOutput extends SkillOutput {
+interface SummarizeOutput extends SkillOutput {
   summary: string;
   originalLength: number;
   summaryLength: number;

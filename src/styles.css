@@ -218,16 +218,6 @@
   box-shadow: var(--shadow-glow);
 }
 
-/* LOT 41 P1 — canvas decoratifs isoles sur leur propre couche composite
-   (Safari iOS) + taps traversants. Applique en inline-style sur les canvas
-   matrix/particles ; utilitaire de secours pour tout futur canvas de fond. */
-@utility canvas-gpu {
-  will-change: transform;
-  transform: translateZ(0);
-  contain: strict;
-  pointer-events: none;
-}
-
 /* LOT 42 P3 — fallback mobile du hero : gradient anime leger (< 2 Ko,
    compositing GPU pur, aucun JS/canvas/SVG). Memes dimensions que le canvas
    remplace (absolute inset-0 -z-10) pour un CLS = 0. Ambiance light :

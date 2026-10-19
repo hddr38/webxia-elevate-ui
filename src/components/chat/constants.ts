@@ -5,8 +5,8 @@
  *   dessous de laquelle l'utilisateur est considéré "proche du bas".
  *   Utilisée par `isNearBottom` / `useStickyScroll`.
  * - MOBILE_BREAKPOINT_PX : breakpoint mobile du chat (px). Cohérent avec
- *   le breakpoint `md` de Tailwind (768px) et le hook `useIsMobile`
- *   existant : mobile = largeur < 768px (`max-md:` en Tailwind).
+ *   le breakpoint `md` de Tailwind (768px) : mobile = largeur < 768px
+ *   (`max-md:` en Tailwind).
  */
 
 export const STICKY_SCROLL_THRESHOLD_PX = 100;

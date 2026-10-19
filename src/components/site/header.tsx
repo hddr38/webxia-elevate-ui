@@ -13,7 +13,7 @@ export function LocaleSwitcher() {
     <div
       role="group"
       aria-label={t("header.locale.switch")}
-      className="inline-flex items-center rounded-full border border-border bg-background/40 p-0.5 text-xs font-medium backdrop-blur-md"
+      className="inline-flex items-center rounded-full border border-border bg-background/40 p-0.5 text-xs font-medium backdrop-blur-sm"
     >
       {(["en", "fr"] as const).map((l) => (
         <button
@@ -74,7 +74,7 @@ export function Header() {
             scrolle) : le gating blur LOT 41 est retire, 0 listener scroll. */}
         <div
           data-testid="header-bar"
-          className="flex items-center justify-between rounded-full border border-border bg-background/60 px-4 py-2.5 backdrop-blur-xl shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--foreground)_15%,transparent)]"
+          className="flex items-center justify-between rounded-full border border-border bg-background/60 px-4 py-2.5 backdrop-blur-md shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--foreground)_15%,transparent)]"
         >
           <Logo />
 

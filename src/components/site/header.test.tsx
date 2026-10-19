@@ -58,14 +58,14 @@ describe("Header LOT 43 Phase 6 — opaque permanent", () => {
     const { container } = renderHeader();
     const el = bar(container);
     expect(el.className).toContain("bg-background/60");
-    expect(el.className).toContain("backdrop-blur-xl");
+    expect(el.className).toContain("backdrop-blur-md");
     expect(el.className).not.toContain("bg-background/0");
 
     // Scroll : classes inchangees (aucune logique `scrolled`).
     window.dispatchEvent(new Event("scroll"));
     const after = bar(container);
     expect(after.className).toContain("bg-background/60");
-    expect(after.className).toContain("backdrop-blur-xl");
+    expect(after.className).toContain("backdrop-blur-md");
   });
 });
 

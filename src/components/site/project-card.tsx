@@ -46,16 +46,16 @@ export function DbRealisationCard({
         )}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_60%)]" />
         <div className="absolute inset-0 bg-grid opacity-10 mix-blend-overlay" />
-        <div className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white backdrop-blur-md">
+        <div className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white">
           {item.category}
         </div>
         {item.featured && (
-          <div className="absolute left-4 top-11 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/30 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/90 backdrop-blur-md">
+          <div className="absolute left-4 top-11 inline-flex items-center gap-1 rounded-full border border-white/25 bg-black/60 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/90">
             <Star className="size-3 fill-current" aria-hidden="true" />
             {t("admin.form.featured")}
           </div>
         )}
-        <div className="absolute right-4 top-4 rounded-full border border-white/20 bg-black/30 px-2 py-0.5 font-mono text-[10px] font-medium text-white backdrop-blur-md">
+        <div className="absolute right-4 top-4 rounded-full border border-white/20 bg-black/60 px-2 py-0.5 font-mono text-[10px] font-medium text-white">
           {item.year}
         </div>
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-5">
@@ -69,7 +69,7 @@ export function DbRealisationCard({
               {item.title}
             </div>
           </div>
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition-transform group-hover:rotate-45">
+          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/30 text-white transition-transform group-hover:rotate-45">
             <ArrowUpRight className="size-4" aria-hidden="true" />
           </span>
         </div>

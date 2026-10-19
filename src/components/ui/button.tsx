@@ -20,7 +20,7 @@ const buttonVariants = cva(
           "bg-brand text-brand-foreground shadow-[0_8px_24px_-8px_var(--brand)] hover:shadow-[0_12px_32px_-8px_var(--brand)] hover:-translate-y-0.5",
         hero: "relative overflow-hidden bg-foreground text-background hover:bg-foreground/90 hover:-translate-y-0.5 shadow-[0_10px_30px_-12px_color-mix(in_oklab,var(--foreground)_60%,transparent)]",
         glass:
-          "border border-border bg-background/40 backdrop-blur-xl hover:bg-background/60 text-foreground",
+          "border border-border bg-background/40 backdrop-blur-md hover:bg-background/60 text-foreground",
       },
       size: {
         default: "h-10 px-5 py-2",

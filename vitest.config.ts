@@ -16,5 +16,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     globals: true,
     setupFiles: [],
+    // Vitest 5: clearMocks default changed to true — keep v2 behavior (Option B).
+    clearMocks: false,
   },
 });

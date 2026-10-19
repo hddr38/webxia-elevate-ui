@@ -25,35 +25,37 @@ vi.mock("@/lib/ai/conversation/conversation-service", () => {
 });
 
 vi.mock("@/lib/ai/agent/orchestrator", () => ({
-  AgentOrchestrator: vi.fn().mockImplementation(() => ({
-    run: vi.fn(
-      async (opts: {
-        onStream?: (e: unknown) => void;
-        conversationId: string;
-        requestId: string;
-      }) => {
-        opts.onStream?.({
-          type: "text_delta",
-          data: { content: "hi", index: 0 },
-          timestamp: 1,
-          conversationId: opts.conversationId,
-          requestId: opts.requestId,
-        });
-        return {
-          finalResponse: "hi",
-          messages: [],
-          toolCalls: [],
-          toolResults: [],
-          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
-          finishReason: "stop",
-          steps: 1,
-          toolCallCount: 0,
-          durationMs: 5,
-          errors: [],
-        };
-      },
-    ),
-  })),
+  AgentOrchestrator: vi.fn().mockImplementation(function MockOrchestrator() {
+    return {
+      run: vi.fn(
+        async (opts: {
+          onStream?: (e: unknown) => void;
+          conversationId: string;
+          requestId: string;
+        }) => {
+          opts.onStream?.({
+            type: "text_delta",
+            data: { content: "hi", index: 0 },
+            timestamp: 1,
+            conversationId: opts.conversationId,
+            requestId: opts.requestId,
+          });
+          return {
+            finalResponse: "hi",
+            messages: [],
+            toolCalls: [],
+            toolResults: [],
+            usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+            finishReason: "stop",
+            steps: 1,
+            toolCallCount: 0,
+            durationMs: 5,
+            errors: [],
+          };
+        },
+      ),
+    };
+  }),
 }));
 
 import {
@@ -214,19 +216,18 @@ describe("handleChatRequest generation failure", () => {
       seen.push(event.type);
     });
 
-    vi.mocked(AgentOrchestrator).mockImplementationOnce(
-      () =>
-        ({
-          run: () =>
-            Promise.reject(
-              Object.assign(new Error("LLM generation failed — no response produced"), {
-                code: "GENERATION_FAILED",
-                recoverable: true,
-                details: { cause: "PROVIDER_UNAVAILABLE" },
-              }),
-            ),
-        }) as unknown as InstanceType<typeof AgentOrchestrator>,
-    );
+    vi.mocked(AgentOrchestrator).mockImplementationOnce(function MockOrchestrator() {
+      return {
+        run: () =>
+          Promise.reject(
+            Object.assign(new Error("LLM generation failed — no response produced"), {
+              code: "GENERATION_FAILED",
+              recoverable: true,
+              details: { cause: "PROVIDER_UNAVAILABLE" },
+            }),
+          ),
+      } as unknown as InstanceType<typeof AgentOrchestrator>;
+    });
 
     const response = await handleChatRequest(ctx());
     expect(response.status).toBe(200);
@@ -273,12 +274,11 @@ describe("handleChatRequest lifecycle", () => {
     const previous = process.env.CHAT_REQUEST_TIMEOUT_MS;
     process.env.CHAT_REQUEST_TIMEOUT_MS = "5000";
     try {
-      vi.mocked(AgentOrchestrator).mockImplementationOnce(
-        () =>
-          ({
-            run: () => new Promise(() => undefined),
-          }) as unknown as InstanceType<typeof AgentOrchestrator>,
-      );
+      vi.mocked(AgentOrchestrator).mockImplementationOnce(function MockOrchestrator() {
+        return {
+          run: () => new Promise(() => undefined),
+        } as unknown as InstanceType<typeof AgentOrchestrator>;
+      });
 
       const response = await handleChatRequest(ctx());
       expect(response.status).toBe(200);
@@ -323,12 +323,11 @@ describe("handleChatRequest SSE keep-alive", () => {
     const previous = process.env.CHAT_HEARTBEAT_MS;
     process.env.CHAT_HEARTBEAT_MS = "250";
     try {
-      vi.mocked(AgentOrchestrator).mockImplementationOnce(
-        () =>
-          ({
-            run: () => new Promise(() => undefined),
-          }) as unknown as InstanceType<typeof AgentOrchestrator>,
-      );
+      vi.mocked(AgentOrchestrator).mockImplementationOnce(function MockOrchestrator() {
+        return {
+          run: () => new Promise(() => undefined),
+        } as unknown as InstanceType<typeof AgentOrchestrator>;
+      });
 
       const response = await handleChatRequest(ctx());
       const stream = openSse(response);
@@ -353,31 +352,30 @@ describe("handleChatRequest SSE keep-alive", () => {
     const previous = process.env.CHAT_HEARTBEAT_MS;
     process.env.CHAT_HEARTBEAT_MS = "250";
     try {
-      vi.mocked(AgentOrchestrator).mockImplementationOnce(
-        () =>
-          ({
-            run: async (opts: StreamOpts) => {
-              // 8 deltas at ~40ms = ~320ms of continuous production, longer
-              // than the heartbeat window but with no idle gap.
-              for (let i = 0; i < 8; i++) {
-                await new Promise<void>((resolve) => setTimeout(resolve, 40));
-                await opts.onStream?.(delta(`t${i} `, opts));
-              }
-              return {
-                finalResponse: "t0 t1 t2 t3 t4 t5 t6 t7 ",
-                messages: [],
-                toolCalls: [],
-                toolResults: [],
-                usage: { promptTokens: 1, completionTokens: 8, totalTokens: 9 },
-                finishReason: "stop",
-                steps: 1,
-                toolCallCount: 0,
-                durationMs: 320,
-                errors: [],
-              };
-            },
-          }) as unknown as InstanceType<typeof AgentOrchestrator>,
-      );
+      vi.mocked(AgentOrchestrator).mockImplementationOnce(function MockOrchestrator() {
+        return {
+          run: async (opts: StreamOpts) => {
+            // 8 deltas at ~40ms = ~320ms of continuous production, longer
+            // than the heartbeat window but with no idle gap.
+            for (let i = 0; i < 8; i++) {
+              await new Promise<void>((resolve) => setTimeout(resolve, 40));
+              await opts.onStream?.(delta(`t${i} `, opts));
+            }
+            return {
+              finalResponse: "t0 t1 t2 t3 t4 t5 t6 t7 ",
+              messages: [],
+              toolCalls: [],
+              toolResults: [],
+              usage: { promptTokens: 1, completionTokens: 8, totalTokens: 9 },
+              finishReason: "stop",
+              steps: 1,
+              toolCallCount: 0,
+              durationMs: 320,
+              errors: [],
+            };
+          },
+        } as unknown as InstanceType<typeof AgentOrchestrator>;
+      });
 
       const text = await readSse(await handleChatRequest(ctx()));
       expect(text).toContain('"type":"message_complete"');
@@ -419,15 +417,14 @@ describe("handleChatRequest partial content", () => {
       signal: controller.signal,
     });
 
-    vi.mocked(AgentOrchestrator).mockImplementationOnce(
-      () =>
-        ({
-          run: async (opts: StreamOpts) => {
-            await opts.onStream?.(delta("bonjour ", opts));
-            return new Promise(() => undefined);
-          },
-        }) as unknown as InstanceType<typeof AgentOrchestrator>,
-    );
+    vi.mocked(AgentOrchestrator).mockImplementationOnce(function MockOrchestrator() {
+      return {
+        run: async (opts: StreamOpts) => {
+          await opts.onStream?.(delta("bonjour ", opts));
+          return new Promise(() => undefined);
+        },
+      } as unknown as InstanceType<typeof AgentOrchestrator>;
+    });
 
     const response = await handleChatRequest({ ...ctx(), request });
     const stream = openSse(response);
@@ -447,18 +444,17 @@ describe("handleChatRequest partial content", () => {
   });
 
   it("still never persists an assistant row on GENERATION_FAILED, even after deltas", async () => {
-    vi.mocked(AgentOrchestrator).mockImplementationOnce(
-      () =>
-        ({
-          run: async (opts: StreamOpts) => {
-            await opts.onStream?.(delta("debut ", opts));
-            throw Object.assign(new Error("LLM generation failed — no response produced"), {
-              code: "GENERATION_FAILED",
-              recoverable: true,
-            });
-          },
-        }) as unknown as InstanceType<typeof AgentOrchestrator>,
-    );
+    vi.mocked(AgentOrchestrator).mockImplementationOnce(function MockOrchestrator() {
+      return {
+        run: async (opts: StreamOpts) => {
+          await opts.onStream?.(delta("debut ", opts));
+          throw Object.assign(new Error("LLM generation failed — no response produced"), {
+            code: "GENERATION_FAILED",
+            recoverable: true,
+          });
+        },
+      } as unknown as InstanceType<typeof AgentOrchestrator>;
+    });
 
     const response = await handleChatRequest(ctx());
     const text = await readSse(response);
@@ -505,40 +501,39 @@ describe("handleChatRequest save_lead confirmation (Phase 2 FIX B1/B2)", () => {
   });
 
   it("injects and persists the confirmation when saveLeadSucceeded and the final content is empty", async () => {
-    vi.mocked(AgentOrchestrator).mockImplementationOnce(
-      () =>
-        ({
-          run: async (opts: StreamOpts) => {
-            // The orchestrator reports the successful save_lead tool result
-            // (flag arm, FIX B2), then returns a finalResponse that stripped
-            // to nothing — the exact shape the FIX A break guarantees.
-            opts.onToolResult?.({
-              type: "tool_result",
-              data: {
-                toolCallId: "call-1",
-                toolName: "save_lead",
-                content: '{"leadId":"lead-b1-1"}',
-                success: true,
-              },
-              timestamp: 1,
-              conversationId: opts.conversationId,
-              requestId: opts.requestId,
-            });
-            return {
-              finalResponse: "",
-              messages: [],
-              toolCalls: [],
-              toolResults: [],
-              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
-              finishReason: "stop",
-              steps: 1,
-              toolCallCount: 1,
-              durationMs: 5,
-              errors: [],
-            };
-          },
-        }) as unknown as InstanceType<typeof AgentOrchestrator>,
-    );
+    vi.mocked(AgentOrchestrator).mockImplementationOnce(function MockOrchestrator() {
+      return {
+        run: async (opts: StreamOpts) => {
+          // The orchestrator reports the successful save_lead tool result
+          // (flag arm, FIX B2), then returns a finalResponse that stripped
+          // to nothing — the exact shape the FIX A break guarantees.
+          opts.onToolResult?.({
+            type: "tool_result",
+            data: {
+              toolCallId: "call-1",
+              toolName: "save_lead",
+              content: '{"leadId":"lead-b1-1"}',
+              success: true,
+            },
+            timestamp: 1,
+            conversationId: opts.conversationId,
+            requestId: opts.requestId,
+          });
+          return {
+            finalResponse: "",
+            messages: [],
+            toolCalls: [],
+            toolResults: [],
+            usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+            finishReason: "stop",
+            steps: 1,
+            toolCallCount: 1,
+            durationMs: 5,
+            errors: [],
+          };
+        },
+      } as unknown as InstanceType<typeof AgentOrchestrator>;
+    });
 
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     try {
@@ -563,37 +558,36 @@ describe("handleChatRequest save_lead confirmation (Phase 2 FIX B1/B2)", () => {
   });
 
   it("does not inject a confirmation when the final content is non-empty after save_lead", async () => {
-    vi.mocked(AgentOrchestrator).mockImplementationOnce(
-      () =>
-        ({
-          run: async (opts: StreamOpts) => {
-            opts.onToolResult?.({
-              type: "tool_result",
-              data: {
-                toolCallId: "call-1",
-                toolName: "save_lead",
-                content: '{"leadId":"lead-b1-2"}',
-                success: true,
-              },
-              timestamp: 1,
-              conversationId: opts.conversationId,
-              requestId: opts.requestId,
-            });
-            return {
-              finalResponse: "Réponse du modèle après outil.",
-              messages: [],
-              toolCalls: [],
-              toolResults: [],
-              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
-              finishReason: "stop",
-              steps: 1,
-              toolCallCount: 1,
-              durationMs: 5,
-              errors: [],
-            };
-          },
-        }) as unknown as InstanceType<typeof AgentOrchestrator>,
-    );
+    vi.mocked(AgentOrchestrator).mockImplementationOnce(function MockOrchestrator() {
+      return {
+        run: async (opts: StreamOpts) => {
+          opts.onToolResult?.({
+            type: "tool_result",
+            data: {
+              toolCallId: "call-1",
+              toolName: "save_lead",
+              content: '{"leadId":"lead-b1-2"}',
+              success: true,
+            },
+            timestamp: 1,
+            conversationId: opts.conversationId,
+            requestId: opts.requestId,
+          });
+          return {
+            finalResponse: "Réponse du modèle après outil.",
+            messages: [],
+            toolCalls: [],
+            toolResults: [],
+            usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+            finishReason: "stop",
+            steps: 1,
+            toolCallCount: 1,
+            durationMs: 5,
+            errors: [],
+          };
+        },
+      } as unknown as InstanceType<typeof AgentOrchestrator>;
+    });
 
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     try {

@@ -12,7 +12,7 @@ import type { Message } from "@/lib/ai/contracts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Same budget as the chat turn: `MAX_CONVERSATION_HISTORY` (validation.ts). */
+/** Same budget as the chat turn: 50 conversation turns. */
 export const DEFAULT_HISTORY_LIMIT = 50;
 export const MAX_HISTORY_LIMIT = 200;
 const MAX_PAYLOAD_SIZE = 8192;

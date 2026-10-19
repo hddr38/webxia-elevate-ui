@@ -14,7 +14,7 @@ import { shouldDisplayTool } from "@/lib/ai/user-visible-tools";
 import { stripInlineToolCalls } from "@/lib/ai/agent/strip-inline-tool-calls";
 import type { ChatMessage, UseChatReturn } from "@/components/chat/types";
 
-/** Transcript depth requested on restore (server default = MAX_CONVERSATION_HISTORY). */
+/** Transcript depth requested on restore (server default = 50 conversation turns). */
 const HISTORY_RESTORE_LIMIT = 50;
 
 function generateId(): string {

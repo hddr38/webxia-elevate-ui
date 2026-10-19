@@ -1,5 +1,4 @@
 export { useChat } from "./use-chat";
-export { useIsMobile } from "./use-mobile";
 export {
   createRafGate,
   isNearBottom,

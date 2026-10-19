@@ -39,7 +39,7 @@
 | 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`       | résolu en production          | 2026-10-15 |
 | 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés             | `6.4-b`     | résolu en production          | 2026-10-15 |
 | 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a               | `6.4-b V2`  | résolu en production          | 2026-10-15 |
-| 17  | P3       | `use-mobile.tsx` — à investiguer, bloqué sur décision shadcn keep/purge          | `6.4-b V2+` | à investiguer                 | 2026-10-15 |
+| 17  | P3       | `use-mobile.tsx` — orphelin après suppression de `sidebar.tsx` (V6-a)            | `V6-a`      | supprimé                      | 2026-10-19 |
 | 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`  | corrigé localement            | 2026-10-15 |
 | 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+` | résolu en production          | 2026-10-18 |
 | 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)              | `6.4-b`     | terminé, poussé               | 2026-10-18 |
@@ -817,17 +817,17 @@ Parité FR/EN stricte maintenue (test `locale-context.test.ts` vert après purge
 
 ---
 
-## 17 — `use-mobile.tsx` — à investiguer, bloqué sur décision shadcn keep/purge
+## 17 — `use-mobile.tsx` — supprimé (V6-a, orphelin après `sidebar.tsx`)
 
 - **Priorité** : `P3`
-- **Lot cible** : `6.4-b V2+` (conditionné à la décision shadcn)
-- **Statut** : `à investiguer` — revalidation V2-pre établi que le fichier n'a **aucun usage
-  runtime ni framework**, mais qu'il est importé par `src/components/ui/sidebar.tsx:6`
-  (composant shadcn **non monté** : 0 import de `@/components/ui/sidebar` dans `src/`).
-  La suppression est conditionnée à la décision produit « shadcn keep/purge » (décision en
-  attente). Si purge shadcn → `sidebar.tsx` supprimé → `use-mobile` devient entièrement mort
-  et supprimable. Si keep → `use-mobile` reste consommé par `sidebar.tsx`.
-- **Date** : `2026-10-15`
+- **Lot cible** : `V6-a` (décision shadcn tranchée : purge partielle)
+- **Statut** : `supprimé` — décision produit « shadcn keep/purge » rendue le 2026-10-19 :
+  purge partielle validée (19 composants conservés). `src/components/ui/sidebar.tsx` supprimé
+  dans V6-a → `use-mobile.tsx` devenu entièrement orphelin (0 import applicatif, barrel mis à
+  jour) → fichier supprimé. Re-export associé retiré de `src/hooks/index.ts`.
+  Hook vivant distinct `useIsMobileViewport` (`src/lib/use-is-mobile-viewport.ts`) inchangé
+  (consommé par 10+ fichiers applicatifs).
+- **Date** : `2026-10-19`
 
 **Preuve V2-pre (read-only)**
 
@@ -888,8 +888,10 @@ Exports vivants **conservés impérativement** (importés via le barrel `../skil
 `skillRegistry` + `getAllToolDefinitions` + `skillExecutor`
 (`src/lib/ai/agent/orchestrator.ts:3-4`).
 
-**Décision shadcn** : toujours en attente — aucun composant shadcn, ni `use-mobile.tsx`,
-ni `sidebar.tsx` supprimés.
+**Décision shadcn** : **validée le 2026-10-19 (V6-a) — purge partielle**. 31 composants UI
+mort supprimés (dont `sidebar.tsx`) + `use-mobile.tsx` orphelin ; 19 composants conservés.
+Vague **V6-b** (suppression des 19 dépendances Radix mortes et 8 libs associées) en attente
+de GO explicite.
 
 **Limite** : committé en local (`a380786`), non poussé, non déployé — en attente du GO de push V3.
 
@@ -1040,8 +1042,8 @@ vagues V4 restantes (V4-b2, V4-c).
 
 **Notes transversales**
 
-- Décision shadcn toujours en attente (`hooks/index.ts`, `types/index.ts`, `types/admin.ts`
-  conservés).
+- Décision shadcn **validée (V6-a, 2026-10-19)** : purge partielle — `hooks/index.ts`
+  mis à jour (re-export `useIsMobile` retiré) ; `types/index.ts`, `types/admin.ts` conservés.
 - `skills/index.ts` conservé (`initializeSkills` + `skillRegistry` vivants).
 - Vérif Playwright FR+EN obligatoire avant push V4-b1 (code client potentiellement impacté
   via `chat.ts`).
@@ -1058,7 +1060,8 @@ vagues V4 restantes (V4-b2, V4-c).
 - **V3** (barrels morts) : poussé
 - **V4** (IA + observabilité) : poussé (V4-a, V4-b1, V4-b2a, V4-b2b, V4-c)
 - **V5** (CSS canvas-gpu) : poussé (`2bafd45`)
-- **V6** (dépendances) : reporté (décision shadcn en attente)
+- **V6-a** (fichiers UI morts) : commit local — purge 31 fichiers + `use-mobile.tsx`
+- **V6-b** (dépendances Radix/lib mortes) : reporté (19 Radix + 8 libs), en attente de GO
 - **Backlog large** : items i18n parallèles, backdrop-blur, docs obsolètes, `bun.lock`
   restent ouverts.
 
@@ -1096,3 +1099,4 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-15` — LOT 6.4-b V3+ Hero canvas mobile préparé localement (non commité, non déployé) : réactivation des 2 canvas du hero sur mobile (`MatrixRain` dark + `ParticleField` light) avec params allégés — DPR cap 3 paliers (mobile 1.0 / tablette 1.5 / desktop 2.0, aucun régression desktop), `frameMs` 66, `shadowBlur` 0 mobile, `fontSize` 16 / `particleCount` 5 / `interactive=false` mobile. Kill-switch `VITE_ENABLE_MOBILE_CANVAS` (rollback sans redéploiement). Fallback `.matrix-css-fallback` masqué quand canvas actif. Tests : DPR 3 paliers, frameMs, shadowBlur, 1 canvas + fallback masqué (desktop et mobile). Item **#19** → `corrigé localement, non commité, non déployé`. **Limite : mesure iOS réelle sur iPhone non réalisée dans ce lot — requise avant validation définitive.**
 - `2026-10-15` — push `a380786` (LOT 6.4-b V3), CI/E2E/Integration ✅. Item **#18** → `résolu en production`.
 - `2026-10-18` — push `908b99c` (Hero canvas mobile) + `e836983` (E2E assertion alignée), CI/E2E/Integration ✅ (runs 39076465367 / 39076465376 / 39076465378). Vérification production : canvas mobile actif (1 canvas visible, fallback masqué), DPR 1.0 mobile / 2.0 desktop, 0 clé i18n brute sur 5 pages, hash CSS inchangé / hash JS changé. E2E 40 tests verts dont le test mobile `LOT 6.4-b` mis à jour. **Validation iOS réelle par l'utilisateur le 2026-10-18 : fluide, pas de saturation.** Item **#19** → `résolu en production`. LOT 42 P2 / LOT 44 P0 officiellement inversés (remplacés par les params allégés) ; kill-switch `VITE_ENABLE_MOBILE_CANVAS` maintenu pour régression future.
+- `2026-10-19` — **V6-a** préparé localement (non poussé) : décision shadcn tranchée (**purge partielle, 19 composants conservés**). Suppression de 31 composants UI morts de `src/components/ui/` (27 à 0 import + 4 transitivement morts : `separator`, `skeleton`, `tooltip`, `toggle` via `sidebar`/`toggle-group`), suppression orpheline `src/hooks/use-mobile.tsx` + re-export retiré de `src/hooks/index.ts` (barrel conservé pour `useChat`/`useStickyScroll`). Garde-fous greps pré/post (src, e2e, scripts, docs) : **0 import applicatif, 0 test** impacté ; résidu connu : commentaire JSDoc `chat/constants.ts:8` mentionnant `useIsMobile` (fichier vivant hors périmètre V6-a). `useIsMobileViewport` (`src/lib/`) vivant et inchangé. **Aucune modification de `package.json`** — dépendances (19 Radix + 8 libs) reportées à **V6-b**. Item **#17** → `supprimé`.

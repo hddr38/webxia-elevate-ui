@@ -9,56 +9,35 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ServicesRouteImport } from './routes/services'
-import { Route as PolitiqueConfidentialiteRouteImport } from './routes/politique-confidentialite'
-import { Route as MentionsLegalesRouteImport } from './routes/mentions-legales'
-import { Route as ContactRouteImport } from './routes/contact'
-import { Route as CguRouteImport } from './routes/cgu'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorkIndexRouteImport } from './routes/work/index'
-import { Route as JournalIndexRouteImport } from './routes/journal/index'
+import { Route as CguRouteImport } from './routes/cgu'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as MentionsLegalesRouteImport } from './routes/mentions-legales'
+import { Route as PolitiqueConfidentialiteRouteImport } from './routes/politique-confidentialite'
+import { Route as ServicesRouteImport } from './routes/services'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as WorkSlugRouteImport } from './routes/work/$slug'
-import { Route as JournalSlugRouteImport } from './routes/journal/$slug'
-import { Route as AuthLoginRouteImport } from './routes/auth/login'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
-import { Route as AdminRealisationsIndexRouteImport } from './routes/admin/realisations/index'
-import { Route as AdminMessagesIndexRouteImport } from './routes/admin/messages/index'
-import { Route as AdminArticlesIndexRouteImport } from './routes/admin/articles/index'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as JournalIndexRouteImport } from './routes/journal/index'
+import { Route as JournalSlugRouteImport } from './routes/journal/$slug'
+import { Route as WorkIndexRouteImport } from './routes/work/index'
+import { Route as WorkSlugRouteImport } from './routes/work/$slug'
 import { Route as AdminAiMemoryIndexRouteImport } from './routes/admin/ai-memory/index'
-import { Route as AdminRealisationsNewRouteImport } from './routes/admin/realisations/new'
-import { Route as AdminRealisationsIdRouteImport } from './routes/admin/realisations/$id'
-import { Route as AdminArticlesNewRouteImport } from './routes/admin/articles/new'
+import { Route as AdminArticlesIndexRouteImport } from './routes/admin/articles/index'
 import { Route as AdminArticlesIdRouteImport } from './routes/admin/articles/$id'
+import { Route as AdminArticlesNewRouteImport } from './routes/admin/articles/new'
+import { Route as AdminMessagesIndexRouteImport } from './routes/admin/messages/index'
+import { Route as AdminRealisationsIndexRouteImport } from './routes/admin/realisations/index'
+import { Route as AdminRealisationsIdRouteImport } from './routes/admin/realisations/$id'
+import { Route as AdminRealisationsNewRouteImport } from './routes/admin/realisations/new'
 
-const ServicesRoute = ServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PolitiqueConfidentialiteRoute =
-  PolitiqueConfidentialiteRouteImport.update({
-    id: '/politique-confidentialite',
-    path: '/politique-confidentialite',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const MentionsLegalesRoute = MentionsLegalesRouteImport.update({
-  id: '/mentions-legales',
-  path: '/mentions-legales',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CguRoute = CguRouteImport.update({
-  id: '/cgu',
-  path: '/cgu',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -71,19 +50,30 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const CguRoute = CguRouteImport.update({
+  id: '/cgu',
+  path: '/cgu',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkIndexRoute = WorkIndexRouteImport.update({
-  id: '/work/',
-  path: '/work/',
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JournalIndexRoute = JournalIndexRouteImport.update({
-  id: '/journal/',
-  path: '/journal/',
+const MentionsLegalesRoute = MentionsLegalesRouteImport.update({
+  id: '/mentions-legales',
+  path: '/mentions-legales',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PolitiqueConfidentialiteRoute =
+  PolitiqueConfidentialiteRouteImport.update({
+    id: '/politique-confidentialite',
+    path: '/politique-confidentialite',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ServicesRoute = ServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -91,19 +81,14 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const WorkSlugRoute = WorkSlugRouteImport.update({
-  id: '/work/$slug',
-  path: '/work/$slug',
-  getParentRoute: () => rootRouteImport,
+const AdminLeadsRoute = AdminLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
-const JournalSlugRoute = JournalSlugRouteImport.update({
-  id: '/journal/$slug',
-  path: '/journal/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: '/auth/login',
-  path: '/auth/login',
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -111,24 +96,34 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiChatRoute = ApiChatRouteImport.update({
-  id: '/api/chat',
-  path: '/api/chat',
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminLeadsRoute = AdminLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => AdminRouteRoute,
+const JournalIndexRoute = JournalIndexRouteImport.update({
+  id: '/journal/',
+  path: '/journal/',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRealisationsIndexRoute = AdminRealisationsIndexRouteImport.update({
-  id: '/realisations/',
-  path: '/realisations/',
-  getParentRoute: () => AdminRouteRoute,
+const JournalSlugRoute = JournalSlugRouteImport.update({
+  id: '/journal/$slug',
+  path: '/journal/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AdminMessagesIndexRoute = AdminMessagesIndexRouteImport.update({
-  id: '/messages/',
-  path: '/messages/',
+const WorkIndexRoute = WorkIndexRouteImport.update({
+  id: '/work/',
+  path: '/work/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkSlugRoute = WorkSlugRouteImport.update({
+  id: '/work/$slug',
+  path: '/work/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAiMemoryIndexRoute = AdminAiMemoryIndexRouteImport.update({
+  id: '/ai-memory/',
+  path: '/ai-memory/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminArticlesIndexRoute = AdminArticlesIndexRouteImport.update({
@@ -136,19 +131,9 @@ const AdminArticlesIndexRoute = AdminArticlesIndexRouteImport.update({
   path: '/articles/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminAiMemoryIndexRoute = AdminAiMemoryIndexRouteImport.update({
-  id: '/ai-memory/',
-  path: '/ai-memory/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminRealisationsNewRoute = AdminRealisationsNewRouteImport.update({
-  id: '/realisations/new',
-  path: '/realisations/new',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminRealisationsIdRoute = AdminRealisationsIdRouteImport.update({
-  id: '/realisations/$id',
-  path: '/realisations/$id',
+const AdminArticlesIdRoute = AdminArticlesIdRouteImport.update({
+  id: '/articles/$id',
+  path: '/articles/$id',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminArticlesNewRoute = AdminArticlesNewRouteImport.update({
@@ -156,9 +141,24 @@ const AdminArticlesNewRoute = AdminArticlesNewRouteImport.update({
   path: '/articles/new',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminArticlesIdRoute = AdminArticlesIdRouteImport.update({
-  id: '/articles/$id',
-  path: '/articles/$id',
+const AdminMessagesIndexRoute = AdminMessagesIndexRouteImport.update({
+  id: '/messages/',
+  path: '/messages/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminRealisationsIndexRoute = AdminRealisationsIndexRouteImport.update({
+  id: '/realisations/',
+  path: '/realisations/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminRealisationsIdRoute = AdminRealisationsIdRouteImport.update({
+  id: '/realisations/$id',
+  path: '/realisations/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminRealisationsNewRoute = AdminRealisationsNewRouteImport.update({
+  id: '/realisations/new',
+  path: '/realisations/new',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 
@@ -346,39 +346,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/services': {
-      id: '/services'
-      path: '/services'
-      fullPath: '/services'
-      preLoaderRoute: typeof ServicesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/politique-confidentialite': {
-      id: '/politique-confidentialite'
-      path: '/politique-confidentialite'
-      fullPath: '/politique-confidentialite'
-      preLoaderRoute: typeof PolitiqueConfidentialiteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mentions-legales': {
-      id: '/mentions-legales'
-      path: '/mentions-legales'
-      fullPath: '/mentions-legales'
-      preLoaderRoute: typeof MentionsLegalesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cgu': {
-      id: '/cgu'
-      path: '/cgu'
-      fullPath: '/cgu'
-      preLoaderRoute: typeof CguRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -395,25 +367,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/cgu': {
+      id: '/cgu'
+      path: '/cgu'
+      fullPath: '/cgu'
+      preLoaderRoute: typeof CguRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/work/': {
-      id: '/work/'
-      path: '/work'
-      fullPath: '/work/'
-      preLoaderRoute: typeof WorkIndexRouteImport
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/journal/': {
-      id: '/journal/'
-      path: '/journal'
-      fullPath: '/journal/'
-      preLoaderRoute: typeof JournalIndexRouteImport
+    '/mentions-legales': {
+      id: '/mentions-legales'
+      path: '/mentions-legales'
+      fullPath: '/mentions-legales'
+      preLoaderRoute: typeof MentionsLegalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/politique-confidentialite': {
+      id: '/politique-confidentialite'
+      path: '/politique-confidentialite'
+      fullPath: '/politique-confidentialite'
+      preLoaderRoute: typeof PolitiqueConfidentialiteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/services': {
+      id: '/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof ServicesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -423,25 +409,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/work/$slug': {
-      id: '/work/$slug'
-      path: '/work/$slug'
-      fullPath: '/work/$slug'
-      preLoaderRoute: typeof WorkSlugRouteImport
-      parentRoute: typeof rootRouteImport
+    '/admin/leads': {
+      id: '/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AdminLeadsRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
-    '/journal/$slug': {
-      id: '/journal/$slug'
-      path: '/journal/$slug'
-      fullPath: '/journal/$slug'
-      preLoaderRoute: typeof JournalSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/login': {
-      id: '/auth/login'
-      path: '/auth/login'
-      fullPath: '/auth/login'
-      preLoaderRoute: typeof AuthLoginRouteImport
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -451,32 +430,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/chat': {
-      id: '/api/chat'
-      path: '/api/chat'
-      fullPath: '/api/chat'
-      preLoaderRoute: typeof ApiChatRouteImport
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/leads': {
-      id: '/admin/leads'
-      path: '/leads'
-      fullPath: '/admin/leads'
-      preLoaderRoute: typeof AdminLeadsRouteImport
-      parentRoute: typeof AdminRouteRoute
+    '/journal/': {
+      id: '/journal/'
+      path: '/journal'
+      fullPath: '/journal/'
+      preLoaderRoute: typeof JournalIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/realisations/': {
-      id: '/admin/realisations/'
-      path: '/realisations'
-      fullPath: '/admin/realisations/'
-      preLoaderRoute: typeof AdminRealisationsIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
+    '/journal/$slug': {
+      id: '/journal/$slug'
+      path: '/journal/$slug'
+      fullPath: '/journal/$slug'
+      preLoaderRoute: typeof JournalSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/messages/': {
-      id: '/admin/messages/'
-      path: '/messages'
-      fullPath: '/admin/messages/'
-      preLoaderRoute: typeof AdminMessagesIndexRouteImport
+    '/work/': {
+      id: '/work/'
+      path: '/work'
+      fullPath: '/work/'
+      preLoaderRoute: typeof WorkIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/work/$slug': {
+      id: '/work/$slug'
+      path: '/work/$slug'
+      fullPath: '/work/$slug'
+      preLoaderRoute: typeof WorkSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/ai-memory/': {
+      id: '/admin/ai-memory/'
+      path: '/ai-memory'
+      fullPath: '/admin/ai-memory/'
+      preLoaderRoute: typeof AdminAiMemoryIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/articles/': {
@@ -486,25 +479,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminArticlesIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/ai-memory/': {
-      id: '/admin/ai-memory/'
-      path: '/ai-memory'
-      fullPath: '/admin/ai-memory/'
-      preLoaderRoute: typeof AdminAiMemoryIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/realisations/new': {
-      id: '/admin/realisations/new'
-      path: '/realisations/new'
-      fullPath: '/admin/realisations/new'
-      preLoaderRoute: typeof AdminRealisationsNewRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/realisations/$id': {
-      id: '/admin/realisations/$id'
-      path: '/realisations/$id'
-      fullPath: '/admin/realisations/$id'
-      preLoaderRoute: typeof AdminRealisationsIdRouteImport
+    '/admin/articles/$id': {
+      id: '/admin/articles/$id'
+      path: '/articles/$id'
+      fullPath: '/admin/articles/$id'
+      preLoaderRoute: typeof AdminArticlesIdRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/articles/new': {
@@ -514,11 +493,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminArticlesNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/articles/$id': {
-      id: '/admin/articles/$id'
-      path: '/articles/$id'
-      fullPath: '/admin/articles/$id'
-      preLoaderRoute: typeof AdminArticlesIdRouteImport
+    '/admin/messages/': {
+      id: '/admin/messages/'
+      path: '/messages'
+      fullPath: '/admin/messages/'
+      preLoaderRoute: typeof AdminMessagesIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/realisations/': {
+      id: '/admin/realisations/'
+      path: '/realisations'
+      fullPath: '/admin/realisations/'
+      preLoaderRoute: typeof AdminRealisationsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/realisations/$id': {
+      id: '/admin/realisations/$id'
+      path: '/realisations/$id'
+      fullPath: '/admin/realisations/$id'
+      preLoaderRoute: typeof AdminRealisationsIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/realisations/new': {
+      id: '/admin/realisations/new'
+      path: '/realisations/new'
+      fullPath: '/admin/realisations/new'
+      preLoaderRoute: typeof AdminRealisationsNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
   }

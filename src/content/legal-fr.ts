@@ -8,9 +8,7 @@
  */
 
 export type LegalInline =
-  | string
-  | { text: string; strong?: true }
-  | { href: string; label: string; external?: true };
+  string | { text: string; strong?: true } | { href: string; label: string; external?: true };
 
 export type LegalBlock =
   | { kind: "p"; content: LegalInline[]; gap?: "sm" | "md" }

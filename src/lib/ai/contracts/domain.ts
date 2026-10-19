@@ -234,10 +234,7 @@ export interface CostPerToken {
 // LOT 38a quater — how the provider must pick tools for this request.
 // "auto" (default), "none", "required", or a forced single function.
 export type ToolChoice =
-  | "auto"
-  | "none"
-  | "required"
-  | { type: "function"; function: { name: string } };
+  "auto" | "none" | "required" | { type: "function"; function: { name: string } };
 
 export interface ProviderRequest {
   model: string;

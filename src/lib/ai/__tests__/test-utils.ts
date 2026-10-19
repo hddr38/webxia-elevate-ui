@@ -85,15 +85,12 @@ export function createMockStreamRequest(overrides: Partial<ProviderRequest> = {}
 
 export function createMockMessages(count: number = 3): Message[] {
   const roles: ("user" | "assistant")[] = ["user", "assistant", "user"];
-  return Array.from(
-    { length: count },
-    (_, i): Message => ({
-      id: `msg-${i}`,
-      role: roles[i % roles.length],
-      content: `Message ${i + 1}`,
-      timestamp: Date.now() - (count - i) * 1000,
-    }),
-  );
+  return Array.from({ length: count }, (_, i): Message => ({
+    id: `msg-${i}`,
+    role: roles[i % roles.length],
+    content: `Message ${i + 1}`,
+    timestamp: Date.now() - (count - i) * 1000,
+  }));
 }
 
 export function createMockToolCall(): ToolCall {

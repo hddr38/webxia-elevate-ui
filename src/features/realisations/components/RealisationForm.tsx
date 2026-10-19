@@ -322,7 +322,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
                 id="title"
                 value={titleValue}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="Nom du projet"
+                placeholder={t("admin.form.projectTitlePlaceholder")}
                 className="rounded-xl"
               />
               <FieldError message={errors.title?.message} />
@@ -334,7 +334,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
                 id="slug"
                 value={slugValue}
                 onChange={(e) => setValue("slug", e.target.value, { shouldDirty: true })}
-                placeholder="slug-du-projet"
+                placeholder={t("admin.form.projectSlugPlaceholder")}
                 className="rounded-xl font-mono text-sm"
               />
               <FieldError message={errors.slug?.message} />
@@ -349,7 +349,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
               </div>
               <Textarea
                 id="shortDescription"
-                placeholder="Courte description pour les cartes"
+                placeholder={t("admin.form.shortDescriptionPlaceholder")}
                 rows={2}
                 className="rounded-xl"
                 {...register("shortDescription")}
@@ -366,7 +366,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
               </div>
               <Textarea
                 id="description"
-                placeholder="Description complète du projet en Markdown..."
+                placeholder={t("admin.form.descriptionMdPlaceholder")}
                 rows={15}
                 className="rounded-xl font-mono text-sm leading-relaxed"
                 {...register("descriptionMd")}
@@ -381,7 +381,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
                 <Label htmlFor="client">{t("admin.form.client")}</Label>
                 <Input
                   id="client"
-                  placeholder="Nom du client"
+                  placeholder={t("admin.form.clientPlaceholder")}
                   className="rounded-xl"
                   {...register("clientName")}
                 />
@@ -391,7 +391,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
                 <Label htmlFor="cover">{t("admin.form.cover")}</Label>
                 <Input
                   id="cover"
-                  placeholder="https://..."
+                  placeholder={t("admin.form.coverPlaceholder")}
                   className="rounded-xl font-mono text-xs"
                   {...register("coverImageUrl")}
                 />
@@ -401,7 +401,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
                 <Label htmlFor="projectUrl">{t("admin.form.projectUrl")}</Label>
                 <Input
                   id="projectUrl"
-                  placeholder="https://..."
+                  placeholder={t("admin.form.projectUrlPlaceholder")}
                   className="rounded-xl font-mono text-xs"
                   {...register("projectUrl")}
                 />
@@ -411,7 +411,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
                 <Label htmlFor="githubUrl">GitHub</Label>
                 <Input
                   id="githubUrl"
-                  placeholder="https://github.com/..."
+                  placeholder={t("admin.form.githubUrlPlaceholder")}
                   className="rounded-xl font-mono text-xs"
                   {...register("githubUrl")}
                 />
@@ -437,7 +437,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
                       addGalleryImage();
                     }
                   }}
-                  placeholder="https://..."
+                  placeholder={t("admin.form.galleryPlaceholder")}
                   className="flex-1 rounded-xl font-mono text-xs"
                 />
                 <Button
@@ -542,7 +542,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
               <Label htmlFor="category">{t("admin.form.categories")}</Label>
               <Input
                 id="category"
-                placeholder="web, app, ai, brand"
+                placeholder={t("admin.form.projectTagsPlaceholder")}
                 className="rounded-xl"
                 {...register("categoryText")}
               />
@@ -553,7 +553,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
               <Label htmlFor="technologies">{t("admin.form.technologies")}</Label>
               <Input
                 id="technologies"
-                placeholder="React, TypeScript, Tailwind"
+                placeholder={t("admin.form.technologiesPlaceholder")}
                 className="rounded-xl"
                 {...register("technologiesText")}
               />
@@ -571,7 +571,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
               </div>
               <Input
                 id="metaTitle"
-                placeholder="Titre pour les moteurs de recherche"
+                placeholder={t("admin.form.metaTitlePlaceholder")}
                 className="rounded-xl"
                 {...register("metaTitle")}
               />
@@ -586,7 +586,7 @@ export function RealisationForm({ realisation, mode }: RealisationFormProps) {
               </div>
               <Textarea
                 id="metaDesc"
-                placeholder="Description pour les moteurs de recherche"
+                placeholder={t("admin.form.metaDescriptionPlaceholder")}
                 rows={3}
                 className="rounded-xl"
                 {...register("metaDescription")}

@@ -278,7 +278,7 @@ export function ArticleForm({ article, mode }: ArticleFormProps) {
                 id="title"
                 value={titleValue}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="Titre de l'article"
+                placeholder={t("admin.form.titlePlaceholder")}
                 className="rounded-xl"
               />
               <FieldError message={errors.title?.message} />
@@ -290,7 +290,7 @@ export function ArticleForm({ article, mode }: ArticleFormProps) {
                 id="slug"
                 value={slugValue}
                 onChange={(e) => setValue("slug", e.target.value, { shouldDirty: true })}
-                placeholder="slug-de-l-article"
+                placeholder={t("admin.form.slugPlaceholder")}
                 className="rounded-xl font-mono text-sm"
               />
               <FieldError message={errors.slug?.message} />
@@ -305,7 +305,7 @@ export function ArticleForm({ article, mode }: ArticleFormProps) {
               </div>
               <Textarea
                 id="excerpt"
-                placeholder="Courte description (optionnel)"
+                placeholder={t("admin.form.excerptPlaceholder")}
                 rows={2}
                 className="rounded-xl"
                 {...register("excerpt")}
@@ -322,7 +322,7 @@ export function ArticleForm({ article, mode }: ArticleFormProps) {
               </div>
               <Textarea
                 id="content"
-                placeholder="Rédigez votre article en Markdown..."
+                placeholder={t("admin.form.contentMdPlaceholder")}
                 rows={20}
                 className="rounded-xl font-mono text-sm leading-relaxed"
                 {...register("contentMd")}
@@ -366,7 +366,7 @@ export function ArticleForm({ article, mode }: ArticleFormProps) {
               <Label htmlFor="tags">{t("admin.form.tags")}</Label>
               <Input
                 id="tags"
-                placeholder="react, web, tutoriel"
+                placeholder={t("admin.form.tagsPlaceholder")}
                 className="rounded-xl"
                 {...register("tagsText")}
               />
@@ -377,7 +377,7 @@ export function ArticleForm({ article, mode }: ArticleFormProps) {
               <Label htmlFor="category">{t("admin.form.categories")}</Label>
               <Input
                 id="category"
-                placeholder="article, case-study, news"
+                placeholder={t("admin.form.categoriesPlaceholder")}
                 className="rounded-xl"
                 {...register("categoryText")}
               />
@@ -401,7 +401,7 @@ export function ArticleForm({ article, mode }: ArticleFormProps) {
                 <Label htmlFor="cover">{t("admin.form.cover")}</Label>
                 <Input
                   id="cover"
-                  placeholder="https://..."
+                  placeholder={t("admin.form.coverPlaceholder")}
                   className="rounded-xl font-mono text-xs"
                   {...register("coverImageUrl")}
                 />
@@ -420,7 +420,7 @@ export function ArticleForm({ article, mode }: ArticleFormProps) {
               </div>
               <Input
                 id="metaTitle"
-                placeholder="Titre pour les moteurs de recherche"
+                placeholder={t("admin.form.metaTitlePlaceholder")}
                 className="rounded-xl"
                 {...register("metaTitle")}
               />
@@ -435,7 +435,7 @@ export function ArticleForm({ article, mode }: ArticleFormProps) {
               </div>
               <Textarea
                 id="metaDesc"
-                placeholder="Description pour les moteurs de recherche"
+                placeholder={t("admin.form.metaDescriptionPlaceholder")}
                 rows={3}
                 className="rounded-xl"
                 {...register("metaDescription")}

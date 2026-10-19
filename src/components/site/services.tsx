@@ -32,8 +32,8 @@ import type { LucideIcon } from "lucide-react";
 import { Check } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { Container } from "@/components/ui/container";
-import { servicesFr, type ServiceCardData, type ServiceSectionData } from "@/data/services-fr";
-import { servicesEn } from "@/data/services-en";
+import { servicesFr, type ServiceCardData, type ServiceSectionData } from "@/content/services-fr";
+import { servicesEn } from "@/content/services-en";
 import { useIsMobileViewport } from "@/lib/use-is-mobile-viewport";
 
 const iconMap: Record<string, LucideIcon> = {

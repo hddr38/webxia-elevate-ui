@@ -42,7 +42,7 @@ Name: WebXIA. Existing assets: `public/logo.svg` (primary) + `public/logo (1).sv
 
 ## Evidence on Hand
 
-Real content and paths: `src/data/projects.ts`, `src/data/services-fr.ts`, `src/data/services-en.ts`, `src/data/articles.ts`, `src/data/team.ts`; `supabase/migrations/` + `docs/DATABASE_SCHEMA.md`; `docs/WEBI_ARCHITECTURE.md`, `AGENTS.md`, `README.md`; legal routes present. Absences future work must not fabricate: no confirmed testimonials, client logos, benchmarks, pricing, or deployment claims in the repo — do not invent them.
+Real content and paths: `src/data/projects.ts`, `src/content/services-fr.ts`, `src/content/services-en.ts`, `src/data/articles.ts`, `src/data/team.ts`; `supabase/migrations/` + `docs/DATABASE_SCHEMA.md`; `docs/WEBI_ARCHITECTURE.md`, `AGENTS.md`, `README.md`; legal routes present. Absences future work must not fabricate: no confirmed testimonials, client logos, benchmarks, pricing, or deployment claims in the repo — do not invent them.
 
 ## Product Principles
 

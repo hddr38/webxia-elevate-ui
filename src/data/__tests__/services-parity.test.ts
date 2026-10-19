@@ -11,8 +11,8 @@
  * uniquement la structure qui pilote le rendu de la page /services.
  */
 import { describe, expect, it } from "vitest";
-import { servicesEn } from "../services-en";
-import { servicesFr } from "../services-fr";
+import { servicesEn } from "../../content/services-en";
+import { servicesFr } from "../../content/services-fr";
 
 const COMMON_LENGTH = Math.min(servicesFr.length, servicesEn.length);
 

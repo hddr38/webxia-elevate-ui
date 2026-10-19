@@ -44,6 +44,7 @@
 | 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+`   | résolu en production                         | 2026-10-18 |
 | 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)              | `6.4-b`       | terminé, poussé                              | 2026-10-18 |
 | 21  | P3       | Design/UX-1 — navbar admin isolée, bouton retour ≥44 px, libellé retour i18n     | `Design/UX-1` | corrigé localement, non commité, non déployé | 2026-10-19 |
+| 22  | P3       | Design/UX-2 — images : coverage, ratios 16/10-16/9 et fallbacks                  | `Design/UX-2` | corrigé localement, non commité, non déployé | 2026-10-20 |
 
 **Barème de priorité utilisé**
 
@@ -1112,6 +1113,66 @@ vagues V4 restantes (V4-b2, V4-c).
 
 ---
 
+## 22 — Design/UX-2 — images : coverage, ratios et fallbacks
+
+- **Priorité** : `P3`
+- **Lot cible** : `Design/UX-2`
+- **Statut** : `corrigé localement, non commité, non déployé` — corrections appliquées dans
+  le cadre du GO « DESIGN/UX-2 » (2026-10-20). **Non commité, non poussé, non déployé.**
+- **Date** : `2026-10-20`
+
+**Phase 0 — format de `a.cover` (avant toute modification)**
+
+- `src/lib/mappers.ts` : `cover` est une **valeur CSS déjà formatée**, jamais nullable —
+  `url(<cover_image_url>)` si image, sinon `linear-gradient(...)` déterministe (parité
+  hash id). Vérifié sur échantillon réel en base (2 articles, URLs Supabase Storage propres,
+  sans espaces) → utilisation directe en `backgroundImage` (règle 5 du GO).
+- `coverUrl` reste l'URL brute nullable pour les `<img>`.
+
+**Changements (5 fichiers)**
+
+| Fichier                                | Mission | Changement                                                                                                                                            |
+| -------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/routes/journal/index.tsx`         | 1       | cartes : `backgroundSize: "cover"` + `backgroundPosition: "center"` ajoutés (fallback gradient conservé)                                              |
+| `src/components/site/project-card.tsx` | 2       | conteneur image `aspect-[4/3] → aspect-[16/10]` ; `<img>` `object-cover object-center` ; `DbRealisationCard`/`CTAStrip` intacts                       |
+| `src/routes/journal/$slug.tsx`         | 3       | div de fallback hero : `backgroundSize: "cover"` + `backgroundPosition: "center"`                                                                     |
+| `src/routes/work/$slug.tsx`            | 3       | idem (fallback hero)                                                                                                                                  |
+| `src/components/admin/cover-hero.tsx`  | 4       | conteneur `aspect-[21/9] sm:aspect-[28/9] → aspect-[16/9]` (aligné sur les heroes 16/9 des pages détail) ; JSDoc mise à jour ; upload/logique intacts |
+
+Aucun test à mettre à jour (aucune assertion de ratio existante). `ProjectCard` (export mort)
+n'existe plus depuis LOT 6.4-b V2 — non modifié par nature.
+
+**Contrôles (avant → après, mesurés)**
+
+- Prettier (5 fichiers) : clean → clean ; ESLint (5 fichiers) : 0/0 → 0/0.
+- `npm run lint` : 0 err / 22 warn → **0 err / 22 warn** (identique) ; typecheck : 0 → 0.
+- `npm run test` : 62 files / **696 + 1 todo** → identique (12.63 s).
+- `npm run build` : 1.86 s → **1.68 s**, 0 erreur ; `git diff --check` : 0 → 0.
+
+**Vérification visuelle locale (preview `:4173` + Playwright, FR + EN)**
+
+- **95 checks / 0 fail** :
+  - `/journal` : cartes `url(...)` + `background-size: cover` + `position: center` (computed
+    `50% 50%`) + ratio 1.600 ; passe fallback (covers nullées par interception réseau du
+    document SSR — données loaders en littérales JS `cover:"url(...)"` + styles inline) :
+    gradient intact + cover/center.
+  - `/journal/$slug` et `/work/$slug` : hero `<img>` `object-cover` chargée (données
+    réelles) ; passe fallback : div de fallback `linear-gradient` + cover/center (Missions 3).
+  - `/work` : cartes ratio **1.600**, 0 `aspect-[4/3]` restant, img `object-cover object-center`.
+  - `/contact` : h1 FR/EN, 0 clé i18n brute, 0 overflow (non-régression).
+  - Mobile **390 px** : 0 overflow horizontal sur les 5 pages × 2 locales ; `object-fit: cover`
+    (non déformation par conception).
+  - Admin simulé : `/admin/realisations` propre ; CoverHero sur `/admin/realisations/new` :
+    ratio **1.778 (16/9)**, 0 conteneur 21/9-28/9 restant, fallback gradient intact.
+- Méthode fallback : **interception Playwright du document SSR** (patch `cover:"url(…)"`,
+  `coverUrl:"…"`, styles inline `background-image:url(https…)` → gradient) — simulation
+  « sans image », aucun contenu sans cover n'existe en base (2/2 articles + 1/1 réalisation
+  ont une cover).
+
+**Limite** : vérification locale uniquement — aucune vérification en production.
+
+---
+
 ## Note complémentaire — clés manquantes supplémentaires
 
 Conformément à la consigne d'ajout, l'audit 5.2-pre-a a recherché toute clé i18n manquante
@@ -1149,3 +1210,4 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-19` — **Push global V6** (`14b38cf..a2cbfef` = V6-a `ccb62f3` + V6-b `a2cbfef`) : CI/E2E/Integration ✅ (runs 39320735604 / 39320735451 / 39320735587). Production : `/` HTTP 200, `/api/health` **200 healthy `version=a2cbfef`**. Smoke global Playwright FR **9/9** (home 200 + h1 + 0 clé i18n brute, ChatWidget ouvert, `/services` + `/cgu` 200, `/admin` → `/auth/login?redirect=…` 200 avec formulaire de login visible). Doc de stack mise à jour (README tests 696 + 1 todo, WEBI_ARCHITECTURE Radix 7 primitives / 19 composants / 696 tests, hash `a2cbfef`). **Décision shadcn officiellement clôturée.**
 - `2026-10-19` — **Doc stack** (`0ae87b7`) poussée : CI/E2E/Integration ✅ (runs 39322487785 / 39322487699 / 39322487806). Aucune modification applicative.
 - `2026-10-19` — **Design/UX-1** préparé localement (non commité, non déployé) : navbar admin regroupée en pill isolée (`border-brand/25` `bg-brand/[0.07]`), nav `gap-3`, filet vertical retiré, zone droite `gap-1.5` + séparateur `h-6 w-px` + avatar `size-9` ; `AdminPageHeader` prop `backLabel` + `BackButton min-h-[44px]` ; clé i18n `admin.common.backToDashboard` FR/EN ajoutée et branchée sur les 5 listes admin (`backTo="/admin"`). Gates : prettier/lint **0 err / 22 warn** (baseline identique), typecheck, **696 + 1 todo**, build 1.90 s, `git diff --check` 0. Vérification visuelle locale (preview `:4173` + Playwright, navigation SPA avec session fausse) : **249 checks / 0 fail** (FR + EN × 6 pages + mobile 390×844), h1 des 5 listes attendu en 2 locales (swap SPA ~70 ms — lectures instantanées décalées = artefact de test). Limite : **local uniquement, aucune vérification en production** (pas de session admin réelle). Item **#21** → `corrigé localement, non commité, non déployé`.
+- `2026-10-20` — **Design/UX-2** préparé localement (non commité, non déployé) : Phase 0 — `a.cover` confirmé **valeur CSS déjà formatée** (`url(…)` ou gradient déterministe, mappers + échantillon base) ; cartes journal `backgroundSize: cover` + `backgroundPosition: center` ; `project-card` ratio `4/3 → 16/10` + `object-cover object-center` ; fallbacks hero `journal/$slug` + `work/$slug` en cover/center ; CoverHero admin `21/9 sm:28/9 → 16/9` (aligné heroes détail). Gates (avant = après) : prettier/eslint 0, lint 0 err/22 warn, typecheck 0, **696 + 1 todo**, build 1.68 s, diff-check 0. Vérification visuelle locale : **95 checks / 0 fail** (FR + EN × `/journal`, `/journal/$slug`, `/work`, `/work/$slug`, `/contact`, mobile 390 ; admin simulé `/admin/realisations` + formulaire `new` CoverHero 1.778) ; scénarios « sans image » simulés par interception du document SSR (aucun contenu sans cover en base). Limite : **local uniquement**. Item **#22** → `corrigé localement, non commité, non déployé`.

@@ -122,7 +122,14 @@ function ArticlePage() {
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
-            <div className="absolute inset-0" style={{ backgroundImage: article.cover }} />
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: article.cover,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            />
           )}
           <div
             className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_60%)]"

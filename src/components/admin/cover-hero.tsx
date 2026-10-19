@@ -31,7 +31,7 @@ interface CoverHeroProps {
   className?: string;
 }
 
-/** Bandeau cover premium (aperçu live) : visuel 21/9 + fallback gradient déterministe. */
+/** Bandeau cover premium (aperçu live) : visuel 16/9 + fallback gradient déterministe. */
 export function CoverHero({
   eyebrow,
   title,
@@ -54,7 +54,7 @@ export function CoverHero({
         className,
       )}
     >
-      <div className="relative aspect-[21/9] w-full overflow-hidden bg-muted sm:aspect-[28/9]">
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
         {hasCover ? (
           <img
             src={coverUrl!.trim()}

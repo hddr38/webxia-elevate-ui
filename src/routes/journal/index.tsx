@@ -127,7 +127,11 @@ function JournalPage() {
                   <>
                     <div
                       className="relative aspect-[16/10] overflow-hidden"
-                      style={{ backgroundImage: a.cover }}
+                      style={{
+                        backgroundImage: a.cover,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }}
                     >
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_60%)]" />
                       <div className="absolute inset-0 bg-grid opacity-10 mix-blend-overlay" />

@@ -32,14 +32,14 @@ export function DbRealisationCard({
 
   const body = (
     <>
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
         {item.coverUrl ? (
           <img
             src={item.coverUrl}
             alt={item.title}
             loading="lazy"
             decoding="async"
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover object-center"
           />
         ) : (
           <div className="absolute inset-0" style={{ backgroundImage: item.cover }} />

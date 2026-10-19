@@ -354,7 +354,7 @@ test.describe("Accueil", () => {
     const bar = page.getByTestId("header-bar");
 
     // Opaque des le top.
-    await expect(bar).toHaveClass(/backdrop-blur-xl/);
+    await expect(bar).toHaveClass(/backdrop-blur-md/);
 
     // Scroll dans le hero par steps : 0 erreur, pas de freeze.
     const heroBox = await page.locator("section").first().boundingBox();
@@ -368,12 +368,12 @@ test.describe("Accueil", () => {
     // Apres scroll : toujours opaque.
     await page.evaluate(() => window.scrollTo(0, 300));
     await page.waitForTimeout(400);
-    await expect(bar).toHaveClass(/backdrop-blur-xl/);
+    await expect(bar).toHaveClass(/backdrop-blur-md/);
 
     // Retour top : toujours opaque.
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(400);
-    await expect(bar).toHaveClass(/backdrop-blur-xl/);
+    await expect(bar).toHaveClass(/backdrop-blur-md/);
     expect(pageErrors).toEqual([]);
   });
 
@@ -475,7 +475,7 @@ test.describe("Accueil", () => {
     expect(opacities.every((o) => o === "1")).toBe(true);
 
     // Header opaque permanent + bouton pause retire.
-    await expect(page.getByTestId("header-bar")).toHaveClass(/backdrop-blur-xl/);
+    await expect(page.getByTestId("header-bar")).toHaveClass(/backdrop-blur-md/);
     await expect(page.getByRole("button", { name: /animations/i })).toHaveCount(0);
 
     // Tap CTA hero vite (cible produit < 300 ms ; seuil E2E < 1000 ms,
@@ -497,7 +497,7 @@ test.describe("Accueil", () => {
     await waitForHydration(page);
 
     // Header opaque des le top (permanent).
-    await expect(page.getByTestId("header-bar")).toHaveClass(/backdrop-blur-xl/);
+    await expect(page.getByTestId("header-bar")).toHaveClass(/backdrop-blur-md/);
     // Bouton pause retire aussi sur desktop.
     await expect(page.getByRole("button", { name: /animations/i })).toHaveCount(0);
     // Marquee toujours animee (compositor).

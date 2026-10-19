@@ -31,8 +31,7 @@ function createMockClient(results: unknown[]) {
   const client = {
     from: (table: string) => {
       const calls: Record<string, unknown[][]> = {};
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const chain: any = {};
+      const chain: Record<string, unknown> = {};
       for (const method of CHAIN_METHODS) {
         chain[method] = (...args: unknown[]) => {
           (calls[method] ??= []).push(args);

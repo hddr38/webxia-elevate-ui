@@ -20,14 +20,14 @@ npm run dev
 
 ## Scripts
 
-| Commande            | Usage                                |
-| ------------------- | ------------------------------------ |
-| `npm run dev`       | Dev Vite                             |
-| `npm run build`     | Build prod (inclut typecheck strict) |
-| `npm run lint`      | ESLint + Prettier                    |
-| `npm run format`    | Fix auto Prettier                    |
-| `npm run typecheck` | `tsc --noEmit`                       |
-| `npm run test`      | Vitest (329 tests, providers mockés) |
+| Commande            | Usage                                         |
+| ------------------- | --------------------------------------------- |
+| `npm run dev`       | Dev Vite                                      |
+| `npm run build`     | Build prod (inclut typecheck strict)          |
+| `npm run lint`      | ESLint + Prettier                             |
+| `npm run format`    | Fix auto Prettier                             |
+| `npm run typecheck` | `tsc --noEmit`                                |
+| `npm run test`      | Vitest (696 tests + 1 todo, providers mockés) |
 
 Avant chaque push : `npm run lint && npm run build`.
 

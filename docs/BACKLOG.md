@@ -890,8 +890,9 @@ Exports vivants **conservés impérativement** (importés via le barrel `../skil
 
 **Décision shadcn** : **validée le 2026-10-19 (V6-a) — purge partielle**. 31 composants UI
 mort supprimés (dont `sidebar.tsx`) + `use-mobile.tsx` orphelin ; 19 composants conservés.
-Vague **V6-b** (suppression des 19 dépendances Radix mortes et 8 libs associées) en attente
-de GO explicite.
+Vague **V6-b** exécutée le `2026-10-19` (`a2cbfef`) : 19 dépendances Radix mortes + 8 libs
+associées désinstallées (`dependencies` 59 → 32, 7 Radix conservés). **Décision officiellement
+clôturée (V6-a + V6-b poussés le 2026-10-19).**
 
 **Limite** : committé en local (`a380786`), non poussé, non déployé — en attente du GO de push V3.
 
@@ -1060,8 +1061,8 @@ vagues V4 restantes (V4-b2, V4-c).
 - **V3** (barrels morts) : poussé
 - **V4** (IA + observabilité) : poussé (V4-a, V4-b1, V4-b2a, V4-b2b, V4-c)
 - **V5** (CSS canvas-gpu) : poussé (`2bafd45`)
-- **V6-a** (fichiers UI morts) : commit local — purge 31 fichiers + `use-mobile.tsx`
-- **V6-b** (dépendances Radix/lib mortes) : reporté (19 Radix + 8 libs), en attente de GO
+- **V6-a** (fichiers UI morts) : poussé (`ccb62f3`) — purge 31 fichiers + `use-mobile.tsx`
+- **V6-b** (dépendances Radix/lib mortes) : poussé (`a2cbfef`) — 19 Radix + 8 libs désinstallés
 - **Backlog large** : items i18n parallèles, backdrop-blur, docs obsolètes, `bun.lock`
   restent ouverts.
 
@@ -1100,3 +1101,5 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-15` — push `a380786` (LOT 6.4-b V3), CI/E2E/Integration ✅. Item **#18** → `résolu en production`.
 - `2026-10-18` — push `908b99c` (Hero canvas mobile) + `e836983` (E2E assertion alignée), CI/E2E/Integration ✅ (runs 39076465367 / 39076465376 / 39076465378). Vérification production : canvas mobile actif (1 canvas visible, fallback masqué), DPR 1.0 mobile / 2.0 desktop, 0 clé i18n brute sur 5 pages, hash CSS inchangé / hash JS changé. E2E 40 tests verts dont le test mobile `LOT 6.4-b` mis à jour. **Validation iOS réelle par l'utilisateur le 2026-10-18 : fluide, pas de saturation.** Item **#19** → `résolu en production`. LOT 42 P2 / LOT 44 P0 officiellement inversés (remplacés par les params allégés) ; kill-switch `VITE_ENABLE_MOBILE_CANVAS` maintenu pour régression future.
 - `2026-10-19` — **V6-a** préparé localement (non poussé) : décision shadcn tranchée (**purge partielle, 19 composants conservés**). Suppression de 31 composants UI morts de `src/components/ui/` (27 à 0 import + 4 transitivement morts : `separator`, `skeleton`, `tooltip`, `toggle` via `sidebar`/`toggle-group`), suppression orpheline `src/hooks/use-mobile.tsx` + re-export retiré de `src/hooks/index.ts` (barrel conservé pour `useChat`/`useStickyScroll`). Garde-fous greps pré/post (src, e2e, scripts, docs) : **0 import applicatif, 0 test** impacté ; résidu connu : commentaire JSDoc `chat/constants.ts:8` mentionnant `useIsMobile` (fichier vivant hors périmètre V6-a). `useIsMobileViewport` (`src/lib/`) vivant et inchangé. **Aucune modification de `package.json`** — dépendances (19 Radix + 8 libs) reportées à **V6-b**. Item **#17** → `supprimé`.
+- `2026-10-19` — **V6-b** (`a2cbfef`) : désinstallation des 27 dépendances mortes (19 `@radix-ui/*` + `recharts`, `react-day-picker`, `react-resizable-panels`, `vaul`, `cmdk`, `input-otp`, `embla-carousel-react`, `date-fns`) — `dependencies` **59 → 32**, 7 Radix conservés, résidus `package.json`/`npm ls` = 0, JSDoc `useIsMobile` corrigé (`chat/constants.ts`, seule source touchée). Gates : prettier/lint **0 err / 22 warn**, typecheck, **696 + 1 todo (697)**, build 1.86 s, `npm audit` 23 total / **0 critical** (inchangé — paquets supprimés sans advisory ; gain `node_modules`/lockfile/surface).
+- `2026-10-19` — **Push global V6** (`14b38cf..a2cbfef` = V6-a `ccb62f3` + V6-b `a2cbfef`) : CI/E2E/Integration ✅ (runs 39320735604 / 39320735451 / 39320735587). Production : `/` HTTP 200, `/api/health` **200 healthy `version=a2cbfef`**. Smoke global Playwright FR **9/9** (home 200 + h1 + 0 clé i18n brute, ChatWidget ouvert, `/services` + `/cgu` 200, `/admin` → `/auth/login?redirect=…` 200 avec formulaire de login visible). Doc de stack mise à jour (README tests 696 + 1 todo, WEBI_ARCHITECTURE Radix 7 primitives / 19 composants / 696 tests, hash `a2cbfef`). **Décision shadcn officiellement clôturée.**

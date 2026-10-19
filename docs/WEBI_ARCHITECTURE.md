@@ -11,24 +11,24 @@
 
 ### 1.1 Stack Summary
 
-| Layer           | Technology                       | Version      |
-| --------------- | -------------------------------- | ------------ |
-| Frontend        | React                            | 19.2         |
-| Full-Stack      | TanStack Start                   | 1.167        |
-| Router          | TanStack Router                  | 1.168        |
-| Server          | Nitro                            | 3.0          |
-| Build           | Vite                             | 8            |
-| Language        | TypeScript                       | 5.8 (strict) |
-| Styling         | Tailwind CSS                     | 4.2          |
-| UI Components   | shadcn/ui + Radix UI             | Latest       |
-| Animation       | Framer Motion                    | 12.40        |
-| Icons           | Lucide React                     | 0.575        |
-| Data Fetching   | TanStack Query                   | 5.83         |
-| Database        | Supabase (PostgreSQL + pgvector) | 2.111        |
-| Auth            | Supabase Auth + @supabase/ssr    | 0.12         |
-| Validation      | Zod                              | 3.24         |
-| Forms           | React Hook Form                  | 7.71         |
-| Package Manager | npm                              | 10+          |
+| Layer           | Technology                          | Version      |
+| --------------- | ----------------------------------- | ------------ |
+| Frontend        | React                               | 19.2         |
+| Full-Stack      | TanStack Start                      | 1.167        |
+| Router          | TanStack Router                     | 1.168        |
+| Server          | Nitro                               | 3.0          |
+| Build           | Vite                                | 8            |
+| Language        | TypeScript                          | 5.8 (strict) |
+| Styling         | Tailwind CSS                        | 4.2          |
+| UI Components   | shadcn/ui + Radix UI (7 primitives) | Latest       |
+| Animation       | Framer Motion                       | 12.40        |
+| Icons           | Lucide React                        | 0.575        |
+| Data Fetching   | TanStack Query                      | 5.83         |
+| Database        | Supabase (PostgreSQL + pgvector)    | 2.111        |
+| Auth            | Supabase Auth + @supabase/ssr       | 0.12         |
+| Validation      | Zod                                 | 3.24         |
+| Forms           | React Hook Form                     | 7.71         |
+| Package Manager | npm                                 | 10+          |
 
 ### 1.2 High-Level Architecture
 
@@ -575,9 +575,9 @@ docs/WEBI_ARCHITECTURE.md     # This document
 - ✅ `ai_memory` table with pgvector (`vector(2048)`), RLS, indexes
 - ✅ Server Functions for `ai_memory` CRUD
 - ✅ Admin UI at `/admin/ai-memory`
-- ✅ shadcn/ui (47 components), Tailwind 4, Framer Motion
+- ✅ shadcn/ui (19 components post-V6 purge), Tailwind 4, Framer Motion
 - ✅ TypeScript strict, ESLint, Prettier
-- ✅ **206 tests passing** (unit + integration)
+- ✅ **696 tests passing + 1 todo** (unit + integration)
 - ✅ **Observability layer** (metrics, structured logging, health checks)
 - ✅ **Health endpoint** (`/api/health`) with DB + provider checks
 - ✅ **Structured logging** (requestId, conversationId, provider, duration, event, error type)

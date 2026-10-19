@@ -1,26 +1,65 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Fragment } from "react";
 import { Container } from "@/components/ui/container";
+import { cguContentEn } from "@/content/legal-en";
+import { cguContent, type LegalInline } from "@/content/legal-fr";
+import { useLocale } from "@/lib/locale-context";
+import { seo } from "@/lib/seo";
 
 export const Route = createFileRoute("/cgu")({
-  head: () => ({
-    meta: [
-      { title: "Conditions Générales d'Utilisation — WebXIA" },
-      {
-        name: "description",
-        content:
-          "Conditions générales d'utilisation du site webxia.fr — accès au site, propriété intellectuelle, prestations et responsabilités.",
-      },
-      { property: "og:title", content: "CGU — WebXIA" },
-    ],
-    links: [{ rel: "canonical", href: "https://webxia.fr/cgu" }],
-  }),
+  head: () => {
+    const locale = (typeof window !== "undefined" && localStorage.getItem("webxia-locale")) || "fr";
+    const s = locale === "en" ? seo.en.cgu : seo.fr.cgu;
+    return {
+      meta: [
+        { title: s.title },
+        { name: "description", content: s.description },
+        { property: "og:title", content: s.title },
+        { property: "og:description", content: s.ogDescription },
+      ],
+      links: [{ rel: "canonical", href: "https://webxia.fr/cgu" }],
+    };
+  },
   component: CguPage,
 });
 
+function renderInline(node: LegalInline, index: number) {
+  if (typeof node === "string") return <Fragment key={index}>{node}</Fragment>;
+  if ("href" in node) {
+    return node.external ? (
+      <Fragment key={index}>
+        <a
+          href={node.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-brand hover:underline"
+        >
+          {node.label}
+        </a>
+      </Fragment>
+    ) : (
+      <Fragment key={index}>
+        <a href={node.href} className="text-brand hover:underline">
+          {node.label}
+        </a>
+      </Fragment>
+    );
+  }
+  return node.strong ? (
+    <Fragment key={index}>
+      <strong className="text-foreground">{node.text}</strong>
+    </Fragment>
+  ) : (
+    <Fragment key={index}>{node.text}</Fragment>
+  );
+}
+
 function CguPage() {
+  const { locale } = useLocale();
+  const page = locale === "en" ? cguContentEn : cguContent;
+
   return (
     <div className="min-h-screen bg-background">
       <Container size="narrow" className="px-4 sm:px-6 lg:px-8 pt-14 pb-20 md:pt-20 md:pb-28">
@@ -35,140 +74,50 @@ function CguPage() {
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground/80 transition-colors hover:text-brand mb-8"
           >
             <ArrowLeft className="size-4" />
-            Retour à l'accueil
+            {page.backLink}
           </Link>
 
           <h1 className="font-display text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
-            Conditions Générales d'Utilisation (CGU)
+            {page.title}
           </h1>
 
           <div className="mt-10 space-y-8 text-base leading-relaxed text-muted-foreground">
-            <p>
-              Les présentes Conditions Générales d'Utilisation (ci-après "CGU") régissent l'accès et
-              l'utilisation du site webxia.fr. En accédant au site, l'utilisateur accepte sans
-              réserve les présentes CGU.
-            </p>
+            <p>{page.intro.map(renderInline)}</p>
 
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Article 1 : Accès au site
-              </h2>
-              <p>
-                Le site webxia.fr est accessible gratuitement à tout utilisateur disposant d'un
-                accès à Internet. Les frais d'accès et d'utilisation du matériel (ordinateur,
-                connexion Internet) sont à la charge de l'utilisateur.
-              </p>
-              <p className="mt-2">
-                WebXIA s'efforce de permettre l'accès au site 24h/24, 7j/7, mais ne saurait être
-                tenu responsable des interruptions liées à des opérations de maintenance, de mise à
-                jour, ou de problèmes techniques indépendants de sa volonté.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Article 2 : Utilisation du site
-              </h2>
-              <p>
-                L'utilisateur s'engage à utiliser le site de manière conforme aux lois en vigueur et
-                à ne pas porter atteinte aux droits de WebXIA ou de tiers. Sont notamment interdits
-                :
-              </p>
-              <ul className="mt-2 space-y-2 list-disc pl-6">
-                <li>
-                  L'accès frauduleux ou la tentative d'accès à des zones non publiques du site.
-                </li>
-                <li>L'introduction de virus, chevaux de Troie ou tout autre code malveillant.</li>
-                <li>L'extraction automatisée de données (scraping) sans autorisation préalable.</li>
-                <li>
-                  L'utilisation du site à des fins de prospection commerciale sans accord de WebXIA.
-                </li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Article 3 : Propriété intellectuelle
-              </h2>
-              <p>
-                Tous les éléments présents sur le site (textes, logos, graphismes, code source) sont
-                la propriété exclusive de WebXIA ou de ses partenaires. Toute reproduction, même
-                partielle, sans autorisation écrite préalable est interdite et constitue une
-                contrefaçon.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Article 4 : Prestations et Paiements
-              </h2>
-              <p>
-                Le site webxia.fr a pour objet la présentation des services de WebXIA. Les
-                informations fournies sont à titre indicatif.
-              </p>
-              <p className="mt-2">
-                Le paiement des prestations peut s'effectuer de deux manières :
-              </p>
-              <ul className="mt-2 space-y-2 list-disc pl-6">
-                <li>
-                  <strong className="text-foreground">En ligne :</strong> Via un système de paiement
-                  sécurisé. Les transactions sont traitées par un prestataire de paiement tiers.
-                  WebXIA n'a à aucun moment accès aux coordonnées bancaires de l'utilisateur.
-                </li>
-                <li>
-                  <strong className="text-foreground">Par facture classique :</strong> Par virement
-                  bancaire selon les modalités définies sur le devis ou la facture émise par WebXIA.
-                </li>
-              </ul>
-              <p className="mt-2">
-                Les conditions financières et techniques de chaque prestation sont définies dans un
-                contrat ou un devis spécifique accepté par les deux parties.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Article 5 : Liens hypertextes
-              </h2>
-              <p>
-                Le site peut contenir des liens vers des sites tiers. WebXIA n'exerce aucun contrôle
-                sur ces sites et décline toute responsabilité quant à leur contenu ou leurs
-                pratiques en matière de protection des données.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Article 6 : Responsabilité
-              </h2>
-              <p>
-                WebXIA ne saurait être tenu responsable des dommages directs ou indirects résultant
-                de l'accès ou de l'utilisation du site, notamment des pertes de données, de virus,
-                ou de pannes matérielles. Le site est fourni "tel quel" sans garantie d'aucune
-                sorte.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Article 7 : Modification des CGU
-              </h2>
-              <p>
-                WebXIA se réserve le droit de modifier les présentes CGU à tout moment. Les
-                utilisateurs sont invités à les consulter régulièrement. La version applicable est
-                celle en ligne à la date d'utilisation du site.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Article 8 : Droit applicable et juridiction compétente
-              </h2>
-              <p>
-                Les présentes CGU sont régies par le droit français. En cas de litige, et après
-                recherche d'une solution amiable, les tribunaux français seront seuls compétents.
-              </p>
-            </section>
+            {page.sections.map((section, sectionIndex) => (
+              <section key={sectionIndex}>
+                <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
+                  {section.heading}
+                </h2>
+                {section.blocks.map((block, blockIndex) =>
+                  block.kind === "p" ? (
+                    <p
+                      key={blockIndex}
+                      className={
+                        block.gap === "md"
+                          ? "mt-4"
+                          : blockIndex === 0 && block.gap !== "sm"
+                            ? undefined
+                            : "mt-2"
+                      }
+                    >
+                      {block.content.map(renderInline)}
+                    </p>
+                  ) : (
+                    <ul
+                      key={blockIndex}
+                      className={
+                        block.style === "disc" ? "mt-2 space-y-2 list-disc pl-6" : "mt-2 space-y-1"
+                      }
+                    >
+                      {block.items.map((item, itemIndex) => (
+                        <li key={itemIndex}>{item.map(renderInline)}</li>
+                      ))}
+                    </ul>
+                  ),
+                )}
+              </section>
+            ))}
           </div>
         </motion.div>
       </Container>

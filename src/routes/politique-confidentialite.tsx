@@ -1,26 +1,65 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Fragment } from "react";
 import { Container } from "@/components/ui/container";
+import { confidentialiteContentEn } from "@/content/legal-en";
+import { confidentialiteContent, type LegalInline } from "@/content/legal-fr";
+import { useLocale } from "@/lib/locale-context";
+import { seo } from "@/lib/seo";
 
 export const Route = createFileRoute("/politique-confidentialite")({
-  head: () => ({
-    meta: [
-      { title: "Politique de Confidentialité — WebXIA" },
-      {
-        name: "description",
-        content:
-          "Politique de confidentialité de WebXIA — comment nous collectons, utilisons et protégeons vos données personnelles conformément au RGPD.",
-      },
-      { property: "og:title", content: "Politique de Confidentialité — WebXIA" },
-    ],
-    links: [{ rel: "canonical", href: "https://webxia.fr/politique-confidentialite" }],
-  }),
+  head: () => {
+    const locale = (typeof window !== "undefined" && localStorage.getItem("webxia-locale")) || "fr";
+    const s = locale === "en" ? seo.en.politiqueConfidentialite : seo.fr.politiqueConfidentialite;
+    return {
+      meta: [
+        { title: s.title },
+        { name: "description", content: s.description },
+        { property: "og:title", content: s.title },
+        { property: "og:description", content: s.ogDescription },
+      ],
+      links: [{ rel: "canonical", href: "https://webxia.fr/politique-confidentialite" }],
+    };
+  },
   component: PolitiqueConfidentialitePage,
 });
 
+function renderInline(node: LegalInline, index: number) {
+  if (typeof node === "string") return <Fragment key={index}>{node}</Fragment>;
+  if ("href" in node) {
+    return node.external ? (
+      <Fragment key={index}>
+        <a
+          href={node.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-brand hover:underline"
+        >
+          {node.label}
+        </a>
+      </Fragment>
+    ) : (
+      <Fragment key={index}>
+        <a href={node.href} className="text-brand hover:underline">
+          {node.label}
+        </a>
+      </Fragment>
+    );
+  }
+  return node.strong ? (
+    <Fragment key={index}>
+      <strong className="text-foreground">{node.text}</strong>
+    </Fragment>
+  ) : (
+    <Fragment key={index}>{node.text}</Fragment>
+  );
+}
+
 function PolitiqueConfidentialitePage() {
+  const { locale } = useLocale();
+  const page = locale === "en" ? confidentialiteContentEn : confidentialiteContent;
+
   return (
     <div className="min-h-screen bg-background">
       <Container size="narrow" className="px-4 sm:px-6 lg:px-8 pt-14 pb-20 md:pt-20 md:pb-28">
@@ -35,155 +74,50 @@ function PolitiqueConfidentialitePage() {
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground/80 transition-colors hover:text-brand mb-8"
           >
             <ArrowLeft className="size-4" />
-            Retour à l'accueil
+            {page.backLink}
           </Link>
 
           <h1 className="font-display text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
-            Politique de Confidentialité
+            {page.title}
           </h1>
 
           <div className="mt-10 space-y-8 text-base leading-relaxed text-muted-foreground">
-            <p>
-              WebXIA s'engage à protéger la vie privée des utilisateurs de son site webxia.fr. Cette
-              politique de confidentialité explique comment nous collectons, utilisons et protégeons
-              vos données personnelles, conformément au Règlement Général sur la Protection des
-              Données (RGPD) et à la loi Informatique et Libertés.
-            </p>
+            <p>{page.intro.map(renderInline)}</p>
 
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                1. Responsable du traitement
-              </h2>
-              <p>
-                Le responsable du traitement des données est WebXIA, représentée par Mehdi E., ayant
-                son adresse à 30 allée Robert Boulin, 33500 Libourne, France, joignable à l'adresse
-                suivante :{" "}
-                <a href="mailto:webxia@protonmail.com" className="text-brand hover:underline">
-                  webxia@protonmail.com
-                </a>
-                .
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                2. Données collectées
-              </h2>
-              <p>Nous collectons les données suivantes :</p>
-              <ul className="mt-2 space-y-2 list-disc pl-6">
-                <li>
-                  <strong className="text-foreground">Données de contact :</strong> Nom, prénom,
-                  adresse e-mail et contenu de votre message lorsque vous remplissez notre
-                  formulaire de contact.
-                </li>
-                <li>
-                  <strong className="text-foreground">Données de paiement :</strong> En cas de
-                  paiement en ligne, les transactions sont sécurisées par notre prestataire de
-                  paiement. WebXIA ne stocke aucune donnée bancaire (les coordonnées de carte bleue
-                  ne transitent jamais par nos serveurs).
-                </li>
-                <li>
-                  <strong className="text-foreground">Données techniques :</strong> Adresse IP, type
-                  de navigateur (données strictement nécessaires au fonctionnement du site).
-                </li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                3. Finalités du traitement
-              </h2>
-              <p>Les données collectées sont utilisées pour :</p>
-              <ul className="mt-2 space-y-2 list-disc pl-6">
-                <li>Répondre à vos demandes d'information, de devis ou de contact.</li>
-                <li>Traiter vos paiements en ligne et vous fournir les prestations commandées.</li>
-                <li>Respecter nos obligations légales et comptables.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                4. Base légale
-              </h2>
-              <p>Le traitement de vos données est fondé sur :</p>
-              <ul className="mt-2 space-y-2 list-disc pl-6">
-                <li>Votre consentement (lorsque vous remplissez le formulaire de contact).</li>
-                <li>
-                  L'exécution de mesures précontractuelles ou d'un contrat (pour les paiements et
-                  prestations).
-                </li>
-                <li>
-                  Notre intérêt légitime à répondre à vos demandes et à assurer la sécurité du site.
-                </li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                5. Durée de conservation
-              </h2>
-              <p>
-                Vos données personnelles sont conservées pour une durée maximale de 3 ans après
-                votre dernière interaction avec nos services, sauf si une durée de conservation plus
-                longue est requise par la loi (notamment pour la preuve d'un droit ou d'un contrat,
-                ou les obligations comptables qui exigent une conservation de 10 ans).
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                6. Partage des données
-              </h2>
-              <p>
-                Vos données ne sont jamais vendues à des tiers. Elles peuvent uniquement être
-                partagées avec nos prestataires techniques (hébergeur du site, prestataire de
-                paiement en ligne) agissant en tant que sous-traitants, ou si la loi l'exige.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                7. Cookies et traceurs
-              </h2>
-              <p>
-                Le site webxia.fr n'utilise pas de cookies de tracking publicitaire ni d'outils
-                d'analyse de trafic tiers (comme Google Analytics ou Meta Pixel). Seuls des cookies
-                strictement nécessaires au bon fonctionnement technique du site peuvent être
-                utilisés, ne nécessitant pas de consentement préalable.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                8. Vos droits (RGPD)
-              </h2>
-              <p>
-                Conformément au RGPD, vous disposez des droits suivants concernant vos données
-                personnelles :
-              </p>
-              <ul className="mt-2 space-y-2 list-disc pl-6">
-                <li>Droit d'accès, de rectification et d'effacement.</li>
-                <li>Droit à la limitation et à l'opposition du traitement.</li>
-                <li>Droit à la portabilité de vos données.</li>
-                <li>Droit de retirer votre consentement à tout moment.</li>
-              </ul>
-              <p className="mt-4">
-                Pour exercer ces droits, vous pouvez nous contacter à :{" "}
-                <a href="mailto:webxia@protonmail.com" className="text-brand hover:underline">
-                  webxia@protonmail.com
-                </a>
-                . Vous avez également le droit d'introduire une réclamation auprès de la{" "}
-                <a
-                  href="https://www.cnil.fr"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-brand hover:underline"
-                >
-                  CNIL (www.cnil.fr)
-                </a>
-                .
-              </p>
-            </section>
+            {page.sections.map((section, sectionIndex) => (
+              <section key={sectionIndex}>
+                <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
+                  {section.heading}
+                </h2>
+                {section.blocks.map((block, blockIndex) =>
+                  block.kind === "p" ? (
+                    <p
+                      key={blockIndex}
+                      className={
+                        block.gap === "md"
+                          ? "mt-4"
+                          : blockIndex === 0 && block.gap !== "sm"
+                            ? undefined
+                            : "mt-2"
+                      }
+                    >
+                      {block.content.map(renderInline)}
+                    </p>
+                  ) : (
+                    <ul
+                      key={blockIndex}
+                      className={
+                        block.style === "disc" ? "mt-2 space-y-2 list-disc pl-6" : "mt-2 space-y-1"
+                      }
+                    >
+                      {block.items.map((item, itemIndex) => (
+                        <li key={itemIndex}>{item.map(renderInline)}</li>
+                      ))}
+                    </ul>
+                  ),
+                )}
+              </section>
+            ))}
           </div>
         </motion.div>
       </Container>

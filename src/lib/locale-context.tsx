@@ -121,7 +121,6 @@ export const translations: Record<Locale, Dict> = {
     "work.filter.app": "App",
     "work.filter.ai": "AI",
     "work.filter.brand": "Brand",
-    "work.concept": "Concept",
     "about.eyebrow": "The studio",
     "about.title": "A small, senior team — obsessed with craft and outcomes.",
     "about.subtitle":
@@ -167,8 +166,8 @@ export const translations: Record<Locale, Dict> = {
     "journal.filter.article": "Articles",
     "journal.filter.case-study": "Case studies",
     "journal.filter.news": "News",
-    "journal.filter.Intelligence artificielle": "Artificial intelligence",
-    "journal.filter.Marketing": "Marketing",
+    "journal.filter.ai": "Artificial intelligence",
+    "journal.filter.marketing": "Marketing",
     "journal.readMore": "Read article",
     "journal.minutes": "min read",
     "journal.empty.all": "No articles yet. Check back soon.",
@@ -641,7 +640,6 @@ export const translations: Record<Locale, Dict> = {
     "work.filter.app": "App",
     "work.filter.ai": "IA",
     "work.filter.brand": "Identité",
-    "work.concept": "Concept",
 
     "about.eyebrow": "Le studio",
     "about.title":
@@ -689,8 +687,8 @@ export const translations: Record<Locale, Dict> = {
     "journal.filter.article": "Articles",
     "journal.filter.case-study": "Études de cas",
     "journal.filter.news": "Actualités",
-    "journal.filter.Intelligence artificielle": "Intelligence artificielle",
-    "journal.filter.Marketing": "Marketing",
+    "journal.filter.ai": "Intelligence artificielle",
+    "journal.filter.marketing": "Marketing",
     "journal.readMore": "Lire l'article",
     "journal.minutes": "min de lecture",
     "journal.empty.all": "Aucun article pour le moment. Revenez bientôt.",

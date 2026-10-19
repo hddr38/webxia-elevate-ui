@@ -10,6 +10,9 @@ type SeoPage = {
   services: SeoEntry;
   contact: SeoEntry;
   journal: SeoEntry;
+  cgu: SeoEntry;
+  mentionsLegales: SeoEntry;
+  politiqueConfidentialite: SeoEntry;
 };
 
 export const seo: Record<"fr" | "en", SeoPage> = {
@@ -43,6 +46,24 @@ export const seo: Record<"fr" | "en", SeoPage> = {
       description: "Articles, études de cas et actualités du studio WebXIA.",
       ogDescription: "Notes de terrain du studio.",
     },
+    cgu: {
+      title: "Conditions Générales d'Utilisation — WebXIA",
+      description:
+        "Conditions générales d'utilisation du site webxia.fr — accès au site, propriété intellectuelle, prestations et responsabilités.",
+      ogDescription: "Conditions générales d'utilisation de webxia.fr.",
+    },
+    mentionsLegales: {
+      title: "Mentions Légales — WebXIA",
+      description:
+        "Mentions légales du site webxia.fr — identité de l'éditeur, hébergeur et propriété intellectuelle.",
+      ogDescription: "Mentions légales du site webxia.fr.",
+    },
+    politiqueConfidentialite: {
+      title: "Politique de Confidentialité — WebXIA",
+      description:
+        "Politique de confidentialité de WebXIA — comment nous collectons, utilisons et protégeons vos données personnelles conformément au RGPD.",
+      ogDescription: "Politique de confidentialité de WebXIA — données personnelles et RGPD.",
+    },
   },
   en: {
     home: {
@@ -72,6 +93,24 @@ export const seo: Record<"fr" | "en", SeoPage> = {
       title: "Journal — WebXIA",
       description: "Articles, case studies and news from the WebXIA studio.",
       ogDescription: "Field notes from the studio.",
+    },
+    cgu: {
+      title: "Terms and Conditions — WebXIA",
+      description:
+        "Terms and conditions of using webxia.fr — site access, intellectual property, services and liability.",
+      ogDescription: "Terms and conditions of webxia.fr.",
+    },
+    mentionsLegales: {
+      title: "Legal Notice — WebXIA",
+      description:
+        "Legal notice for webxia.fr — publisher identity, hosting provider and intellectual property.",
+      ogDescription: "Legal notice for webxia.fr.",
+    },
+    politiqueConfidentialite: {
+      title: "Privacy Policy — WebXIA",
+      description:
+        "WebXIA privacy policy — how we collect, use and protect your personal data in compliance with the GDPR.",
+      ogDescription: "Privacy policy — personal data and GDPR.",
     },
   },
 };

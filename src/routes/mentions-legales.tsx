@@ -1,26 +1,65 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Fragment } from "react";
 import { Container } from "@/components/ui/container";
+import { mentionsContentEn } from "@/content/legal-en";
+import { mentionsContent, type LegalInline } from "@/content/legal-fr";
+import { useLocale } from "@/lib/locale-context";
+import { seo } from "@/lib/seo";
 
 export const Route = createFileRoute("/mentions-legales")({
-  head: () => ({
-    meta: [
-      { title: "Mentions Légales — WebXIA" },
-      {
-        name: "description",
-        content:
-          "Mentions légales du site webxia.fr — identité de l'éditeur, hébergeur et propriété intellectuelle.",
-      },
-      { property: "og:title", content: "Mentions Légales — WebXIA" },
-    ],
-    links: [{ rel: "canonical", href: "https://webxia.fr/mentions-legales" }],
-  }),
+  head: () => {
+    const locale = (typeof window !== "undefined" && localStorage.getItem("webxia-locale")) || "fr";
+    const s = locale === "en" ? seo.en.mentionsLegales : seo.fr.mentionsLegales;
+    return {
+      meta: [
+        { title: s.title },
+        { name: "description", content: s.description },
+        { property: "og:title", content: s.title },
+        { property: "og:description", content: s.ogDescription },
+      ],
+      links: [{ rel: "canonical", href: "https://webxia.fr/mentions-legales" }],
+    };
+  },
   component: MentionsLegalesPage,
 });
 
+function renderInline(node: LegalInline, index: number) {
+  if (typeof node === "string") return <Fragment key={index}>{node}</Fragment>;
+  if ("href" in node) {
+    return node.external ? (
+      <Fragment key={index}>
+        <a
+          href={node.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-brand hover:underline"
+        >
+          {node.label}
+        </a>
+      </Fragment>
+    ) : (
+      <Fragment key={index}>
+        <a href={node.href} className="text-brand hover:underline">
+          {node.label}
+        </a>
+      </Fragment>
+    );
+  }
+  return node.strong ? (
+    <Fragment key={index}>
+      <strong className="text-foreground">{node.text}</strong>
+    </Fragment>
+  ) : (
+    <Fragment key={index}>{node.text}</Fragment>
+  );
+}
+
 function MentionsLegalesPage() {
+  const { locale } = useLocale();
+  const page = locale === "en" ? mentionsContentEn : mentionsContent;
+
   return (
     <div className="min-h-screen bg-background">
       <Container size="narrow" className="px-4 sm:px-6 lg:px-8 pt-14 pb-20 md:pt-20 md:pb-28">
@@ -35,94 +74,50 @@ function MentionsLegalesPage() {
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground/80 transition-colors hover:text-brand mb-8"
           >
             <ArrowLeft className="size-4" />
-            Retour à l'accueil
+            {page.backLink}
           </Link>
 
           <h1 className="font-display text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
-            Mentions Légales
+            {page.title}
           </h1>
 
           <div className="mt-10 space-y-8 text-base leading-relaxed text-muted-foreground">
-            <p>
-              Conformément aux dispositions de la loi n° 2004-575 du 21 juin 2004 pour la confiance
-              dans l'économie numérique (LCEN), il est précisé aux utilisateurs du site webxia.fr
-              l'identité des différents intervenants dans le cadre de sa réalisation et de son
-              suivi.
-            </p>
+            <p>{page.intro.map(renderInline)}</p>
 
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Éditeur du site
-              </h2>
-              <p>Le site webxia.fr est édité par :</p>
-              <ul className="mt-2 space-y-1">
-                <li>
-                  <strong className="text-foreground">WebXIA</strong> — Micro-entreprise
-                </li>
-                <li>Représentée par : Mehdi E.</li>
-                <li>Adresse : 30 allée Robert Boulin, 33500 Libourne, France</li>
-                <li>
-                  Email :{" "}
-                  <a href="mailto:webxia@protonmail.com" className="text-brand hover:underline">
-                    webxia@protonmail.com
-                  </a>
-                </li>
-                <li>Numéro SIRET : 87179907200018</li>
-                <li>Code APE / NAF : 6201Z — Programmation informatique</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Hébergeur du site
-              </h2>
-              <p>Le site webxia.fr est hébergé par :</p>
-              <ul className="mt-2 space-y-1">
-                <li>
-                  <strong className="text-foreground">Netlify, Inc.</strong>
-                </li>
-                <li>Adresse : 2325 3rd Street, Suite 296, San Francisco, California 94107, USA</li>
-                <li>
-                  Site web :{" "}
-                  <a
-                    href="https://www.netlify.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-brand hover:underline"
-                  >
-                    www.netlify.com
-                  </a>
-                </li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Propriété intellectuelle
-              </h2>
-              <p>
-                L'ensemble du contenu du site webxia.fr (incluant de manière non limitative les
-                textes, graphismes, images, photos, sons, vidéos, logos, icônes, et code source) est
-                la propriété exclusive de WebXIA, sauf mention contraire. Toute reproduction,
-                représentation, modification, publication, adaptation totale ou partielle de tout ou
-                partie des éléments du site, quel que soit le moyen ou le procédé utilisé, est
-                interdite sans l'autorisation écrite préalable de WebXIA. Toute exploitation non
-                autorisée du site ou de l'un quelconque des éléments qu'il contient sera considérée
-                comme constitutive d'une contrefaçon et poursuivie conformément aux dispositions des
-                articles L.335-2 et suivants du Code de la Propriété Intellectuelle.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
-                Liens hypertextes
-              </h2>
-              <p>
-                Le site webxia.fr peut contenir des liens hypertextes vers d'autres sites. WebXIA
-                n'exerce aucun contrôle sur ces sites et décline toute responsabilité quant à leur
-                contenu.
-              </p>
-            </section>
+            {page.sections.map((section, sectionIndex) => (
+              <section key={sectionIndex}>
+                <h2 className="font-display text-xl font-semibold tracking-tight text-foreground mb-3">
+                  {section.heading}
+                </h2>
+                {section.blocks.map((block, blockIndex) =>
+                  block.kind === "p" ? (
+                    <p
+                      key={blockIndex}
+                      className={
+                        block.gap === "md"
+                          ? "mt-4"
+                          : blockIndex === 0 && block.gap !== "sm"
+                            ? undefined
+                            : "mt-2"
+                      }
+                    >
+                      {block.content.map(renderInline)}
+                    </p>
+                  ) : (
+                    <ul
+                      key={blockIndex}
+                      className={
+                        block.style === "disc" ? "mt-2 space-y-2 list-disc pl-6" : "mt-2 space-y-1"
+                      }
+                    >
+                      {block.items.map((item, itemIndex) => (
+                        <li key={itemIndex}>{item.map(renderInline)}</li>
+                      ))}
+                    </ul>
+                  ),
+                )}
+              </section>
+            ))}
           </div>
         </motion.div>
       </Container>

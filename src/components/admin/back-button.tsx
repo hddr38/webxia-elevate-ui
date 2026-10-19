@@ -23,7 +23,7 @@ export function BackButton({ fallbackTo, label }: BackButtonProps) {
     <Button
       variant="ghost"
       size="sm"
-      className="-ml-2 h-9 gap-2 text-muted-foreground hover:text-foreground"
+      className="-ml-2 h-9 min-h-[44px] gap-2 text-muted-foreground hover:text-foreground"
       onClick={handleClick}
     >
       <ArrowLeft className="h-4 w-4" aria-hidden="true" />

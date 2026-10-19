@@ -21,28 +21,29 @@
 
 ## Vue d'ensemble
 
-| #   | Priorité | Titre                                                                            | Lot cible   | Statut                        | Date       |
-| --- | -------- | -------------------------------------------------------------------------------- | ----------- | ----------------------------- | ---------- |
-| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b` | résolu en production          | 2026-10-14 |
-| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`       | ouvert                        | 2026-10-14 |
-| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b` | résolu en production          | 2026-10-14 |
-| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`       | résolu en production          | 2026-10-15 |
-| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`       | ouvert                        | 2026-10-14 |
-| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | `6.4-b V2`  | résolu en production          | 2026-10-14 |
-| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | `6.3`       | résolu en production          | 2026-10-15 |
-| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | `6.3`       | résolu en production          | 2026-10-15 |
-| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | `6.4-b V2`  | résolu en production          | 2026-10-15 |
-| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`     | résolu en production          | 2026-10-15 |
-| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`       | résolu                        | 2026-10-15 |
-| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`       | résolu en production          | 2026-10-15 |
-| 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test | `6.3`       | faux positif — non applicable | 2026-10-15 |
-| 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`       | résolu en production          | 2026-10-15 |
-| 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés             | `6.4-b`     | résolu en production          | 2026-10-15 |
-| 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a               | `6.4-b V2`  | résolu en production          | 2026-10-15 |
-| 17  | P3       | `use-mobile.tsx` — orphelin après suppression de `sidebar.tsx` (V6-a)            | `V6-a`      | supprimé                      | 2026-10-19 |
-| 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`  | corrigé localement            | 2026-10-15 |
-| 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+` | résolu en production          | 2026-10-18 |
-| 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)              | `6.4-b`     | terminé, poussé               | 2026-10-18 |
+| #   | Priorité | Titre                                                                            | Lot cible     | Statut                                       | Date       |
+| --- | -------- | -------------------------------------------------------------------------------- | ------------- | -------------------------------------------- | ---------- |
+| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`   | résolu en production                         | 2026-10-14 |
+| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`         | ouvert                                       | 2026-10-14 |
+| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`   | résolu en production                         | 2026-10-14 |
+| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`         | résolu en production                         | 2026-10-15 |
+| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`         | ouvert                                       | 2026-10-14 |
+| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | `6.4-b V2`    | résolu en production                         | 2026-10-14 |
+| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | `6.3`         | résolu en production                         | 2026-10-15 |
+| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | `6.3`         | résolu en production                         | 2026-10-15 |
+| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | `6.4-b V2`    | résolu en production                         | 2026-10-15 |
+| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`       | résolu en production                         | 2026-10-15 |
+| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`         | résolu                                       | 2026-10-15 |
+| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`         | résolu en production                         | 2026-10-15 |
+| 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test | `6.3`         | faux positif — non applicable                | 2026-10-15 |
+| 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`         | résolu en production                         | 2026-10-15 |
+| 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés             | `6.4-b`       | résolu en production                         | 2026-10-15 |
+| 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a               | `6.4-b V2`    | résolu en production                         | 2026-10-15 |
+| 17  | P3       | `use-mobile.tsx` — orphelin après suppression de `sidebar.tsx` (V6-a)            | `V6-a`        | supprimé                                     | 2026-10-19 |
+| 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`    | corrigé localement                           | 2026-10-15 |
+| 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+`   | résolu en production                         | 2026-10-18 |
+| 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)              | `6.4-b`       | terminé, poussé                              | 2026-10-18 |
+| 21  | P3       | Design/UX-1 — navbar admin isolée, bouton retour ≥44 px, libellé retour i18n     | `Design/UX-1` | corrigé localement, non commité, non déployé | 2026-10-19 |
 
 **Barème de priorité utilisé**
 
@@ -1068,6 +1069,49 @@ vagues V4 restantes (V4-b2, V4-c).
 
 ---
 
+## 21 — Design/UX-1 — navbar admin isolée, bouton retour ≥44 px, libellé retour i18n
+
+- **Priorité** : `P3`
+- **Lot cible** : `Design/UX-1`
+- **Statut** : `corrigé localement, non commité, non déployé` — corrections appliquées dans
+  le cadre du GO « DESIGN/UX-1 » (2026-10-19), enchaîné à l'audit Design/UX read-only.
+  **Non commité, non poussé, non déployé** (en attente du GO de commit).
+- **Date** : `2026-10-19`
+
+**Changements (9 fichiers)**
+
+| Fichier                                                             | Changement                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/components/admin/admin-header.tsx`                             | nav `gap-3` ; groupes admin isolés dans une pill `rounded-full border-brand/25 bg-brand/[0.07] p-0.5 gap-0.5` (liens `px-2.5`) ; ancien filet vertical retiré ; zone droite `gap-1.5` ; avatar `size-9` ; séparateur `h-6 w-px` avant le menu utilisateur |
+| `src/components/admin/admin-page-header.tsx`                        | nouvelle prop `backLabel?: string` (défaut : `t("admin.common.back")`)                                                                                                                                                                                    |
+| `src/components/admin/back-button.tsx`                              | `min-h-[44px]` ajouté (cible tactile mobile ≥ 44 px, hauteur inchangée visuellement)                                                                                                                                                                      |
+| `src/lib/locale-context.tsx`                                        | clé `admin.common.backToDashboard` ajoutée FR (`Retour au tableau de bord`) + EN (`Back to dashboard`) — parité FR/EN vérifiée par `locale-context.test.ts`                                                                                               |
+| `src/routes/admin/{articles,realisations,leads,messages,ai-memory}` | `backTo="/admin"` + `backLabel={t("admin.common.backToDashboard")}` sur les 5 AdminPageHeader                                                                                                                                                             |
+
+**Contrôles (avant → après)**
+
+- Prettier / ESLint / typecheck : **0 erreur** (lint 22 warnings préexistants inchangés, dont
+  2 `leads.tsx` ; baseline avant édition identique).
+- Tests : **696 passed + 1 todo** (62 files) — identique avant/après.
+- Build : 1.90 s, 0 erreur.
+- `git diff --check` : 0.
+
+**Vérification visuelle locale (preview `:4173` + Playwright, navigation SPA, session fausse)**
+
+- **249 checks / 0 fail** — FR + EN × 6 pages : pill isolée (classes + gap 2 px + padding
+  10 px), nav `gap-3`, ancien filet absent (count 0), zone droite `gap-1.5`, séparateur
+  `h-6` avant avatar (ordre DOM/position vérifié), avatar 36×36 avec `aria-label`, 0 clé
+  i18n brute, 0 débordement horizontal, bouton retour visible + libellé localisé
+  (`Retour au tableau de bord` / `Back to dashboard`) + 44 px + focus visible + navigation
+  clavier + clic → `/admin`, `/admin` sans bouton retour.
+- Mobile 390×844 : burger visible, drawer intacte, retour 44 px, 0 débordement.
+- h1 des 5 listes attendu en FR + EN (swap SPA mesuré ~70 ms après l'URL — les lectures
+  instantanées montraient l'h1 de la page précédente, artefact de test, pas un défaut).
+
+**Limite** : vérification locale uniquement — aucune session admin réelle en production.
+
+---
+
 ## Note complémentaire — clés manquantes supplémentaires
 
 Conformément à la consigne d'ajout, l'audit 5.2-pre-a a recherché toute clé i18n manquante
@@ -1103,3 +1147,5 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-19` — **V6-a** préparé localement (non poussé) : décision shadcn tranchée (**purge partielle, 19 composants conservés**). Suppression de 31 composants UI morts de `src/components/ui/` (27 à 0 import + 4 transitivement morts : `separator`, `skeleton`, `tooltip`, `toggle` via `sidebar`/`toggle-group`), suppression orpheline `src/hooks/use-mobile.tsx` + re-export retiré de `src/hooks/index.ts` (barrel conservé pour `useChat`/`useStickyScroll`). Garde-fous greps pré/post (src, e2e, scripts, docs) : **0 import applicatif, 0 test** impacté ; résidu connu : commentaire JSDoc `chat/constants.ts:8` mentionnant `useIsMobile` (fichier vivant hors périmètre V6-a). `useIsMobileViewport` (`src/lib/`) vivant et inchangé. **Aucune modification de `package.json`** — dépendances (19 Radix + 8 libs) reportées à **V6-b**. Item **#17** → `supprimé`.
 - `2026-10-19` — **V6-b** (`a2cbfef`) : désinstallation des 27 dépendances mortes (19 `@radix-ui/*` + `recharts`, `react-day-picker`, `react-resizable-panels`, `vaul`, `cmdk`, `input-otp`, `embla-carousel-react`, `date-fns`) — `dependencies` **59 → 32**, 7 Radix conservés, résidus `package.json`/`npm ls` = 0, JSDoc `useIsMobile` corrigé (`chat/constants.ts`, seule source touchée). Gates : prettier/lint **0 err / 22 warn**, typecheck, **696 + 1 todo (697)**, build 1.86 s, `npm audit` 23 total / **0 critical** (inchangé — paquets supprimés sans advisory ; gain `node_modules`/lockfile/surface).
 - `2026-10-19` — **Push global V6** (`14b38cf..a2cbfef` = V6-a `ccb62f3` + V6-b `a2cbfef`) : CI/E2E/Integration ✅ (runs 39320735604 / 39320735451 / 39320735587). Production : `/` HTTP 200, `/api/health` **200 healthy `version=a2cbfef`**. Smoke global Playwright FR **9/9** (home 200 + h1 + 0 clé i18n brute, ChatWidget ouvert, `/services` + `/cgu` 200, `/admin` → `/auth/login?redirect=…` 200 avec formulaire de login visible). Doc de stack mise à jour (README tests 696 + 1 todo, WEBI_ARCHITECTURE Radix 7 primitives / 19 composants / 696 tests, hash `a2cbfef`). **Décision shadcn officiellement clôturée.**
+- `2026-10-19` — **Doc stack** (`0ae87b7`) poussée : CI/E2E/Integration ✅ (runs 39322487785 / 39322487699 / 39322487806). Aucune modification applicative.
+- `2026-10-19` — **Design/UX-1** préparé localement (non commité, non déployé) : navbar admin regroupée en pill isolée (`border-brand/25` `bg-brand/[0.07]`), nav `gap-3`, filet vertical retiré, zone droite `gap-1.5` + séparateur `h-6 w-px` + avatar `size-9` ; `AdminPageHeader` prop `backLabel` + `BackButton min-h-[44px]` ; clé i18n `admin.common.backToDashboard` FR/EN ajoutée et branchée sur les 5 listes admin (`backTo="/admin"`). Gates : prettier/lint **0 err / 22 warn** (baseline identique), typecheck, **696 + 1 todo**, build 1.90 s, `git diff --check` 0. Vérification visuelle locale (preview `:4173` + Playwright, navigation SPA avec session fausse) : **249 checks / 0 fail** (FR + EN × 6 pages + mobile 390×844), h1 des 5 listes attendu en 2 locales (swap SPA ~70 ms — lectures instantanées décalées = artefact de test). Limite : **local uniquement, aucune vérification en production** (pas de session admin réelle). Item **#21** → `corrigé localement, non commité, non déployé`.

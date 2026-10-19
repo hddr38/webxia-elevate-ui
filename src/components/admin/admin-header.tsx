@@ -40,7 +40,7 @@ function AdminLinks({
   const isDrawer = variant === "drawer";
   const linkClass = isDrawer
     ? "flex items-center gap-3 rounded-xl px-4 py-3 font-display text-2xl font-semibold tracking-tight text-foreground transition-colors hover:bg-secondary"
-    : "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors";
+    : "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm transition-colors";
   const iconClass = isDrawer ? "size-6 shrink-0 text-brand" : "size-3.5";
   return (
     <>
@@ -165,9 +165,9 @@ export function AdminHeader() {
         <div className="flex items-center justify-between rounded-full border border-border bg-background/60 px-4 py-2.5 shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--foreground)_15%,transparent)] backdrop-blur-xl">
           <AdminLogo />
 
-          {/* Liens site (xl+) + groupe admin (md+) dans la même pill */}
+          {/* Liens site (xl+) + groupe admin isolé (md+) dans la même pill */}
           <nav
-            className="hidden min-w-0 items-center gap-1 md:flex"
+            className="hidden min-w-0 items-center gap-3 md:flex"
             aria-label={t("admin.nav.administration")}
           >
             <span className="hidden items-center gap-1 2xl:flex">
@@ -184,47 +184,51 @@ export function AdminHeader() {
                   {t(item.key)}
                 </Link>
               ))}
-              <span aria-hidden="true" className="mx-1.5 h-5 w-px shrink-0 bg-border" />
             </span>
-            <AdminLinks variant="pill" />
+            <div className="inline-flex items-center gap-0.5 rounded-full border border-brand/25 bg-brand/[0.07] p-0.5">
+              <AdminLinks variant="pill" />
+            </div>
           </nav>
 
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-1.5 md:flex">
             <LocaleSwitcher />
             <ThemeToggle />
             {userEmail && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    aria-label={t("admin.nav.userMenu")}
-                    className="inline-flex size-10 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand transition-colors hover:bg-brand/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <span aria-hidden="true">{userEmail.charAt(0).toUpperCase()}</span>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel className="truncate font-normal">
-                    <span className="block text-sm font-medium">{userEmail}</span>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/" className="cursor-pointer">
-                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                      {t("admin.nav.viewSite")}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
-                    onSelect={(event) => {
-                      event.preventDefault();
-                      void handleSignOut();
-                    }}
-                  >
-                    <LogOut className="h-4 w-4" aria-hidden="true" />
-                    {t("admin.nav.logout")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      aria-label={t("admin.nav.userMenu")}
+                      className="inline-flex size-9 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand transition-colors hover:bg-brand/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span aria-hidden="true">{userEmail.charAt(0).toUpperCase()}</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="truncate font-normal">
+                      <span className="block text-sm font-medium">{userEmail}</span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/" className="cursor-pointer">
+                        <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                        {t("admin.nav.viewSite")}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        void handleSignOut();
+                      }}
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      {t("admin.nav.logout")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             )}
           </div>
 

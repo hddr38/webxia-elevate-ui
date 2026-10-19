@@ -146,6 +146,8 @@ function MessagesListPage() {
       <AdminPageHeader
         title={t("admin.messages.title")}
         description={t("admin.messages.description")}
+        backTo="/admin"
+        backLabel={t("admin.common.backToDashboard")}
       />
 
       <div className="flex flex-col gap-3 sm:flex-row">

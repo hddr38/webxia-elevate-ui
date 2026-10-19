@@ -128,6 +128,8 @@ function ArticlesListPage() {
       <AdminPageHeader
         title={t("admin.articles.title")}
         description={t("admin.articles.description")}
+        backTo="/admin"
+        backLabel={t("admin.common.backToDashboard")}
         actions={
           <Button asChild>
             <Link to="/admin/articles/new">

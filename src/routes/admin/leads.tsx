@@ -165,7 +165,12 @@ function LeadsPage() {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader title={t("admin.leads.title")} description={t("admin.leads.description")} />
+      <AdminPageHeader
+        title={t("admin.leads.title")}
+        description={t("admin.leads.description")}
+        backTo="/admin"
+        backLabel={t("admin.common.backToDashboard")}
+      />
 
       <Card>
         <CardContent className="space-y-4 pt-0">

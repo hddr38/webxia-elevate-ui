@@ -7,9 +7,16 @@ interface AdminPageHeaderProps {
   description?: string;
   actions?: ReactNode;
   backTo?: string;
+  backLabel?: string;
 }
 
-export function AdminPageHeader({ title, description, actions, backTo }: AdminPageHeaderProps) {
+export function AdminPageHeader({
+  title,
+  description,
+  actions,
+  backTo,
+  backLabel,
+}: AdminPageHeaderProps) {
   const { t } = useLocale();
 
   return (
@@ -17,7 +24,7 @@ export function AdminPageHeader({ title, description, actions, backTo }: AdminPa
       <div className="min-w-0 space-y-1.5">
         {backTo && (
           <div>
-            <BackButton fallbackTo={backTo} label={t("admin.common.back")} />
+            <BackButton fallbackTo={backTo} label={backLabel ?? t("admin.common.back")} />
           </div>
         )}
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>

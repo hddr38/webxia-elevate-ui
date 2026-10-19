@@ -132,6 +132,8 @@ function RealisationsListPage() {
       <AdminPageHeader
         title={t("admin.realisations.title")}
         description={t("admin.realisations.description")}
+        backTo="/admin"
+        backLabel={t("admin.common.backToDashboard")}
         actions={
           <Button asChild>
             <Link to="/admin/realisations/new">

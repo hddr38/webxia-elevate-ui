@@ -176,6 +176,8 @@ function AIMemoryPage() {
       <AdminPageHeader
         title={t("admin.aiMemory.title")}
         description={t("admin.aiMemory.subtitle")}
+        backTo="/admin"
+        backLabel={t("admin.common.backToDashboard")}
       />
 
       <div className="grid gap-4 md:grid-cols-3">

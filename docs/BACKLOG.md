@@ -47,7 +47,7 @@
 | 22  | P3       | Design/UX-2 — images : coverage, ratios 16/10-16/9 et fallbacks                           | `Design/UX-2` | corrigé localement, non commité, non déployé           | 2026-10-20 |
 | 23  | P2       | Design/UX-3 — contraste AA eyebrows (`--brand-text`) + effet hover ProjectCard            | `Design/UX-3` | contraste corrigé localement ; effet hover **reporté** | 2026-10-20 |
 | 24   | P2       | Chat — statut optimiste du message utilisateur (« Envoi… »/« Échec ») + erreur accessible | `CHAT-2`      | poussé — validé fonctionnellement en production        | 2026-10-21 |
-| 25   | P2       | A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne                 | `CHAT-A2`     | corrigé localement, non commité, non déployé          | 2026-10-21 |
+| 25   | P2       | A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne                 | `CHAT-A2`     | résolu en production (96fc7dd)                          | 2026-10-21 |
 | 26   | P3       | Surveillance injection Netlify / React #418 (faux positif environnement)                  | `HYD-1`       | accepté — surveillance                                 | 2026-10-21 |
 
 **Barème de priorité utilisé**
@@ -1349,9 +1349,12 @@ sans chip pour messages confirmés).
 
 - **Priorité** : `P2` (a11y — annonce fausse en lecteur d'écran)
 - **Lot cible** : `CHAT-A2` (corrigé dans le cadre du GO « CHAT-3 », 2026-10-21)
-- **Statut** : **corrigé localement, non commité, non déployé** — annonce sr-only de la
-  phase outil corrigée dans `ChatWindow.tsx`, clé `chat.tool.running` ajoutée FR/EN,
-  tests ciblés ajoutés. **Non commité, non poussé, non déployé** (en attente du GO de commit).
+- **Statut** : **résolu en production** — commit `96fc7dd` poussé le 2026-10-21, déployé sur
+  Netlify, CI/E2E/Integration success, 50/50 vérifications production FR/EN OK.
+  **Limitation** : le cycle tool_start/tool_result reste non vérifiable en production
+  (`USER_VISIBLE_TOOLS` vide en V1) — validation du cycle outil limitée au build local et
+  aux contrôles Playwright locaux (voir « Validation production » ci-dessous).
+- **Commit** : `96fc7ddf1349c1abad2c58092b3f75f11b7ef36f` (`96fc7dd`)
 - **Date** : `2026-10-21`
 
 **Constat (audit CHAT-1, section 5.2)**
@@ -1390,6 +1393,29 @@ runtime locale (20/20) a exercé le vrai code servi en interceptant le chunk
 `ChatWidget-*.js` pour whitelister `search_knowledge` (patch Playwright hors dépôt, flux
 SSE local avec délais réels : tool_start à +500 ms, tool_result à +2,2 s). Chat non exercé
 en production.
+
+**Validation production (2026-10-21, après push `96fc7dd`)**
+
+- **CI, E2E et Integration : success** (runs GitHub Actions `39642791943` / `39642791706` /
+  `39642792025` sur le SHA `96fc7ddf…`).
+- **50/50 vérifications production FR/EN OK** sur `https://webxia-fr.netlify.app/` —
+  6 pages publiques (`/`, `/about`, `/services`, `/work`, `/journal`, `/contact`) × FR/EN
+  (locale EN via `localStorage webxia-locale`, rendu client) : HTTP 200 pour chacune,
+  contenu principal non vide (837 → 19 321 chars), bascule EN fonctionnelle (nav « Home »,
+  aucun marqueur FR).
+- **Aucune clé i18n brute** sur les 12 rendus (regex `chat.*` sur le texte des pages).
+- **`chat.tool.running` absent du texte brut public** (vérification regex + littérale sur
+  les 12 pages) — la clé n'est exposée que via `t()` dans la région sr-only du widget.
+- Anomalie transitoire notée : un HTTP 500 sur `/` pendant le swap de déploiement Netlify,
+  re-testé **200 stable** — aucun correctif, environnement de plateforme.
+
+**Limite de vérification en production** : le comportement tool_start/tool_result
+(annonce « Outil en cours d'exécution » / « Tool running » puis « Résultat de l'outil » /
+« Tool result ») **n'est pas vérifiable en production** — `USER_VISIBLE_TOOLS` est vide en
+V1, donc aucun outil n'est visible et les deux états ne peuvent pas se déclencher
+naturellement. La validation du cycle outil est **limitée au build local et aux contrôles
+Playwright locaux** (20/20 checks avec whitelist patchée en chunk servi — preuve la plus
+forte disponible en l'état). Chat non exercé en production ; aucune prétention contraire.
 
 ---
 
@@ -1447,3 +1473,18 @@ React #418). Décision : **accepté, pas de Edge Function**.
 - `2026-10-21` — **Push CHAT-2** (`842e384`) : CI/E2E/Integration ✅ (runs 39610704873 / 39610704865 / 39610705062 ; E2E 225 s). Vérification production : `/api/health` 200 `version=842e384` ; Playwright 6 pages FR/EN **42/43 checks OK** (h1 présents et traduits, 0 clé i18n brute, widget chat ouvert en lecture seule, launcher FR/EN). Contenu, i18n et interactions publics intacts. Chat non exercé en production (validation locale complète uniquement — 31 checks runtime + 713 tests). Item **#24** → `poussé — validé fonctionnellement en production`.
 - `2026-10-21` — **HYD-1** (audit read-only React #418 + commit documentaire) : **verdict faux positif environnement** — l'injection plateforme Netlify dans `<head>` (commentaire promo + nœud texte whitespace `\n` après `<meta charset>`) déclenche le `#418` (`args=HTML`, `fromText=false` — mismatch de structure → régénération silencieuse de l'arbre), **non imputable à CHAT-2** (confiance haute). Preuves : matrice HTML × environnement (HTML prod servi en local → 418 ; HTML local servi en prod → 0 ; local/local → 0 ; prod/prod → 1) + isolation du seul `\n` (local + `\n` après charset → 418 ; sans → 0) ; 6/6 pages prod en erreur, 0/6 local ; injection = commentaire Netlify 325 chars + `\n`, `netlify.toml` sans plugin d'injection. Impact : erreur console + double hydratation ; contenu, SEO, i18n et interactions non affectés (DOM final correct, 42/43 checks). Décision : **accepté et documenté, pas de Edge Function** ; item **#26** (surveillance injection Netlify / React #418) ajouté ; item **#24** documenté (preuves, limites, anomalie) ; présentation du verdict faite au GO de commit documentaire.
 - `2026-10-21` — **CHAT-3** préparé localement (non commité, non déployé) : correction A2 — annonce accessible de l'état outil. La région sr-only `role="status"` de `ChatWindow.tsx` annonce désormais « Outil en cours d'exécution » (`chat.tool.running`, clé ajoutée FR/EN) pendant tool_start puis « Résultat de l'outil » (`chat.tool.result`, inchangé) une fois `toolResult` posé sur la dernière bulle outil ; « Webi écrit. » reste pour le streaming sans outil. Phase dérivée de `currentTool` + `toolResult` du dernier message `role="tool"` — `use-chat.ts`, store, SSE, statut optimiste et rendu visible `ToolStatus` intacts ; `chat.tool.result` conservé tel quel (utilisé en visible par `ChatMessage`). Analyse : la branche `currentTool` du ternaire était inatteignable (isStreaming prime) — annonce pendant outil réduite à l'état d'écriture. Tests : `chat-window-a11y.test.tsx` +6 (tool_start sans faux résultat, tool_result, écriture, flux terminé, i18n FR/EN, non-régression ToolStatus + « Envoi… » + aria-busy) — 9/9 verts. Gates (avant = après sauf tests) : prettier/eslint fichiers 0, lint **0 err / 21 warn**, typecheck 0, tests **713 + 1 todo → 719 + 1 todo**, build 0 err (1.72 s), `git diff --check` 0. Vérification runtime locale (preview `:4173` via proxy + faux SSE avec délais réels, whitelist `USER_VISIBLE_TOOLS` **vide en V1** → patch Playwright du chunk `ChatWidget-*.js` pour whitelister `search_knowledge`) : **20/20 checks** — FR « Webi écrit. » avant tool_start, « Outil en cours d'exécution » pendant (0 faux « Résultat… »), « Résultat de l'outil » après tool_result, vide en fin de flux ; EN « Tool running »/« Tool result » ; ToolStatus visible inchangé (« Webi recherche… »/« Webi searching… ») ; réponse finale présente ; 0 clé i18n brute ; 0 overflow ; 0 erreur JS. Limite : **local uniquement** — aucun outil visible en production (whitelist vide) ; chat non exercé en prod. Item **#25** → `corrigé localement, non commité, non déployé`.
+- `2026-10-21` — **CHAT-3 poussé et validé en production** : commit **`96fc7dd`**
+  (`96fc7ddf1349c1abad2c58092b3f75f11b7ef36f`, parent `50228e1`) poussé sur `main` après GO
+  dédié (commit unique puis push, aucun amend). **CI, E2E et Integration : success** (runs
+  `39642791943` / `39642791706` / `39642792025`). Déploiement Netlify validé :
+  **50/50 vérifications production** — 6 pages publiques (`/`, `/about`, `/services`,
+  `/work`, `/journal`, `/contact`) en FR et EN (locale EN via `localStorage webxia-locale`)
+  : toutes HTTP 200, contenu principal non vide, **aucune clé i18n brute**, bascule EN
+  fonctionnelle (nav « Home »), **`chat.tool.running` absent du texte brut public**.
+  Anomalie transitoire : un 500 sur `/` pendant le swap de déploiement Netlify, re-testé
+  200 stable (environnement de plateforme, aucun correctif). **Limite de vérification** :
+  le comportement tool_start/tool_result (« Outil en cours d'exécution » / « Tool running »
+  puis « Résultat de l'outil » / « Tool result ») **n'est pas vérifiable en production** —
+  `USER_VISIBLE_TOOLS` est **vide en V1**, aucun outil visible ; la validation du cycle
+  outil reste **limitée au build local et aux contrôles Playwright locaux** (20/20 checks
+  avec whitelist patchée en chunk servi). Item **#25** → **`résolu en production`**.

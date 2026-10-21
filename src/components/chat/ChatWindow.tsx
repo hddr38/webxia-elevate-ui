@@ -375,6 +375,7 @@ export function ChatWindow() {
                     message={msg}
                     isLast={index === messages.length - 1}
                     isStreaming={isStreaming}
+                    onRetry={() => void retryLastMessage()}
                   />
                 ))
               )}
@@ -433,7 +434,7 @@ export function ChatWindow() {
             exit={{ opacity: 0, y: -10 }}
             className="mx-4 mb-4"
           >
-            <Alert variant="destructive" className="border-destructive/50">
+            <Alert variant="destructive" className="border-destructive/50" role="alert">
               <AlertCircle className="size-4" />
               <AlertTitle className="text-sm">
                 {errorCode === "GENERATION_FAILED"

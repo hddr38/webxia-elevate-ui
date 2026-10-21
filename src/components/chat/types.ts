@@ -17,6 +17,15 @@ export interface ChatMessage {
   toolCallId?: string;
   citations?: Citation[];
   toolResult?: ToolResult;
+  /**
+   * CHAT-2 — transient delivery status of a USER message (client-only).
+   * "pending": appended optimistically, not yet confirmed by `message_start`.
+   * "failed":  pre-stream HTTP/network failure — the bubble stays, retryable.
+   * Absent (including every restored/history message) = confirmed.
+   * Never persisted (store `partialize` saves only conversation/session ids)
+   * and never sent to the server.
+   */
+  status?: "pending" | "failed";
 }
 
 export interface UseChatReturn {

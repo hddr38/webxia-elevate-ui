@@ -120,3 +120,95 @@ describe("ChatMessage", () => {
     expect(html).toContain("Résultat de l");
   });
 });
+
+/**
+ * CHAT-2 — statut optimiste du message utilisateur.
+ * Locale par défaut du provider = FR (état initial useState ; les effets ne
+ * tournent pas en renderToStaticMarkup) → libellés FR assertés au rendu,
+ * libellés EN assertés sur le dictionnaire (parité stricte FR/EN).
+ */
+describe("ChatMessage statut optimiste (CHAT-2)", () => {
+  const userMessage = { id: "u-1", role: "user" as const, content: "Bonjour", timestamp: 1 };
+
+  function renderUser(status: "pending" | "failed" | undefined, onRetry?: () => void): string {
+    return renderToStaticMarkup(
+      <LocaleProvider>
+        <ChatMessage
+          message={{ ...userMessage, ...(status ? { status } : {}) }}
+          isLast={true}
+          isStreaming={false}
+          onRetry={onRetry}
+        />
+      </LocaleProvider>,
+    );
+  }
+
+  it("pending : chip « Envoi… » discrète, sans bouton Réessayer", () => {
+    const html = renderUser("pending");
+    expect(html).toContain("Envoi…");
+    expect(html).toContain("text-primary-foreground/70");
+    expect(html).not.toContain("Réessayer");
+    expect(html).not.toContain("Échec");
+    expect(html).toContain("Bonjour"); // le contenu reste visible
+  });
+
+  it("failed : état « Échec » + bouton « Réessayer » qui appelle onRetry", () => {
+    const onRetry = vi.fn();
+    const html = renderUser("failed", onRetry);
+    expect(html).toContain("Échec");
+    expect(html).toContain("Réessayer");
+    expect(html).not.toContain("Envoi…");
+    // Le bouton est un vrai bouton activable.
+    expect(html).toMatch(/<button[^>]*>[\s\S]*?Réessayer/);
+  });
+
+  it("failed sans onRetry : « Échec » sans bouton (defensive)", () => {
+    const html = renderUser("failed");
+    expect(html).toContain("Échec");
+    expect(html).not.toContain("Réessayer");
+  });
+
+  it("confirmé (statut absent) : aucun chip, aucun bouton", () => {
+    const html = renderUser(undefined);
+    expect(html).not.toContain("Envoi…");
+    expect(html).not.toContain("Échec");
+    expect(html).not.toContain("Réessayer");
+    expect(html).toContain("Bonjour");
+  });
+
+  it("assistant : un éventuel statut fuitant n'affiche JAMAIS de chip (garde isUser)", () => {
+    const html = renderToStaticMarkup(
+      <LocaleProvider>
+        <ChatMessage
+          message={{
+            id: "a-1",
+            role: "assistant",
+            content: "Réponse",
+            timestamp: 1,
+            status: "failed",
+          }}
+          isLast={true}
+          isStreaming={false}
+        />
+      </LocaleProvider>,
+    );
+    expect(html).not.toContain("Envoi…");
+    expect(html).not.toContain("Échec");
+    expect(html).not.toContain("Réessayer");
+  });
+
+  it("parité i18n FR/EN des clés de statut (+ chat.retry réutilisée)", async () => {
+    const { translations } = await import("@/lib/locale-context");
+    expect(translations.fr["chat.status.sending"]).toBe("Envoi…");
+    expect(translations.fr["chat.status.failed"]).toBe("Échec");
+    expect(translations.fr["chat.retry"]).toBe("Réessayer");
+    expect(translations.en["chat.status.sending"]).toBe("Sending…");
+    expect(translations.en["chat.status.failed"]).toBe("Failed");
+    expect(translations.en["chat.retry"]).toBe("Retry");
+    // Parité stricte sur le trio de clés du lot.
+    for (const key of ["chat.status.sending", "chat.status.failed", "chat.retry"]) {
+      expect(translations.fr[key]).toBeDefined();
+      expect(translations.en[key]).toBeDefined();
+    }
+  });
+});

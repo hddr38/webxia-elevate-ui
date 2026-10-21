@@ -21,31 +21,33 @@
 
 ## Vue d'ensemble
 
-| #   | Priorité | Titre                                                                            | Lot cible     | Statut                                                 | Date       |
-| --- | -------- | -------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------ | ---------- |
-| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`   | résolu en production                                   | 2026-10-14 |
-| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`         | ouvert                                                 | 2026-10-14 |
-| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`   | résolu en production                                   | 2026-10-14 |
-| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`         | résolu en production                                   | 2026-10-15 |
-| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`         | ouvert                                                 | 2026-10-14 |
-| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | `6.4-b V2`    | résolu en production                                   | 2026-10-14 |
-| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | `6.3`         | résolu en production                                   | 2026-10-15 |
-| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | `6.3`         | résolu en production                                   | 2026-10-15 |
-| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | `6.4-b V2`    | résolu en production                                   | 2026-10-15 |
-| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`       | résolu en production                                   | 2026-10-15 |
-| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`         | résolu                                                 | 2026-10-15 |
-| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`         | résolu en production                                   | 2026-10-15 |
-| 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test | `6.3`         | faux positif — non applicable                          | 2026-10-15 |
-| 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`         | résolu en production                                   | 2026-10-15 |
-| 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés             | `6.4-b`       | résolu en production                                   | 2026-10-15 |
-| 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a               | `6.4-b V2`    | résolu en production                                   | 2026-10-15 |
-| 17  | P3       | `use-mobile.tsx` — orphelin après suppression de `sidebar.tsx` (V6-a)            | `V6-a`        | supprimé                                               | 2026-10-19 |
-| 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`    | corrigé localement                                     | 2026-10-15 |
-| 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+`   | résolu en production                                   | 2026-10-18 |
-| 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)              | `6.4-b`       | terminé, poussé                                        | 2026-10-18 |
-| 21  | P3       | Design/UX-1 — navbar admin isolée, bouton retour ≥44 px, libellé retour i18n     | `Design/UX-1` | corrigé localement, non commité, non déployé           | 2026-10-19 |
-| 22  | P3       | Design/UX-2 — images : coverage, ratios 16/10-16/9 et fallbacks                  | `Design/UX-2` | corrigé localement, non commité, non déployé           | 2026-10-20 |
-| 23  | P2       | Design/UX-3 — contraste AA eyebrows (`--brand-text`) + effet hover ProjectCard   | `Design/UX-3` | contraste corrigé localement ; effet hover **reporté** | 2026-10-20 |
+| #   | Priorité | Titre                                                                                     | Lot cible     | Statut                                                 | Date       |
+| --- | -------- | ----------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------ | ---------- |
+| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                            | `5.2-pre-b`   | résolu en production                                   | 2026-10-14 |
+| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)                        | `5.3`         | ouvert                                                 | 2026-10-14 |
+| 3   | P1       | `about.process.subtitle` absent en EN                                                     | `5.2-pre-b`   | résolu en production                                   | 2026-10-14 |
+| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                               | `5.2`         | résolu en production                                   | 2026-10-15 |
+| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)                  | `5.2`         | ouvert                                                 | 2026-10-14 |
+| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16)          | `6.4-b V2`    | résolu en production                                   | 2026-10-14 |
+| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                                       | `6.3`         | résolu en production                                   | 2026-10-15 |
+| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)                      | `6.3`         | résolu en production                                   | 2026-10-15 |
+| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                            | `6.4-b V2`    | résolu en production                                   | 2026-10-15 |
+| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                             | `5.2-b`       | résolu en production                                   | 2026-10-15 |
+| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test                      | `N/A`         | résolu                                                 | 2026-10-15 |
+| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                         | `6.1`         | résolu en production                                   | 2026-10-15 |
+| 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test          | `6.3`         | faux positif — non applicable                          | 2026-10-15 |
+| 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                           | `6.3`         | résolu en production                                   | 2026-10-15 |
+| 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés                      | `6.4-b`       | résolu en production                                   | 2026-10-15 |
+| 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a                        | `6.4-b V2`    | résolu en production                                   | 2026-10-15 |
+| 17  | P3       | `use-mobile.tsx` — orphelin après suppression de `sidebar.tsx` (V6-a)                     | `V6-a`        | supprimé                                               | 2026-10-19 |
+| 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                          | `6.4-b V3`    | corrigé localement                                     | 2026-10-15 |
+| 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch                       | `6.4-b V3+`   | résolu en production                                   | 2026-10-18 |
+| 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)                       | `6.4-b`       | terminé, poussé                                        | 2026-10-18 |
+| 21  | P3       | Design/UX-1 — navbar admin isolée, bouton retour ≥44 px, libellé retour i18n              | `Design/UX-1` | corrigé localement, non commité, non déployé           | 2026-10-19 |
+| 22  | P3       | Design/UX-2 — images : coverage, ratios 16/10-16/9 et fallbacks                           | `Design/UX-2` | corrigé localement, non commité, non déployé           | 2026-10-20 |
+| 23  | P2       | Design/UX-3 — contraste AA eyebrows (`--brand-text`) + effet hover ProjectCard            | `Design/UX-3` | contraste corrigé localement ; effet hover **reporté** | 2026-10-20 |
+| 24  | P2       | Chat — statut optimiste du message utilisateur (« Envoi… »/« Échec ») + erreur accessible | `CHAT-2`      | corrigé localement, non commité, non déployé           | 2026-10-21 |
+| 25  | P2       | A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne                 | `CHAT-A2`     | ouvert — GO séparé requis                              | 2026-10-21 |
 
 **Barème de priorité utilisé**
 
@@ -1262,6 +1264,63 @@ découverte hors couverture de l'item global **#1**.
 
 ---
 
+## 24 — Chat — statut optimiste du message utilisateur + erreur accessible
+
+- **Priorité** : `P2` (qualité perçue + a11y — échec pré-stream non signalé sur la bulle)
+- **Lot cible** : `CHAT-2` (suite directe de l'audit `CHAT-1`, Option B retenue)
+- **Statut** : **corrigé localement, non commité, non déployé**
+- **Date** : `2026-10-21`
+
+**Constat (audit CHAT-1)**
+
+Le chat affiche **déjà** le message utilisateur (et une bulle assistant vide + caret) de façon
+synchrone avant le réseau : l'optimisme d'affichage existait. Ce qui manquait : **qualifier**
+la bulle user — « Envoi… » pendant l'attente de `message_start` (émis serveur **après**
+`addMessage` = accusé de réception), « Échec » + Réessayer sur échec HTTP/réseau pré-stream,
+aucun statut sur abort volontaire. L'échec n'était signalé que par la bannière bas, sans lien
+visuel avec la bulle concernée.
+
+**Changements (Option B — champ `status` transitoire, client-only)**
+
+| Fichier                               | Mission                                                                                                                                                                             |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/components/chat/types.ts`        | `status?: "pending" \| "failed"` sur `ChatMessage` (absence = confirmé ; aucun `"sent"`)                                                                                            |
+| `src/hooks/use-chat.ts`               | append user `pending` ; `message_start` → clear via `clearPendingUserStatus` ; catch non-abort → `failed` (seulement si encore pending) ; abort → clear ; retry → repasse `pending` |
+| `src/components/chat/ChatMessage.tsx` | chip « Envoi… » (pending) ; « Échec » + bouton « Réessayer » (failed, via prop `onRetry`)                                                                                           |
+| `src/components/chat/ChatWindow.tsx`  | `onRetry={() => void retryLastMessage()}` passé aux bulles ; `role="alert"` explicite sur l'alerte erreur (A1)                                                                      |
+| `src/lib/locale-context.tsx`          | clés `chat.status.sending` (Envoi… / Sending…) + `chat.status.failed` (Échec / Failed) ; `chat.retry` **réutilisée**                                                                |
+
+**Garde-fous vérifiés** : `partialize` inchangé (`{conversationId, sessionId}` — ni messages ni
+statut persistés) ; aucun statut ni envoi ni reçu par le serveur ; restauration d'historique =
+messages sans statut = confirmés ; comportement abort inchangé côté bannière ; bulle assistant
+vide + caret inchangés ; A2 **non** traité ; protocole SSE / server functions / Zod intacts.
+
+**Tests ajoutés** : `use-chat-status.test.tsx` (8 cas : pending→confirmé, HTTP 429, réseau,
+abort pré/post `message_start`, retry sans duplication, partialize, compteur) ;
+`ChatMessage.test.tsx` +6 (chips FR, bouton, defensif assistant, parité FR/EN) ;
+`chat-window-a11y.test.tsx` (3 cas : `role="alert"` unique, régions live conservées, transcript
+sans chip pour messages confirmés).
+
+---
+
+## 25 — A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne
+
+- **Priorité** : `P2` (a11y — annonce fausse en lecteur d'écran)
+- **Lot cible** : `CHAT-A2` (**GO séparé requis** — explicitement hors périmètre CHAT-2)
+- **Statut** : **ouvert**
+- **Date** : `2026-10-21`
+
+**Constat (audit CHAT-1, section 5.2)**
+
+`ChatWindow.tsx` (région `role="status"` sr-only) affiche `t("chat.tool.result")`
+(« Résultat de l'outil… ») dès que `currentTool` est non nul — c'est-à-dire **pendant** que
+l'outil s'exécute, pas après. Le libellé annonce donc « résultat » à tort. Correction probable :
+clés dédiées « outil en cours » / `chat.tool.executing` réutilisé, ou diffusion d'un événement
+`tool_complete` — décision à trancher au GO dédié (impact possible sur le protocole, hors
+lot CHAT-2).
+
+---
+
 ## Historique
 
 - `2026-10-14` — push `4f481dc`, vérification production `/about` EN OK.
@@ -1285,3 +1344,4 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-19` — **Design/UX-1** préparé localement (non commité, non déployé) : navbar admin regroupée en pill isolée (`border-brand/25` `bg-brand/[0.07]`), nav `gap-3`, filet vertical retiré, zone droite `gap-1.5` + séparateur `h-6 w-px` + avatar `size-9` ; `AdminPageHeader` prop `backLabel` + `BackButton min-h-[44px]` ; clé i18n `admin.common.backToDashboard` FR/EN ajoutée et branchée sur les 5 listes admin (`backTo="/admin"`). Gates : prettier/lint **0 err / 22 warn** (baseline identique), typecheck, **696 + 1 todo**, build 1.90 s, `git diff --check` 0. Vérification visuelle locale (preview `:4173` + Playwright, navigation SPA avec session fausse) : **249 checks / 0 fail** (FR + EN × 6 pages + mobile 390×844), h1 des 5 listes attendu en 2 locales (swap SPA ~70 ms — lectures instantanées décalées = artefact de test). Limite : **local uniquement, aucune vérification en production** (pas de session admin réelle). Item **#21** → `corrigé localement, non commité, non déployé`.
 - `2026-10-20` — **Design/UX-2** préparé localement (non commité, non déployé) : Phase 0 — `a.cover` confirmé **valeur CSS déjà formatée** (`url(…)` ou gradient déterministe, mappers + échantillon base) ; cartes journal `backgroundSize: cover` + `backgroundPosition: center` ; `project-card` ratio `4/3 → 16/10` + `object-cover object-center` ; fallbacks hero `journal/$slug` + `work/$slug` en cover/center ; CoverHero admin `21/9 sm:28/9 → 16/9` (aligné heroes détail). Gates (avant = après) : prettier/eslint 0, lint 0 err/22 warn, typecheck 0, **696 + 1 todo**, build 1.68 s, diff-check 0. Vérification visuelle locale : **95 checks / 0 fail** (FR + EN × `/journal`, `/journal/$slug`, `/work`, `/work/$slug`, `/contact`, mobile 390 ; admin simulé `/admin/realisations` + formulaire `new` CoverHero 1.778) ; scénarios « sans image » simulés par interception du document SSR (aucun contenu sans cover en base). Limite : **local uniquement**. Item **#22** → `corrigé localement, non commité, non déployé`.
 - `2026-10-20` — **Design/UX-3** préparé localement (non commité, non déployé) : Phase 0 — défaut d'audit **confirmé** (`text-brand` eyebrows sur fonds clairs = 3.62/3.42/3.72 → échec AA 4.5 pour `text-xs`) ; valeur GO `oklch(0.52 0.2 258)` validée **clairement** (5.51/5.20/5.66) mais **échoue en sombre** (3.43/3.20/3.13) et **aucune valeur unique** n'atteint 4.5 sur les 6 fonds (balayage L) → token **par thème** : `:root --brand-text: oklch(0.52 0.2 258)` + `.dark --brand-text: oklch(0.68 0.2 258)` (= `--brand` sombre, déjà AA) ; utility `text-brand-text` branchée via `@theme inline`. 7 eyebrows `text-brand → text-brand-text` (contact/expertises/work-index/why-choose-us/services/project-card-CTAStrip/work-slug) ; icônes/liens/badge `text-[10px]`/`*` requis **préservés** (hors périmètre). **Effet hover 3D ProjectCard REPORTÉ** (Cas B/C : `<motion.article>` Framer + `hover:-translate-y-1` CSS déjà actifs → conflit transform garanti). Gates (avant = après) : eslint/lint 0 err/22 warn, typecheck 0, **696 + 1 todo**, build 0 err, diff-check 0 ; prettier `styles.css` dirty **préexistant** (4 wraps hors tokens, aucune ligne `brand-text` dans le diff prettier). Vérification visuelle locale : **203 checks / 0 fail** (FR + EN × light + dark × `/contact` `/services` `/work` `/about` `/work/helllllo-baby` : couleur computed === `--brand-text`, contraste AA, `.dark`, overflow, i18n ; `/work` non-régression hover/focus, 0 erreur JS). Limite : **local uniquement**. Item **#23** → contraste `corrigé localement`, effet hover `reporté`.
+- `2026-10-21` — **CHAT-2** préparé localement (non commité, non déployé) : statut optimiste du message utilisateur (Option B — `status?: "pending" | "failed"` côté client, aucun changement de protocole SSE / server functions / `partialize`) + correction A1 (`role="alert"` explicite au call-site de la bannière d'erreur, verrouillé par test) ; correction A2 **hors lot** (item **#25**, GO séparé requis). Cycle de vie verrouillé : envoi → user `pending` + bulle assistant vide ; `message_start` → confirmé (statut effacé) ; échec HTTP/réseau avant `message_start` → `failed` + `temporaryError` ; AbortError → ni pending ni failed ; retry → re-`pending`, purge de l'assistant échoué, zéro duplication. Clés i18n FR/EN ajoutées `chat.status.sending` (« Envoi… »/« Sending… ») et `chat.status.failed` (« Échec »/« Failed »), `chat.retry` réutilisée. Tests : 3 fichiers neufs + 2 étendus = **+17** (cycle de vie complet, invariant partialize, invariant compteur en rendu client happy-dom — zustand sert `getInitialState()` comme snapshot serveur, un probe SSR ne verrait jamais le seed —, chips FR/EN, `role="alert"` + régions live). Gates (avant = stash sur HEAD `34508fa`, après = travail local) : lint 0 err / 22 warn → **0 err / 21 warn** (−1 : `vi` importé inutilisé dans `ChatMessage.test.tsx` devenu utilisé), typecheck 0 → 0, tests **696 + 1 todo → 713 + 1 todo**, build 0 err, `git diff --check` 0. Vérification runtime locale (preview `:4173` + Playwright, `/api/chat` intercepté) : **31 checks / 0 fail** — chip « Envoi… » visible puis effacé après `message_start`, stream assistant + scroll bas, échec 429 → chip « Échec » + bouton « Réessayer » + bannière `role="alert"` portant le message serveur, retry sans duplication, abort → ni pending ni failed + libellé interrompu, bascule EN (« Failed »/« Retry »/launcher après Escape), mobile 390 px sans scroll horizontal, 0 erreur JS. Limite : **local uniquement** (API interceptée, aucun vrai LLM, aucune vérification production). Item **#24** → `corrigé localement, non commité, non déployé`.

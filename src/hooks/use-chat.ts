@@ -58,6 +58,22 @@ function isOwnershipFailure(error: unknown): boolean {
   );
 }
 
+/**
+ * CHAT-2 — drop the transient `pending` status from the last pending user
+ * bubble (returns the same array when nothing is pending). Used on
+ * `message_start` (server confirmed the turn) and on deliberate abort
+ * (neither "Envoi…" nor "Échec" — the GO forbids both).
+ */
+function clearPendingUserStatus(messages: ChatMessage[]): ChatMessage[] {
+  const idx = messages.findLastIndex((m) => m.role === "user" && m.status === "pending");
+  if (idx < 0) return messages;
+  const next = [...messages];
+  const confirmed: ChatMessage = { ...next[idx] };
+  delete confirmed.status;
+  next[idx] = confirmed;
+  return next;
+}
+
 export function useChat(): UseChatReturn {
   const { t, locale } = useLocale();
   const {
@@ -159,6 +175,11 @@ export function useChat(): UseChatReturn {
             setConversationId(cid);
             localStorage.setItem("webxia-conversation-id", cid);
           }
+          // CHAT-2 — message_start is emitted AFTER the server persisted the
+          // user turn (addMessage), so it is the confirmation signal: drop the
+          // transient `pending` status from the last pending user bubble.
+          // Absence of the field = confirmed (also for restored history).
+          set((state) => ({ messages: clearPendingUserStatus(state.messages) }));
           break;
         }
 
@@ -313,6 +334,9 @@ export function useChat(): UseChatReturn {
           role: "user",
           content: trimmed,
           timestamp: Date.now(),
+          // CHAT-2 — optimistic bubble carries a transient "pending" status
+          // until the server confirms the turn via `message_start`.
+          status: "pending",
         });
       } else {
         // Drop the failed attempt's placeholder so the retry replaces it
@@ -322,6 +346,16 @@ export function useChat(): UseChatReturn {
         if (last?.role === "assistant") {
           useChatStore.setState({ messages: state.messages.slice(0, -1) });
         }
+        // CHAT-2 — re-enter the pending cycle: the failed user bubble goes
+        // back to "Envoi…" for the duration of the new attempt (no duplicate
+        // user bubble is appended).
+        set((s) => {
+          const idx = s.messages.findLastIndex((m) => m.role === "user");
+          if (idx < 0 || s.messages[idx].status !== "failed") return s;
+          const messages = [...s.messages];
+          messages[idx] = { ...messages[idx], status: "pending" };
+          return { messages };
+        });
       }
 
       // Never fabricate a conversation id: the server creates the
@@ -393,6 +427,9 @@ export function useChat(): UseChatReturn {
           updateLastAssistantMessage((prev) =>
             prev.trim().length > 0 ? prev : t("chat.error.stopped"),
           );
+          // CHAT-2 — deliberate abort is neither a confirmation nor a failure:
+          // clear a still-pending "Envoi…" so no status is left behind.
+          set((state) => ({ messages: clearPendingUserStatus(state.messages) }));
         } else {
           const message = error instanceof Error ? error.message : "Unknown error";
           setTemporaryError(message);
@@ -402,6 +439,21 @@ export function useChat(): UseChatReturn {
           updateLastAssistantMessage((prev) =>
             prev.trim().length > 0 ? prev : t("chat.error.generic"),
           );
+
+          // CHAT-2 — pre-stream HTTP/network failure: the last user bubble is
+          // still "pending" (message_start never arrived) → surface "Échec" on
+          // the bubble itself. A stream failure AFTER confirmation finds no
+          // pending bubble and leaves the confirmed status untouched. A
+          // deliberate abort never reaches this branch (handled above).
+          set((state) => {
+            const idx = state.messages.findLastIndex(
+              (m) => m.role === "user" && m.status === "pending",
+            );
+            if (idx < 0) return state;
+            const messages = [...state.messages];
+            messages[idx] = { ...messages[idx], status: "failed" };
+            return { messages };
+          });
 
           // Show toast for specific errors
           if (message.includes("429") || message.includes("rate limit")) {
@@ -428,6 +480,7 @@ export function useChat(): UseChatReturn {
       setCurrentTool,
       setTemporaryError,
       handleStreamEvent,
+      set,
     ],
   );
 

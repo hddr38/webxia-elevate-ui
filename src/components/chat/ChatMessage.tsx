@@ -25,9 +25,11 @@ interface ChatMessageProps {
   /** True only for the final message of the transcript while streaming. */
   isLast: boolean;
   isStreaming: boolean;
+  /** CHAT-2 — replay the last user message (wired from the failed bubble). */
+  onRetry?: () => void;
 }
 
-export function ChatMessage({ message, isLast, isStreaming }: ChatMessageProps) {
+export function ChatMessage({ message, isLast, isStreaming, onRetry }: ChatMessageProps) {
   const { t } = useLocale();
   const [copied, setCopied] = useState(false);
 
@@ -105,7 +107,33 @@ export function ChatMessage({ message, isLast, isStreaming }: ChatMessageProps) 
             isUser ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
           )}
         >
-          {isUser && <div className="whitespace-pre-wrap break-words">{message.content}</div>}
+          {isUser && (
+            <>
+              <div className="whitespace-pre-wrap break-words">{message.content}</div>
+              {/* CHAT-2 — transient delivery status (user bubbles only).
+                  pending: quiet chip until `message_start` confirms the turn.
+                  failed:  "Échec" + retry affordance (pre-stream failure). */}
+              {message.status === "pending" && (
+                <div className="mt-1 text-[11px] text-primary-foreground/70">
+                  {t("chat.status.sending")}
+                </div>
+              )}
+              {message.status === "failed" && (
+                <div className="mt-1.5 flex items-center gap-2 text-[11px]">
+                  <span className="font-medium">{t("chat.status.failed")}</span>
+                  {onRetry && (
+                    <button
+                      type="button"
+                      onClick={onRetry}
+                      className="rounded px-1 underline underline-offset-2 opacity-80 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current"
+                    >
+                      {t("chat.retry")}
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
           {isAssistant && (
             <>

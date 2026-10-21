@@ -49,8 +49,8 @@
 | 24   | P2       | Chat — statut optimiste du message utilisateur (« Envoi… »/« Échec ») + erreur accessible | `CHAT-2`      | poussé — validé fonctionnellement en production        | 2026-10-21 |
 | 25   | P2       | A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne                 | `CHAT-A2`     | résolu en production (96fc7dd)                          | 2026-10-21 |
 | 26   | P3       | Surveillance injection Netlify / React #418 (faux positif environnement)                  | `HYD-1`       | accepté — surveillance                                 | 2026-10-21 |
-| 27   | P2       | Animation CTAStrip reveal au scroll (whileInView gâté mobile)                             | `ANIM-1`      | corrigé localement, non commité, non déployé           | 2026-10-21 |
-| 28   | P3       | Stagger interne CTAStrip — reporté après validation ANIM-1                                | `ANIM-1`      | reporté — à évaluer après validation ANIM-1            | 2026-10-21 |
+| 27   | P2       | Animation CTAStrip reveal au scroll (whileInView gâté mobile)                             | `ANIM-1`      | poussé — reveal non perceptible en production           | 2026-10-21 |
+| 28   | P3       | Stagger interne CTAStrip — reporté après validation ANIM-1                                | `ANIM-1`      | non applicable / reporté sine die                      | 2026-10-21 |
 
 **Barème de priorité utilisé**
 
@@ -1452,8 +1452,10 @@ React #418). Décision : **accepté, pas de Edge Function**.
 
 - **Priorité** : `P2` (polish UX — révélation manquante sur la section CTA commune)
 - **Lot cible** : `ANIM-1`
-- **Statut** : `corrigé localement, non commité, non déployé` — implémentation et tests
-  validés localement ; **non commité, non poussé, non déployé** (en attente du GO de commit).
+- **Statut** : **`poussé — reveal non perceptible en production`** — commit `187670b`
+  poussé sur `origin/main` le `2026-10-21`, CI/E2E/Integration success, vérification
+  production 160/160 OK (voir « Validation production » ci-dessous).
+- **Commit** : `187670becbc3be9028524429a11e204e06e800c6` (`187670b`)
 - **Date** : `2026-10-21`
 
 **Contexte**
@@ -1539,8 +1541,44 @@ approche a été **écartée** car elle violerait deux verrous existants :
   - `prefers-reduced-motion: reduce` : section visible (`opacity=1`), aucun masquage.
 - Locale EN via `localStorage["webxia-locale"]` (`addInitScript`) — pas de préfixe URL.
 
-**Limite** : vérification locale uniquement — **aucune vérification en production** ; le
-change n'est **pas commité ni déployé**.
+**Validation production (push `187670b`, 2026-10-21)**
+
+- **CI ✅** (run `39677682012`), **E2E ✅** (run `39677681965`), **Integration ✅** (run
+  `39677682001`) — tous `success` sur le SHA `187670b…`.
+- Déploiement Netlify : `/api/health` → 200 **`version=187670b`**.
+- **160/160 vérifications production** (5 routes `/`, `/about`, `/services`, `/work`,
+  `/journal` × FR/EN × desktop 1440×900 / mobile 375×812, locale EN via
+  `localStorage webxia-locale`) :
+  - HTTP 200 sur les 30 rendus ;
+  - **aucune clé i18n brute** ;
+  - **CTAStrip monté** (1 CTA/page), **contenu, lien `/contact` et bouton intacts**
+    (h2, libellé CTA FR/EN, flèche SVG) ;
+  - **focus clavier** validé (lien `/contact` recevant le focus) ;
+  - **reduced-motion** validé (`emulateMedia reduce` → section visible `opacity=1`) ;
+  - visible avant scroll (`opacity=1`, aucun `opacity:0` inline) et après `scrollIntoView`
+    (`opacity=1`, `transform=none`).
+
+**Limite importante — reveal non perceptible en production**
+
+- Avec `initial={false}` (convention LOT 43, écart documenté ci-dessus), **la section est
+  visible avant et après scroll** : `opacity=1` et `style=""` constatés identiques dans les
+  deux cas (avec `inViewport=false` avant scroll, la section est bien hors viewport puis
+  révélée par `scrollIntoView`), donc **aucun changement d'opacité perceptible n'est
+  observable en production**.
+- Le **branchement desktop de `whileInView` est prouvé par les tests** (observation
+  `IntersectionObserver`, `ctastrip-reveal.test.tsx` 6/6 ; 140/140 checks locaux), **mais
+  l'effet visuel est actuellement neutre** : Framer n'a aucun état masqué de départ à
+  animer — conséquence directe du refus de `initial={{ opacity: 0 }}` (impossible sans
+  casser `sections-mobile.test.tsx:137` et sans risquer une section invisible mobile).
+
+**Décision**
+
+- Conserver ANIM-1 **comme socle technique** (branche `whileInView` câblée, gâtage mobile,
+  tests, garde-fous SSR/reduced-motion) ;
+- **ne pas lancer de stagger** (item **#28**) : un stagger posé sur un reveal non perceptible
+  n'apporterait aucun bénéfice utilisateur ;
+- toute future évolution de ce reveal exige **une décision UX explicite sur un état initial
+  masqué desktop uniquement** (GO dédié), condition préalable à tout effet visuel perçu.
 
 ---
 
@@ -1548,9 +1586,9 @@ change n'est **pas commité ni déployé**.
 
 - **Priorité** : `P3` (polish — hiérarchisation de l'animation interne)
 - **Lot cible** : `ANIM-1` (option, hors périmètre du GO courant)
-- **Statut** : `reporté — à évaluer après validation ANIM-1` — décision prise dans le cadre
-  du GO ANIM-1 (2026-10-21) : **aucun stagger, aucune exit animation, aucun 3D** — items
-  explicitement exclus par le GO.
+- **Statut** : **`non applicable / reporté sine die`** — décision actée le `2026-10-21`
+  après la validation production d'ANIM-1 (push `187670b`, 160/160 checks). Aucune échéance
+  de réévaluation.
 - **Date** : `2026-10-21`
 
 **Contexte**
@@ -1564,10 +1602,19 @@ léger décalage) enrichirait la perception de hiérarchie — mais :
   de conflit avec le gating mobile ;
 - la valeur UX d'un stagger sur une section CTA courte est **non démontrée** (pas de mesure).
 
-**Décision**
+**Raison du report sine die (validation production ANIM-1)**
 
-Reporté. À réévaluer **après validation en production** du reveal simple (item **#27**), sur
-la base d'un avis UX explicite et d'une GO dédié. Aucune implémentation dans ce lot.
+Ajouter un stagger à un reveal **non perceptible** n'apporterait **aucun bénéfice utilisateur** :
+en l'état, la section CTAStrip est visible avant et après scroll (`initial={false}` — voir
+« Limite importante » de l'item **#27**), donc rien n'est perceptible à séquencer. Le stagger
+reste non applicable tant que ce constat tient.
+
+**Condition de toute future évolution**
+
+Toute reprise exigera **une décision UX explicite sur un état initial masqué desktop
+uniquement** (GO dédié couvrant `initial={false}` → état de départ masqué sur desktop seul,
+mobile / reduced-motion / contenu restant intacts) — préalable à tout effet visuel perçu,
+y compris le reveal simple. Aucune implémentation dans ce lot.
 
 ---
 
@@ -1631,7 +1678,25 @@ la base d'un avis UX explicite et d'une GO dédié. Aucune implémentation dans 
   prettier/eslint fichiers 0, lint **0 err / 21 warn**, typecheck 0, tests
   **719 + 1 todo → 725 + 1 todo**, build 0 err (1.71 s), `git diff --check` 0.
   Vérification visuelle locale (preview `:4174` + Playwright, 5 routes × FR/EN ×
-  desktop/mobile) : **140/140 checks, 0 failures** — HTTP 200, 0 clé i18n brute, CTAStrip
-  visible avant/après scroll, focus clavier, reduced-motion. Stagger interne **reporté**
-  (item **#28**). Items **#27** → `corrigé localement, non commité, non déployé` ;
-  **#28** → `reporté`. **Limite : local uniquement, aucune vérification en production.**
+   desktop/mobile) : **140/140 checks, 0 failures** — HTTP 200, 0 clé i18n brute, CTAStrip
+   visible avant/après scroll, focus clavier, reduced-motion. Stagger interne **reporté**
+   (item **#28**). Items **#27** → `corrigé localement, non commité, non déployé` ;
+   **#28** → `reporté`. **Limite : local uniquement, aucune vérification en production.**
+- `2026-10-21` — **ANIM-1 poussé et validé en production** : commit **`187670b`**
+  (`187670becbc3be9028524429a11e204e06e800c6`, parent `bfb5525`) poussé sur `main` après GO
+  dédié (commit unique puis push, aucun amend). **CI, E2E et Integration : success** (runs
+  `39677682012` / `39677681965` / `39677682001`). Déploiement Netlify validé :
+  `/api/health` 200 **`version=187670b`** ; **160/160 vérifications production** — 5 routes
+  (`/`, `/about`, `/services`, `/work`, `/journal`) × FR/EN × desktop/mobile : HTTP 200,
+  **CTAStrip monté, contenu, lien `/contact` et bouton intacts**, **focus clavier** et
+  **reduced-motion** validés, **aucune clé i18n brute**. **Révélation NON perceptible en
+  production** : avec `initial={false}`, la section est visible avant et après scroll
+  (`opacity=1` / `style=""` identiques, `inViewport=false` avant `scrollIntoView`) — aucun
+  changement d'opacité observable ; le branchement desktop `whileInView` est prouvé par les
+  tests (observation IO, 6/6) mais **l'effet visuel est actuellement neutre** (conséquence
+  directe du refus de `initial={{opacity:0}}`, analyse section **#27**). Décision : conserver
+  ANIM-1 **comme socle technique**, **ne pas lancer de stagger** — item **#28** →
+  **`non applicable / reporté sine die`** (ajouter un stagger sur un reveal non perceptible
+  n'apporterait aucun bénéfice utilisateur ; toute future évolution exigera une décision UX
+  explicite sur un état initial masqué desktop uniquement). Item **#27** →
+  **`poussé — reveal non perceptible en production`**.

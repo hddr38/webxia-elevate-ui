@@ -46,8 +46,9 @@
 | 21  | P3       | Design/UX-1 — navbar admin isolée, bouton retour ≥44 px, libellé retour i18n              | `Design/UX-1` | corrigé localement, non commité, non déployé           | 2026-10-19 |
 | 22  | P3       | Design/UX-2 — images : coverage, ratios 16/10-16/9 et fallbacks                           | `Design/UX-2` | corrigé localement, non commité, non déployé           | 2026-10-20 |
 | 23  | P2       | Design/UX-3 — contraste AA eyebrows (`--brand-text`) + effet hover ProjectCard            | `Design/UX-3` | contraste corrigé localement ; effet hover **reporté** | 2026-10-20 |
-| 24  | P2       | Chat — statut optimiste du message utilisateur (« Envoi… »/« Échec ») + erreur accessible | `CHAT-2`      | corrigé localement, non commité, non déployé           | 2026-10-21 |
-| 25  | P2       | A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne                 | `CHAT-A2`     | ouvert — GO séparé requis                              | 2026-10-21 |
+| 24   | P2       | Chat — statut optimiste du message utilisateur (« Envoi… »/« Échec ») + erreur accessible | `CHAT-2`      | poussé — validé fonctionnellement en production        | 2026-10-21 |
+| 25   | P2       | A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne                 | `CHAT-A2`     | ouvert — GO séparé requis                              | 2026-10-21 |
+| 26   | P3       | Surveillance injection Netlify / React #418 (faux positif environnement)                  | `HYD-1`       | accepté — surveillance                                 | 2026-10-21 |
 
 **Barème de priorité utilisé**
 
@@ -1268,7 +1269,10 @@ découverte hors couverture de l'item global **#1**.
 
 - **Priorité** : `P2` (qualité perçue + a11y — échec pré-stream non signalé sur la bulle)
 - **Lot cible** : `CHAT-2` (suite directe de l'audit `CHAT-1`, Option B retenue)
-- **Statut** : **corrigé localement, non commité, non déployé**
+- **Statut** : **poussé — validé fonctionnellement en production** — commit `842e384`
+  (`feat(chat): add optimistic status and fix a11y alerts (CHAT-2)`) poussé sur
+  `origin/main` le `2026-10-21`, CI/E2E/Integration success, vérification production
+  Playwright (voir « Validation production » ci-dessous ; chat non exercé en prod).
 - **Date** : `2026-10-21`
 
 **Constat (audit CHAT-1)**
@@ -1301,6 +1305,44 @@ abort pré/post `message_start`, retry sans duplication, partialize, compteur) ;
 `chat-window-a11y.test.tsx` (3 cas : `role="alert"` unique, régions live conservées, transcript
 sans chip pour messages confirmés).
 
+**Validation production (push `842e384`, 2026-10-21)**
+
+- CI ✅ (run 39610704873, 72 s), E2E ✅ (run 39610704865, 225 s), Integration ✅ (run
+  39610705062, 76 s).
+- `/api/health` → 200 `version=842e384` (déploiement Netlify à jour).
+- Vérification Playwright production : **42/43 checks OK** — 6 pages FR/EN (`/`, `/about`,
+  `/services`, `/work`, `/journal`, `/contact`) : h1 présents et traduits, 0 clé i18n brute,
+  retour FR effectif ; widget chat ouvert en lecture seule (launcher FR, textarea, `role="log"`,
+  aucune chip fantôme, launcher EN « Chat with Webi » après bascule).
+- Contenu, i18n et interactions publics intacts ; aucune clé i18n brute.
+
+**Limites**
+
+- Chat non exercé en production (aucun envoi de message, aucun LLM réel) — validation
+  complète en local uniquement (31 checks runtime + 713 tests unitaires).
+- Seul échec des 43 vérifications : React #418 (voir anomalie ci-dessous), sans impact
+  visible (DOM final correct).
+
+**Anomalie React #418 — faux positif environnement (audit HYD-1, 2026-10-21)**
+
+- **Verdict** : faux positif environnement — injection plateforme Netlify, **non imputable
+  à CHAT-2** (confiance haute).
+- **Cause** : le HTML servi en production contient une injection Netlify dans `<head>`
+  (commentaire promo + **un nœud texte whitespace `\n` après `<meta charset>`**) ; React 19
+  refuse ce texte inattendu à l'hydratation → erreur `#418` (`args=HTML`, mismatch de
+  structure) puis régénération silencieuse de l'arbre (head + body).
+- **Preuves** : matrice HTML × environnement (HTML prod servi en local → 418 ; HTML local
+  servi en prod → 0 ; local/local → 0 ; prod/prod → 1) + isolation du seul `\n` (local +
+  `\n` après charset → 418 ; sans → 0) ; 6/6 pages prod = 1 erreur, 0/6 local ; HTML prod
+  = local + injection (tailles 40 104 vs 39 778) ; erreur 6/6 à `readyState=complete`,
+  0 console autre, 0 requestfailed, sans extension ; `#418 args=HTML` = `fromText=false`
+  (`react-dom-client.production.js:2735-2747`) ; `netlify.toml` ne déclare aucun plugin
+  d'injection.
+- **Impact** : erreur console + double hydratation (coût mineur) ; contenu, SEO, i18n et
+  interactions non affectés (DOM final correct, 42/43 checks).
+- **Décision** : accepté et documenté — **pas de Edge Function**, surveillance au long
+  cours (item **#26**).
+
 ---
 
 ## 25 — A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne
@@ -1318,6 +1360,33 @@ l'outil s'exécute, pas après. Le libellé annonce donc « résultat » à tort
 clés dédiées « outil en cours » / `chat.tool.executing` réutilisé, ou diffusion d'un événement
 `tool_complete` — décision à trancher au GO dédié (impact possible sur le protocole, hors
 lot CHAT-2).
+
+---
+
+## 26 — Surveillance injection Netlify / React #418
+
+- **Priorité** : `P3` (surveillance — faux positif environnement accepté)
+- **Lot cible** : `HYD-1` (décision du GO de commit documentaire, 2026-10-21)
+- **Statut** : **accepté — surveillance**
+- **Date** : `2026-10-21`
+
+**Contexte**
+
+L'audit HYD-1 (2026-10-21, read-only) a établi que l'erreur React `#418` observée sur les
+6 pages publiques en production est un **faux positif environnement** : l'injection
+plateforme Netlify dans `<head>` (commentaire promo + nœud texte whitespace après
+`<meta charset>`) déclenche un mismatch de structure à l'hydratation React 19, puis une
+régénération silencieuse de l'arbre. Le DOM final, le contenu, le SEO, l'i18n et les
+interactions restent corrects. Non imputable à CHAT-2 (preuves : item **#24**, anomalie
+React #418). Décision : **accepté, pas de Edge Function**.
+
+**Action future**
+
+- Revérifier si Netlify modifie son injection (retrait du commentaire, format différent) ou
+  si React / TanStack Start change le comportement d'hydratation du `<head>` (tolérance
+  aux text nodes) : re-tester les 6 pages prod pour confirmer la disparition ou la
+  persistance du `#418`.
+- **Ne pas implémenter d'Edge Function sans décision explicite d'un GO dédié.**
 
 ---
 
@@ -1345,3 +1414,5 @@ lot CHAT-2).
 - `2026-10-20` — **Design/UX-2** préparé localement (non commité, non déployé) : Phase 0 — `a.cover` confirmé **valeur CSS déjà formatée** (`url(…)` ou gradient déterministe, mappers + échantillon base) ; cartes journal `backgroundSize: cover` + `backgroundPosition: center` ; `project-card` ratio `4/3 → 16/10` + `object-cover object-center` ; fallbacks hero `journal/$slug` + `work/$slug` en cover/center ; CoverHero admin `21/9 sm:28/9 → 16/9` (aligné heroes détail). Gates (avant = après) : prettier/eslint 0, lint 0 err/22 warn, typecheck 0, **696 + 1 todo**, build 1.68 s, diff-check 0. Vérification visuelle locale : **95 checks / 0 fail** (FR + EN × `/journal`, `/journal/$slug`, `/work`, `/work/$slug`, `/contact`, mobile 390 ; admin simulé `/admin/realisations` + formulaire `new` CoverHero 1.778) ; scénarios « sans image » simulés par interception du document SSR (aucun contenu sans cover en base). Limite : **local uniquement**. Item **#22** → `corrigé localement, non commité, non déployé`.
 - `2026-10-20` — **Design/UX-3** préparé localement (non commité, non déployé) : Phase 0 — défaut d'audit **confirmé** (`text-brand` eyebrows sur fonds clairs = 3.62/3.42/3.72 → échec AA 4.5 pour `text-xs`) ; valeur GO `oklch(0.52 0.2 258)` validée **clairement** (5.51/5.20/5.66) mais **échoue en sombre** (3.43/3.20/3.13) et **aucune valeur unique** n'atteint 4.5 sur les 6 fonds (balayage L) → token **par thème** : `:root --brand-text: oklch(0.52 0.2 258)` + `.dark --brand-text: oklch(0.68 0.2 258)` (= `--brand` sombre, déjà AA) ; utility `text-brand-text` branchée via `@theme inline`. 7 eyebrows `text-brand → text-brand-text` (contact/expertises/work-index/why-choose-us/services/project-card-CTAStrip/work-slug) ; icônes/liens/badge `text-[10px]`/`*` requis **préservés** (hors périmètre). **Effet hover 3D ProjectCard REPORTÉ** (Cas B/C : `<motion.article>` Framer + `hover:-translate-y-1` CSS déjà actifs → conflit transform garanti). Gates (avant = après) : eslint/lint 0 err/22 warn, typecheck 0, **696 + 1 todo**, build 0 err, diff-check 0 ; prettier `styles.css` dirty **préexistant** (4 wraps hors tokens, aucune ligne `brand-text` dans le diff prettier). Vérification visuelle locale : **203 checks / 0 fail** (FR + EN × light + dark × `/contact` `/services` `/work` `/about` `/work/helllllo-baby` : couleur computed === `--brand-text`, contraste AA, `.dark`, overflow, i18n ; `/work` non-régression hover/focus, 0 erreur JS). Limite : **local uniquement**. Item **#23** → contraste `corrigé localement`, effet hover `reporté`.
 - `2026-10-21` — **CHAT-2** préparé localement (non commité, non déployé) : statut optimiste du message utilisateur (Option B — `status?: "pending" | "failed"` côté client, aucun changement de protocole SSE / server functions / `partialize`) + correction A1 (`role="alert"` explicite au call-site de la bannière d'erreur, verrouillé par test) ; correction A2 **hors lot** (item **#25**, GO séparé requis). Cycle de vie verrouillé : envoi → user `pending` + bulle assistant vide ; `message_start` → confirmé (statut effacé) ; échec HTTP/réseau avant `message_start` → `failed` + `temporaryError` ; AbortError → ni pending ni failed ; retry → re-`pending`, purge de l'assistant échoué, zéro duplication. Clés i18n FR/EN ajoutées `chat.status.sending` (« Envoi… »/« Sending… ») et `chat.status.failed` (« Échec »/« Failed »), `chat.retry` réutilisée. Tests : 3 fichiers neufs + 2 étendus = **+17** (cycle de vie complet, invariant partialize, invariant compteur en rendu client happy-dom — zustand sert `getInitialState()` comme snapshot serveur, un probe SSR ne verrait jamais le seed —, chips FR/EN, `role="alert"` + régions live). Gates (avant = stash sur HEAD `34508fa`, après = travail local) : lint 0 err / 22 warn → **0 err / 21 warn** (−1 : `vi` importé inutilisé dans `ChatMessage.test.tsx` devenu utilisé), typecheck 0 → 0, tests **696 + 1 todo → 713 + 1 todo**, build 0 err, `git diff --check` 0. Vérification runtime locale (preview `:4173` + Playwright, `/api/chat` intercepté) : **31 checks / 0 fail** — chip « Envoi… » visible puis effacé après `message_start`, stream assistant + scroll bas, échec 429 → chip « Échec » + bouton « Réessayer » + bannière `role="alert"` portant le message serveur, retry sans duplication, abort → ni pending ni failed + libellé interrompu, bascule EN (« Failed »/« Retry »/launcher après Escape), mobile 390 px sans scroll horizontal, 0 erreur JS. Limite : **local uniquement** (API interceptée, aucun vrai LLM, aucune vérification production). Item **#24** → `corrigé localement, non commité, non déployé`.
+- `2026-10-21` — **Push CHAT-2** (`842e384`) : CI/E2E/Integration ✅ (runs 39610704873 / 39610704865 / 39610705062 ; E2E 225 s). Vérification production : `/api/health` 200 `version=842e384` ; Playwright 6 pages FR/EN **42/43 checks OK** (h1 présents et traduits, 0 clé i18n brute, widget chat ouvert en lecture seule, launcher FR/EN). Contenu, i18n et interactions publics intacts. Chat non exercé en production (validation locale complète uniquement — 31 checks runtime + 713 tests). Item **#24** → `poussé — validé fonctionnellement en production`.
+- `2026-10-21` — **HYD-1** (audit read-only React #418 + commit documentaire) : **verdict faux positif environnement** — l'injection plateforme Netlify dans `<head>` (commentaire promo + nœud texte whitespace `\n` après `<meta charset>`) déclenche le `#418` (`args=HTML`, `fromText=false` — mismatch de structure → régénération silencieuse de l'arbre), **non imputable à CHAT-2** (confiance haute). Preuves : matrice HTML × environnement (HTML prod servi en local → 418 ; HTML local servi en prod → 0 ; local/local → 0 ; prod/prod → 1) + isolation du seul `\n` (local + `\n` après charset → 418 ; sans → 0) ; 6/6 pages prod en erreur, 0/6 local ; injection = commentaire Netlify 325 chars + `\n`, `netlify.toml` sans plugin d'injection. Impact : erreur console + double hydratation ; contenu, SEO, i18n et interactions non affectés (DOM final correct, 42/43 checks). Décision : **accepté et documenté, pas de Edge Function** ; item **#26** (surveillance injection Netlify / React #418) ajouté ; item **#24** documenté (preuves, limites, anomalie) ; présentation du verdict faite au GO de commit documentaire.

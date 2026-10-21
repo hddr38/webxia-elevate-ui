@@ -79,7 +79,7 @@ function WorkPage() {
             transition={{ duration: 0.6 }}
             className="max-w-3xl"
           >
-            <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
+            <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand-text">
               {t("work.eyebrow")}
             </span>
             <h1 className="mt-4 font-display text-5xl font-semibold tracking-[-0.04em] text-balance sm:text-6xl md:text-7xl">

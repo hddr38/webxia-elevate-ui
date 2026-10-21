@@ -129,7 +129,7 @@ export function CTAStrip({
         <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-card p-10 text-center sm:p-16">
           <div className="absolute inset-0 bg-radial-fade opacity-70" aria-hidden="true" />
           {eyebrow && (
-            <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
+            <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand-text">
               {eyebrow}
             </span>
           )}

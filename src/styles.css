@@ -37,6 +37,7 @@
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-glow: var(--brand-glow);
+  --color-brand-text: var(--brand-text);
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -87,6 +88,7 @@
   --brand: oklch(0.62 0.2 258);
   --brand-foreground: oklch(0.99 0.002 240);
   --brand-glow: oklch(0.72 0.18 270);
+  --brand-text: oklch(0.52 0.2 258);
 }
 
 .dark {
@@ -115,6 +117,7 @@
   --brand: oklch(0.68 0.2 258);
   --brand-foreground: oklch(0.16 0.012 260);
   --brand-glow: oklch(0.78 0.18 290);
+  --brand-text: oklch(0.68 0.2 258);
 }
 
 @layer base {

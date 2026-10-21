@@ -82,7 +82,7 @@ export function Contact() {
           transition={isMobile ? undefined : { duration: 0.6 }}
           className="mx-auto max-w-3xl text-center"
         >
-          <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
+          <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand-text">
             {t("contact.eyebrow")}
           </span>
           <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl md:text-6xl">

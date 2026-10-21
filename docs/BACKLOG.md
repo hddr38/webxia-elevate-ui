@@ -21,30 +21,31 @@
 
 ## Vue d'ensemble
 
-| #   | Priorité | Titre                                                                            | Lot cible     | Statut                                       | Date       |
-| --- | -------- | -------------------------------------------------------------------------------- | ------------- | -------------------------------------------- | ---------- |
-| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`   | résolu en production                         | 2026-10-14 |
-| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`         | ouvert                                       | 2026-10-14 |
-| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`   | résolu en production                         | 2026-10-14 |
-| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`         | résolu en production                         | 2026-10-15 |
-| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`         | ouvert                                       | 2026-10-14 |
-| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | `6.4-b V2`    | résolu en production                         | 2026-10-14 |
-| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | `6.3`         | résolu en production                         | 2026-10-15 |
-| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | `6.3`         | résolu en production                         | 2026-10-15 |
-| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | `6.4-b V2`    | résolu en production                         | 2026-10-15 |
-| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`       | résolu en production                         | 2026-10-15 |
-| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`         | résolu                                       | 2026-10-15 |
-| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`         | résolu en production                         | 2026-10-15 |
-| 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test | `6.3`         | faux positif — non applicable                | 2026-10-15 |
-| 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`         | résolu en production                         | 2026-10-15 |
-| 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés             | `6.4-b`       | résolu en production                         | 2026-10-15 |
-| 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a               | `6.4-b V2`    | résolu en production                         | 2026-10-15 |
-| 17  | P3       | `use-mobile.tsx` — orphelin après suppression de `sidebar.tsx` (V6-a)            | `V6-a`        | supprimé                                     | 2026-10-19 |
-| 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`    | corrigé localement                           | 2026-10-15 |
-| 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+`   | résolu en production                         | 2026-10-18 |
-| 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)              | `6.4-b`       | terminé, poussé                              | 2026-10-18 |
-| 21  | P3       | Design/UX-1 — navbar admin isolée, bouton retour ≥44 px, libellé retour i18n     | `Design/UX-1` | corrigé localement, non commité, non déployé | 2026-10-19 |
-| 22  | P3       | Design/UX-2 — images : coverage, ratios 16/10-16/9 et fallbacks                  | `Design/UX-2` | corrigé localement, non commité, non déployé | 2026-10-20 |
+| #   | Priorité | Titre                                                                            | Lot cible     | Statut                                                 | Date       |
+| --- | -------- | -------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------ | ---------- |
+| 1   | P1       | Audit i18n global — clés manquantes FR/EN (issu LOT 5.2-pre-a)                   | `5.2-pre-b`   | résolu en production                                   | 2026-10-14 |
+| 2   | P1       | Filtres journal incohérents (boutons ≠ catégories réelles en base)               | `5.3`         | ouvert                                                 | 2026-10-14 |
+| 3   | P1       | `about.process.subtitle` absent en EN                                            | `5.2-pre-b`   | résolu en production                                   | 2026-10-14 |
+| 4   | P3       | FloatingCTA `animate-ping` continue hors interaction (I-19)                      | `5.2`         | résolu en production                                   | 2026-10-15 |
+| 5   | P2       | `backdrop-blur` ×28 statiques (perf à mesurer avant modification) (I-18)         | `5.2`         | ouvert                                                 | 2026-10-14 |
+| 6   | P3       | Code mort : `ProjectCard`, `src/data/projects.ts`, `src/data/articles.ts` (I-16) | `6.4-b V2`    | résolu en production                                   | 2026-10-14 |
+| 7   | P2       | Saut hiérarchique `h1` → `h3` sur `/contact` (I-11)                              | `6.3`         | résolu en production                                   | 2026-10-15 |
+| 8   | P3       | Ancrage footer `/about#realisations` versus section `process` (I-12)             | `6.3`         | résolu en production                                   | 2026-10-15 |
+| 9   | P3       | FloatingCTA non monté dans l'arborescence (composant obsolète)                   | `6.4-b V2`    | résolu en production                                   | 2026-10-15 |
+| 10  | P1       | SSR/hydratation animations — 65 éléments `opacity:0` corrigés                    | `5.2-b`       | résolu en production                                   | 2026-10-15 |
+| 11  | P3       | MotionConfig `reducedMotion="user"` — présent et verrouillé par test             | `N/A`         | résolu                                                 | 2026-10-15 |
+| 12  | P3       | Dead keys i18n — purge de 47 clés mortes + test marquee (LOT 6.1)                | `6.1`         | résolu en production                                   | 2026-10-15 |
+| 13  | P3       | Hiérarchie titres `/services` — finding audit (faux positif) verrouillé par test | `6.3`         | faux positif — non applicable                          | 2026-10-15 |
+| 14  | P3       | `LocaleSwitcher` `aria-label` hardcodé EN — i18n + `role=group`                  | `6.3`         | résolu en production                                   | 2026-10-15 |
+| 15  | P3       | LOT 6.4-b V1 — exports morts supprimés, symboles internes privatisés             | `6.4-b`       | résolu en production                                   | 2026-10-15 |
+| 16  | P3       | Purge clé i18n `floating.cta` (FR + EN) — devenue morte après V2-a               | `6.4-b V2`    | résolu en production                                   | 2026-10-15 |
+| 17  | P3       | `use-mobile.tsx` — orphelin après suppression de `sidebar.tsx` (V6-a)            | `V6-a`        | supprimé                                               | 2026-10-19 |
+| 18  | P3       | LOT 6.4-b V3 — barrels morts supprimés + exports `skills` purgés                 | `6.4-b V3`    | corrigé localement                                     | 2026-10-15 |
+| 19  | P2       | Hero canvas mobile — réactivation avec params allégés + kill-switch              | `6.4-b V3+`   | résolu en production                                   | 2026-10-18 |
+| 20  | P2       | LOT 6.4-b V4 — IA + observabilité (exports morts AI, observability)              | `6.4-b`       | terminé, poussé                                        | 2026-10-18 |
+| 21  | P3       | Design/UX-1 — navbar admin isolée, bouton retour ≥44 px, libellé retour i18n     | `Design/UX-1` | corrigé localement, non commité, non déployé           | 2026-10-19 |
+| 22  | P3       | Design/UX-2 — images : coverage, ratios 16/10-16/9 et fallbacks                  | `Design/UX-2` | corrigé localement, non commité, non déployé           | 2026-10-20 |
+| 23  | P2       | Design/UX-3 — contraste AA eyebrows (`--brand-text`) + effet hover ProjectCard   | `Design/UX-3` | contraste corrigé localement ; effet hover **reporté** | 2026-10-20 |
 
 **Barème de priorité utilisé**
 
@@ -1173,6 +1174,78 @@ n'existe plus depuis LOT 6.4-b V2 — non modifié par nature.
 
 ---
 
+## 23 — Design/UX-3 — contraste AA eyebrows (`--brand-text`) + effet hover ProjectCard
+
+- **Priorité** : `P2` (signal a11y/audit — contraste insuffisant `text-brand` sur eyebrows)
+- **Lot cible** : `Design/UX-3`
+- **Statut** : contraste **corrigé localement** ; effet hover **reporté** (voir Mission 3).
+- **Date** : `2026-10-20`
+
+**Phase 0 — vérification contraste (calcul OKLCH → sRGB → luminance WCAG 2.1)**
+
+- `--brand` clair = `oklch(0.62 0.2 258)` ; `--brand` sombre = `oklch(0.68 0.2 258)`.
+- **Actuel `text-brand` sur fonds clairs** (`background` 0.99 / `surface` 0.97 / `card` 1.0) :
+  ratios **3.62 / 3.42 / 3.72** → seulement **AA-large (≥3)**, **échec AA (4.5) pour texte
+  normal** (`text-xs` 12 px = eyebrows). Défaut d'audit confirmé.
+- Valeur proposée par le GO `--brand-text: oklch(0.52 0.2 258)` : fonds clairs **5.51 / 5.20 /
+  5.66 → AA ✅**, mais fonds sombres **3.43 / 3.20 / 3.13 → AA-large seulement, échec AA ❌**.
+- Balayage L ∈ [0.50, 0.72] (C=0.2, H=258) : **aucune valeur unique n'atteint 4.5 sur les 6
+  fonds** (max du minimum = 4.03 à L=0.58) → token global unique **mathématiquement impossible**.
+- **Alternative validée (par thème, comme `--brand`)** : `:root` (clair) `oklch(0.52 0.2 258)`
+  (AA 5.51/5.20/5.66 ✅) ; `.dark` `oklch(0.68 0.2 258)` (= `--brand` sombre actuel, déjà AA
+  6.40/5.97/5.84 ✅). `--brand` intact.
+
+**Changements (8 fichiers — 1 token + 7 eyebrows)**
+
+| Fichier                                 | Mission | Changement                                                                                                                                                                   |
+| --------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/styles.css`                        | 1       | `@theme inline` : `--color-brand-text: var(--brand-text)` ; `:root` : `--brand-text: oklch(0.52 0.2 258)` ; `.dark` : `--brand-text: oklch(0.68 0.2 258)` ; `--brand` intact |
+| `src/components/site/contact.tsx`       | 2       | eyebrow l.85 `text-brand → text-brand-text`                                                                                                                                  |
+| `src/components/site/expertises.tsx`    | 2       | eyebrow l.86 `text-brand → text-brand-text`                                                                                                                                  |
+| `src/routes/work/index.tsx`             | 2       | eyebrow l.82 `text-brand → text-brand-text`                                                                                                                                  |
+| `src/components/site/why-choose-us.tsx` | 2       | eyebrow l.37 `text-brand → text-brand-text`                                                                                                                                  |
+| `src/components/site/services.tsx`      | 2       | eyebrow l.135 `text-brand → text-brand-text`                                                                                                                                 |
+| `src/components/site/project-card.tsx`  | 2       | eyebrow CTAStrip l.132 `text-brand → text-brand-text` (aucun hover ajouté)                                                                                                   |
+| `src/routes/work/$slug.tsx`             | 2       | eyebrow l.95 `text-brand → text-brand-text`                                                                                                                                  |
+
+Occurrences **non** remplacées (signalement, hors « eyebrows text-xs/text-sm ») : icônes
+`ShieldCheck`/`Sparkles`/`Check` (`contact` 175/178, `expertises` 112, `work/index` 119,
+`why-choose-us` 72, `services` 93/105/111/168), lien `work/$slug` 56 + breadcrumb hover 79,
+`*` requis aria-hidden `contact` 263, badge featured `text-[10px]` `work/$slug` 89.
+
+**Mission 3 — effet hover ProjectCard : REPORTÉ (Cas B/C)**
+
+- Conteneur = `<motion.article>` **Framer Motion** (`initial={false}`, `whileInView`
+  opacity+y desktop, `hover:-translate-y-1` CSS déjà actif) → **Cas B** (pas de CSS brut).
+- **Conflit avéré (Cas C)** : `whileHover` rotateX entrerait en conflit avec la translation
+  CSS `hover:-translate-y-1` et le `transform` inline Framer → risque de « saut »/layout shift
+  au survol. Effet 3D sans valeur critique → **reporté**, décision UX à valider.
+- `project-card.tsx` **non modifié pour le hover** (Mission 2 uniquement).
+
+**Contrôles (avant → après, mesurés)**
+
+- Prettier (8 cibles) : `styles.css` dirty (4 wraps **préexistants** : shadows + mask-image,
+  hors mes tokens — aucune ligne `brand-text` dans le diff prettier) ; 7 TSX clean → **identique**
+  après (aucune régression introduite ; mes 3 ajouts `--brand-text` sont prettier-clean).
+- ESLint (7 TSX) : 0/0 → 0/0 ; `npm run lint` : 0 err / 22 warn → **0 err / 22 warn**.
+- Typecheck : 0 → 0 ; `npm run test` : **62 / 696 + 1 todo** → identique (11.81 s).
+- `npm run build` : 0 err (2.34 s + 1.58 s) ; utility `.text-brand-text{color:var(--brand-text)}`
+  - tokens `:root`/`.dark` présents dans le CSS buildé ; `git diff --check` : 0 → 0.
+
+**Vérification visuelle locale (preview `:4173` + Playwright, FR + EN × light + dark × 5 pages)**
+
+- **203 checks / 0 fail** : `/contact`, `/services`, `/work`, `/about`, `/work/helllllo-baby`.
+- Par page/thème/locale : classe `.dark` correcte, **0 overflow**, **0 clé i18n brute**
+  (domaines e-mail `cal.com`/`protonmail.com` exclus du regex), eyebrow `text-brand-text`
+  présent, **couleur computed === `var(--brand-text)` résolu** (probe), **contraste AA ≥4.5**
+  vs fond effectif (lorsque rgb parsable).
+- `/work` non-régression hover : cartes `article.group` présentes, lien focusable clavier,
+  **0 erreur JS** (hover 3D reporté — aucun comportement existant altéré).
+
+**Limite** : vérification locale uniquement — aucune vérification en production.
+
+---
+
 ## Note complémentaire — clés manquantes supplémentaires
 
 Conformément à la consigne d'ajout, l'audit 5.2-pre-a a recherché toute clé i18n manquante
@@ -1211,3 +1284,4 @@ découverte hors couverture de l'item global **#1**.
 - `2026-10-19` — **Doc stack** (`0ae87b7`) poussée : CI/E2E/Integration ✅ (runs 39322487785 / 39322487699 / 39322487806). Aucune modification applicative.
 - `2026-10-19` — **Design/UX-1** préparé localement (non commité, non déployé) : navbar admin regroupée en pill isolée (`border-brand/25` `bg-brand/[0.07]`), nav `gap-3`, filet vertical retiré, zone droite `gap-1.5` + séparateur `h-6 w-px` + avatar `size-9` ; `AdminPageHeader` prop `backLabel` + `BackButton min-h-[44px]` ; clé i18n `admin.common.backToDashboard` FR/EN ajoutée et branchée sur les 5 listes admin (`backTo="/admin"`). Gates : prettier/lint **0 err / 22 warn** (baseline identique), typecheck, **696 + 1 todo**, build 1.90 s, `git diff --check` 0. Vérification visuelle locale (preview `:4173` + Playwright, navigation SPA avec session fausse) : **249 checks / 0 fail** (FR + EN × 6 pages + mobile 390×844), h1 des 5 listes attendu en 2 locales (swap SPA ~70 ms — lectures instantanées décalées = artefact de test). Limite : **local uniquement, aucune vérification en production** (pas de session admin réelle). Item **#21** → `corrigé localement, non commité, non déployé`.
 - `2026-10-20` — **Design/UX-2** préparé localement (non commité, non déployé) : Phase 0 — `a.cover` confirmé **valeur CSS déjà formatée** (`url(…)` ou gradient déterministe, mappers + échantillon base) ; cartes journal `backgroundSize: cover` + `backgroundPosition: center` ; `project-card` ratio `4/3 → 16/10` + `object-cover object-center` ; fallbacks hero `journal/$slug` + `work/$slug` en cover/center ; CoverHero admin `21/9 sm:28/9 → 16/9` (aligné heroes détail). Gates (avant = après) : prettier/eslint 0, lint 0 err/22 warn, typecheck 0, **696 + 1 todo**, build 1.68 s, diff-check 0. Vérification visuelle locale : **95 checks / 0 fail** (FR + EN × `/journal`, `/journal/$slug`, `/work`, `/work/$slug`, `/contact`, mobile 390 ; admin simulé `/admin/realisations` + formulaire `new` CoverHero 1.778) ; scénarios « sans image » simulés par interception du document SSR (aucun contenu sans cover en base). Limite : **local uniquement**. Item **#22** → `corrigé localement, non commité, non déployé`.
+- `2026-10-20` — **Design/UX-3** préparé localement (non commité, non déployé) : Phase 0 — défaut d'audit **confirmé** (`text-brand` eyebrows sur fonds clairs = 3.62/3.42/3.72 → échec AA 4.5 pour `text-xs`) ; valeur GO `oklch(0.52 0.2 258)` validée **clairement** (5.51/5.20/5.66) mais **échoue en sombre** (3.43/3.20/3.13) et **aucune valeur unique** n'atteint 4.5 sur les 6 fonds (balayage L) → token **par thème** : `:root --brand-text: oklch(0.52 0.2 258)` + `.dark --brand-text: oklch(0.68 0.2 258)` (= `--brand` sombre, déjà AA) ; utility `text-brand-text` branchée via `@theme inline`. 7 eyebrows `text-brand → text-brand-text` (contact/expertises/work-index/why-choose-us/services/project-card-CTAStrip/work-slug) ; icônes/liens/badge `text-[10px]`/`*` requis **préservés** (hors périmètre). **Effet hover 3D ProjectCard REPORTÉ** (Cas B/C : `<motion.article>` Framer + `hover:-translate-y-1` CSS déjà actifs → conflit transform garanti). Gates (avant = après) : eslint/lint 0 err/22 warn, typecheck 0, **696 + 1 todo**, build 0 err, diff-check 0 ; prettier `styles.css` dirty **préexistant** (4 wraps hors tokens, aucune ligne `brand-text` dans le diff prettier). Vérification visuelle locale : **203 checks / 0 fail** (FR + EN × light + dark × `/contact` `/services` `/work` `/about` `/work/helllllo-baby` : couleur computed === `--brand-text`, contraste AA, `.dark`, overflow, i18n ; `/work` non-régression hover/focus, 0 erreur JS). Limite : **local uniquement**. Item **#23** → contraste `corrigé localement`, effet hover `reporté`.

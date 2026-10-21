@@ -92,7 +92,7 @@ function RealisationPage() {
               </span>
             )}
           </div>
-          <p className="mt-4 text-xs font-medium uppercase tracking-[0.2em] text-brand">
+          <p className="mt-4 text-xs font-medium uppercase tracking-[0.2em] text-brand-text">
             {item.client ?? t("work.eyebrow")}
           </p>
           <h1 className="mt-2 font-display text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl md:text-6xl">

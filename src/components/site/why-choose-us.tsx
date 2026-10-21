@@ -34,7 +34,7 @@ export function WhyChooseUs({ className }: { className?: string }) {
           transition={isMobile ? undefined : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto max-w-3xl mb-16 md:mb-20"
         >
-          <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
+          <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand-text">
             {t("home.whyChooseUs.eyebrow")}
           </span>
           <h2 className="mt-4 font-display text-4xl font-semibold tracking-[-0.03em] text-balance sm:text-5xl md:text-6xl">

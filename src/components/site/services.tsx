@@ -132,7 +132,7 @@ export function Services() {
           <Container size="wide" className="px-4 sm:px-6 lg:px-8">
             <Container size="narrow">
               {section.eyebrow && (
-                <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand">
+                <span className="text-xs font-medium uppercase tracking-[0.2em] text-brand-text">
                   {section.eyebrow}
                 </span>
               )}

@@ -47,7 +47,7 @@
 | 22  | P3       | Design/UX-2 — images : coverage, ratios 16/10-16/9 et fallbacks                           | `Design/UX-2` | corrigé localement, non commité, non déployé           | 2026-10-20 |
 | 23  | P2       | Design/UX-3 — contraste AA eyebrows (`--brand-text`) + effet hover ProjectCard            | `Design/UX-3` | contraste corrigé localement ; effet hover **reporté** | 2026-10-20 |
 | 24   | P2       | Chat — statut optimiste du message utilisateur (« Envoi… »/« Échec ») + erreur accessible | `CHAT-2`      | poussé — validé fonctionnellement en production        | 2026-10-21 |
-| 25   | P2       | A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne                 | `CHAT-A2`     | ouvert — GO séparé requis                              | 2026-10-21 |
+| 25   | P2       | A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne                 | `CHAT-A2`     | corrigé localement, non commité, non déployé          | 2026-10-21 |
 | 26   | P3       | Surveillance injection Netlify / React #418 (faux positif environnement)                  | `HYD-1`       | accepté — surveillance                                 | 2026-10-21 |
 
 **Barème de priorité utilisé**
@@ -1348,18 +1348,48 @@ sans chip pour messages confirmés).
 ## 25 — A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne
 
 - **Priorité** : `P2` (a11y — annonce fausse en lecteur d'écran)
-- **Lot cible** : `CHAT-A2` (**GO séparé requis** — explicitement hors périmètre CHAT-2)
-- **Statut** : **ouvert**
+- **Lot cible** : `CHAT-A2` (corrigé dans le cadre du GO « CHAT-3 », 2026-10-21)
+- **Statut** : **corrigé localement, non commité, non déployé** — annonce sr-only de la
+  phase outil corrigée dans `ChatWindow.tsx`, clé `chat.tool.running` ajoutée FR/EN,
+  tests ciblés ajoutés. **Non commité, non poussé, non déployé** (en attente du GO de commit).
 - **Date** : `2026-10-21`
 
 **Constat (audit CHAT-1, section 5.2)**
 
-`ChatWindow.tsx` (région `role="status"` sr-only) affiche `t("chat.tool.result")`
-(« Résultat de l'outil… ») dès que `currentTool` est non nul — c'est-à-dire **pendant** que
-l'outil s'exécute, pas après. Le libellé annonce donc « résultat » à tort. Correction probable :
-clés dédiées « outil en cours » / `chat.tool.executing` réutilisé, ou diffusion d'un événement
-`tool_complete` — décision à trancher au GO dédié (impact possible sur le protocole, hors
-lot CHAT-2).
+`ChatWindow.tsx` (région `role="status"` sr-only) affichait `t("chat.tool.result")`
+(« Résultat de l'outil… ») dès que `currentTool` était non nul — c'est-à-dire **pendant** que
+l'outil s'exécute, pas après. Le libellé annonçait donc « résultat » à tort. Analyse
+complémentaire (CHAT-3) : la branche `currentTool` du ternaire était de plus **inatteignable**
+en l'état (`isStreaming` prime toujours, `currentTool` n'est effacé qu'en fin de stream) —
+l'annonce pendant un outil se réduisait à « Webi écrit. » (état d'écriture inexact lui aussi).
+
+**Correction (CHAT-3 — Option dérivation client, hook/store intacts)**
+
+- `src/components/chat/ChatWindow.tsx` : la région sr-only annonce désormais
+  **« Outil en cours d'exécution »** (`chat.tool.running`) pendant tool_start, puis
+  **« Résultat de l'outil »** (`chat.tool.result`, inchangé) une fois `toolResult` posé sur
+  la dernière bulle outil ; « Webi écrit. » (`chat.status.writing`) reste pour le streaming
+  sans outil. La phase est dérivée de `currentTool` + présence de `toolResult` sur le dernier
+  message `role="tool"` (champ déjà posé par `use-chat` à `tool_result`) — **aucune
+  modification** de `use-chat.ts`, du store, du SSE, du statut optimiste ni du rendu visible
+  de `ToolStatus`.
+- `src/lib/locale-context.tsx` : clé **`chat.tool.running`** ajoutée — FR « Outil en cours
+  d'exécution » / EN « Tool running » (parité stricte vérifiée ; `chat.tool.result` et
+  `chat.tool.executing` inchangés, encore utilisés en visible par `ChatMessage`/`ToolStatus`).
+
+**Tests ajoutés** : `chat-window-a11y.test.tsx` +6 cas (9 au total dans le fichier) —
+tool_start : annonce en cours + aucun faux « Résultat… » ; tool_result : annonce résultat +
+plus d'état en cours ; streaming sans outil (« Webi écrit. ») ; flux terminé (vide) ; i18n
+FR/EN des 2 clés ; non-régression ToolStatus visible + statut optimiste « Envoi… » +
+`aria-busy` pendant l'outil.
+
+**Limite runtime documentée** : la whitelist `USER_VISIBLE_TOOLS` est **vide en V1**
+(`user-visible-tools.ts`, fail-safe) — aucun outil n'est donc visible en production
+aujourd'hui et les deux états ne peuvent pas se déclencher naturellement. La vérification
+runtime locale (20/20) a exercé le vrai code servi en interceptant le chunk
+`ChatWidget-*.js` pour whitelister `search_knowledge` (patch Playwright hors dépôt, flux
+SSE local avec délais réels : tool_start à +500 ms, tool_result à +2,2 s). Chat non exercé
+en production.
 
 ---
 
@@ -1416,3 +1446,4 @@ React #418). Décision : **accepté, pas de Edge Function**.
 - `2026-10-21` — **CHAT-2** préparé localement (non commité, non déployé) : statut optimiste du message utilisateur (Option B — `status?: "pending" | "failed"` côté client, aucun changement de protocole SSE / server functions / `partialize`) + correction A1 (`role="alert"` explicite au call-site de la bannière d'erreur, verrouillé par test) ; correction A2 **hors lot** (item **#25**, GO séparé requis). Cycle de vie verrouillé : envoi → user `pending` + bulle assistant vide ; `message_start` → confirmé (statut effacé) ; échec HTTP/réseau avant `message_start` → `failed` + `temporaryError` ; AbortError → ni pending ni failed ; retry → re-`pending`, purge de l'assistant échoué, zéro duplication. Clés i18n FR/EN ajoutées `chat.status.sending` (« Envoi… »/« Sending… ») et `chat.status.failed` (« Échec »/« Failed »), `chat.retry` réutilisée. Tests : 3 fichiers neufs + 2 étendus = **+17** (cycle de vie complet, invariant partialize, invariant compteur en rendu client happy-dom — zustand sert `getInitialState()` comme snapshot serveur, un probe SSR ne verrait jamais le seed —, chips FR/EN, `role="alert"` + régions live). Gates (avant = stash sur HEAD `34508fa`, après = travail local) : lint 0 err / 22 warn → **0 err / 21 warn** (−1 : `vi` importé inutilisé dans `ChatMessage.test.tsx` devenu utilisé), typecheck 0 → 0, tests **696 + 1 todo → 713 + 1 todo**, build 0 err, `git diff --check` 0. Vérification runtime locale (preview `:4173` + Playwright, `/api/chat` intercepté) : **31 checks / 0 fail** — chip « Envoi… » visible puis effacé après `message_start`, stream assistant + scroll bas, échec 429 → chip « Échec » + bouton « Réessayer » + bannière `role="alert"` portant le message serveur, retry sans duplication, abort → ni pending ni failed + libellé interrompu, bascule EN (« Failed »/« Retry »/launcher après Escape), mobile 390 px sans scroll horizontal, 0 erreur JS. Limite : **local uniquement** (API interceptée, aucun vrai LLM, aucune vérification production). Item **#24** → `corrigé localement, non commité, non déployé`.
 - `2026-10-21` — **Push CHAT-2** (`842e384`) : CI/E2E/Integration ✅ (runs 39610704873 / 39610704865 / 39610705062 ; E2E 225 s). Vérification production : `/api/health` 200 `version=842e384` ; Playwright 6 pages FR/EN **42/43 checks OK** (h1 présents et traduits, 0 clé i18n brute, widget chat ouvert en lecture seule, launcher FR/EN). Contenu, i18n et interactions publics intacts. Chat non exercé en production (validation locale complète uniquement — 31 checks runtime + 713 tests). Item **#24** → `poussé — validé fonctionnellement en production`.
 - `2026-10-21` — **HYD-1** (audit read-only React #418 + commit documentaire) : **verdict faux positif environnement** — l'injection plateforme Netlify dans `<head>` (commentaire promo + nœud texte whitespace `\n` après `<meta charset>`) déclenche le `#418` (`args=HTML`, `fromText=false` — mismatch de structure → régénération silencieuse de l'arbre), **non imputable à CHAT-2** (confiance haute). Preuves : matrice HTML × environnement (HTML prod servi en local → 418 ; HTML local servi en prod → 0 ; local/local → 0 ; prod/prod → 1) + isolation du seul `\n` (local + `\n` après charset → 418 ; sans → 0) ; 6/6 pages prod en erreur, 0/6 local ; injection = commentaire Netlify 325 chars + `\n`, `netlify.toml` sans plugin d'injection. Impact : erreur console + double hydratation ; contenu, SEO, i18n et interactions non affectés (DOM final correct, 42/43 checks). Décision : **accepté et documenté, pas de Edge Function** ; item **#26** (surveillance injection Netlify / React #418) ajouté ; item **#24** documenté (preuves, limites, anomalie) ; présentation du verdict faite au GO de commit documentaire.
+- `2026-10-21` — **CHAT-3** préparé localement (non commité, non déployé) : correction A2 — annonce accessible de l'état outil. La région sr-only `role="status"` de `ChatWindow.tsx` annonce désormais « Outil en cours d'exécution » (`chat.tool.running`, clé ajoutée FR/EN) pendant tool_start puis « Résultat de l'outil » (`chat.tool.result`, inchangé) une fois `toolResult` posé sur la dernière bulle outil ; « Webi écrit. » reste pour le streaming sans outil. Phase dérivée de `currentTool` + `toolResult` du dernier message `role="tool"` — `use-chat.ts`, store, SSE, statut optimiste et rendu visible `ToolStatus` intacts ; `chat.tool.result` conservé tel quel (utilisé en visible par `ChatMessage`). Analyse : la branche `currentTool` du ternaire était inatteignable (isStreaming prime) — annonce pendant outil réduite à l'état d'écriture. Tests : `chat-window-a11y.test.tsx` +6 (tool_start sans faux résultat, tool_result, écriture, flux terminé, i18n FR/EN, non-régression ToolStatus + « Envoi… » + aria-busy) — 9/9 verts. Gates (avant = après sauf tests) : prettier/eslint fichiers 0, lint **0 err / 21 warn**, typecheck 0, tests **713 + 1 todo → 719 + 1 todo**, build 0 err (1.72 s), `git diff --check` 0. Vérification runtime locale (preview `:4173` via proxy + faux SSE avec délais réels, whitelist `USER_VISIBLE_TOOLS` **vide en V1** → patch Playwright du chunk `ChatWidget-*.js` pour whitelister `search_knowledge`) : **20/20 checks** — FR « Webi écrit. » avant tool_start, « Outil en cours d'exécution » pendant (0 faux « Résultat… »), « Résultat de l'outil » après tool_result, vide en fin de flux ; EN « Tool running »/« Tool result » ; ToolStatus visible inchangé (« Webi recherche… »/« Webi searching… ») ; réponse finale présente ; 0 clé i18n brute ; 0 overflow ; 0 erreur JS. Limite : **local uniquement** — aucun outil visible en production (whitelist vide) ; chat non exercé en prod. Item **#25** → `corrigé localement, non commité, non déployé`.

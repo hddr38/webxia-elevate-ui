@@ -216,6 +216,20 @@ export function ChatWindow() {
 
   const remainingMessages = maxMessages - messageCount;
 
+  // CHAT-3 (A2) — phase outil dérivée des messages (use-chat / store intacts) :
+  // `currentTool` est posé à tool_start et effacé uniquement en fin de stream
+  // (finally de sendMessage) ; `toolResult` n'est posé sur la bulle outil qu'à
+  // tool_result. La combinaison des deux signaux distingue les deux phases
+  // annoncées au lecteur d'écran sans toucher au protocole SSE ni au hook.
+  const lastToolMessage = React.useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "tool") return messages[i];
+    }
+    return undefined;
+  }, [messages]);
+  const isToolRunning = currentTool !== null && lastToolMessage?.toolResult === undefined;
+  const toolResultReady = currentTool !== null && lastToolMessage?.toolResult !== undefined;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -414,9 +428,20 @@ export function ChatWindow() {
       </AnimatePresence>
 
       {/* LOT 24 — région de statut pour lecteurs d'écran : annonce l'état
-          du flux (écriture / outil) sans jamais voler le focus. */}
+          du flux (écriture / outil) sans jamais voler le focus.
+          CHAT-3 (A2) — pendant tool_start : « Outil en cours d'exécution » ;
+          après tool_result (toolResult posé sur la dernière bulle outil) :
+          « Résultat de l'outil ». Avant CHAT-3, la branche currentTool était
+          inatteignable (isStreaming prime toujours) et le libellé outil
+          annonçait à tort un résultat pendant l'exécution. */}
       <div role="status" aria-live="polite" className="sr-only">
-        {isStreaming ? t("chat.status.writing") : currentTool ? t("chat.tool.result") : ""}
+        {!isStreaming
+          ? ""
+          : isToolRunning
+            ? t("chat.tool.running")
+            : toolResultReady
+              ? t("chat.tool.result")
+              : t("chat.status.writing")}
       </div>
 
       {/* Tool Status */}

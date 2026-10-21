@@ -123,8 +123,20 @@ export function CTAStrip({
   cta: string;
   className?: string;
 }) {
+  // ANIM-1 — reveal au scroll aligne sur le motif des sections voisines
+  // (DbRealisationCard l.93-98 / services / footer) : `initial={false}`
+  // (visible dès le SSR, convention LOT 43 — verrouillé par
+  // sections-mobile.test.tsx) + `whileInView` gate mobile. Pas de stagger,
+  // pas d'exit, transform/opacity seuls.
+  const isMobile = useIsMobileViewport();
   return (
-    <section className={cn("py-24 md:py-32", className)}>
+    <motion.section
+      initial={false}
+      whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+      viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+      transition={isMobile ? undefined : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      className={cn("py-24 md:py-32", className)}
+    >
       <Container size="wide" className="px-4 sm:px-6 lg:px-8">
         <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-card p-10 text-center sm:p-16">
           <div className="absolute inset-0 bg-radial-fade opacity-70" aria-hidden="true" />
@@ -146,6 +158,6 @@ export function CTAStrip({
           </Button>
         </div>
       </Container>
-    </section>
+    </motion.section>
   );
 }

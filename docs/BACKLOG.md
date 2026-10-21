@@ -49,6 +49,8 @@
 | 24   | P2       | Chat — statut optimiste du message utilisateur (« Envoi… »/« Échec ») + erreur accessible | `CHAT-2`      | poussé — validé fonctionnellement en production        | 2026-10-21 |
 | 25   | P2       | A2 — région sr-only annonce `chat.tool.result` pendant que l'outil tourne                 | `CHAT-A2`     | résolu en production (96fc7dd)                          | 2026-10-21 |
 | 26   | P3       | Surveillance injection Netlify / React #418 (faux positif environnement)                  | `HYD-1`       | accepté — surveillance                                 | 2026-10-21 |
+| 27   | P2       | Animation CTAStrip reveal au scroll (whileInView gâté mobile)                             | `ANIM-1`      | corrigé localement, non commité, non déployé           | 2026-10-21 |
+| 28   | P3       | Stagger interne CTAStrip — reporté après validation ANIM-1                                | `ANIM-1`      | reporté — à évaluer après validation ANIM-1            | 2026-10-21 |
 
 **Barème de priorité utilisé**
 
@@ -1446,6 +1448,129 @@ React #418). Décision : **accepté, pas de Edge Function**.
 
 ---
 
+## 27 — Animation CTAStrip reveal au scroll (whileInView gâté mobile)
+
+- **Priorité** : `P2` (polish UX — révélation manquante sur la section CTA commune)
+- **Lot cible** : `ANIM-1`
+- **Statut** : `corrigé localement, non commité, non déployé` — implémentation et tests
+  validés localement ; **non commité, non poussé, non déployé** (en attente du GO de commit).
+- **Date** : `2026-10-21`
+
+**Contexte**
+
+L'audit `find-animation-opportunities` (skill Emil Kowalski, GO « Skills Emil Kowalski ») a
+identifié **une seule opportunité retenue** sur l'ensemble du site : la section `CTAStrip`
+(montée sur 7 routes : `/`, `/about`, `/services`, `/work`, `/journal`, `/work/$slug`,
+`/journal/$slug`) n'avait **aucune animation d'entrée** — `<section>` statique, contrairement
+aux sections voisines (`DbRealisationCard`, `services`, `footer`) qui utilisent déjà
+`initial={false}` + `whileInView` gâté mobile (convention LOT 43).
+
+**Écart recette documenté (décision)**
+
+La recette GO proposait `initial={{ opacity: 0, y: 20 }}` (masquage initial + reveal). Cette
+approche a été **écartée** car elle violerait deux verrous existants :
+
+1. `sections-mobile.test.tsx:137-148` (`expectNoHiddenOpacity`) — mobile mocké → aucun
+   `opacity:0` attendu dans le DOM ;
+2. Convention LOT 43 (« visible dès le SSR ») — avec `initial={{opacity:0}}`, si `whileInView`
+   passe à `undefined` après bascule du hook `useIsMobileViewport` (faux au SSR puis `true`
+   via `useEffect`), Framer Motion **conserve le style inline** et la section reste invisible.
+
+**Motif retenu** (100 % repo, identique à `DbRealisationCard` l.93-98 / `services` / `footer`) :
+
+```tsx
+<motion.section
+  initial={false}
+  whileInView={isMobile ? undefined : { opacity: 1, y: 0 }}
+  viewport={isMobile ? undefined : { once: true, margin: "-80px" }}
+  transition={isMobile ? undefined : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+  className={cn("py-24 md:py-32", className)}
+>
+```
+
+- `initial={false}` : contenu visible dès le SSR (pas de flash, pas de test cassé).
+- Gating `isMobile ? undefined : …` : mobile → aucune animation (contenu visible
+  immédiatement) ; desktop → reveal au scroll.
+- `once: true` + `margin: "-80px"` : déclenchement unique à 80 px avant viewport.
+- `duration: 0.6` + `ease: [0.22, 1, 0.36, 1]` : easing partagé du repo.
+- `MotionConfig reducedMotion="user"` (`__root.tsx:237`) neutralise automatiquement sous
+  `prefers-reduced-motion` — aucune branche dédiée nécessaire.
+- Contenu, liens `/contact`, bouton, focus clavier et layout **strictement intacts**.
+
+**Changements (1 fichier applicatif + 1 test)**
+
+| Fichier                                  | Changement                                                                                                             |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `src/components/site/project-card.tsx`   | `CTAStrip` : `<section>` → `<motion.section>` + `useIsMobileViewport()` + reveal gâté mobile (motif ci-dessus, +12/−2) |
+| `src/components/site/ctastrip-reveal.test.tsx` | nouveau — 6 tests (voir ci-dessous)                                                                              |
+
+**Tests ajoutés** (`ctastrip-reveal.test.tsx`, 6 cas) :
+
+1. Desktop : `whileInView` actif — l'élément `section` est observé par `IntersectionObserver`.
+2. Desktop : contenu visible au montage (0 `opacity:0` inline, titre/body/cta rendus).
+3. Mobile : après bascule du hook, contenu visible, 0 `opacity:0` (artefact timing du hook
+   SSR-safe documenté : `false` au 1er render puis bascule en `useEffect` — comme
+   `DbRealisationCard`).
+4. SSR : aucun `opacity:0` dans le HTML servi (`renderToStaticMarkup`).
+5. Non-régression : contenu, lien `/contact`, bouton, flèche, `h2`, focus clavier.
+6. Props source verrouillées : `initial={false}`, `whileInView` `{opacity:1, y:0}`,
+   `viewport` `once/margin:-80px`, `transition` `0.6s / [0.22,1,0.36,1]`, gâtage mobile,
+   0 `delay`, 0 `exit`.
+
+**Contrôles (avant → après, mesurés)**
+
+- Baseline avant modification : prettier `project-card.tsx` OK, eslint ciblé 0, lint 0 err /
+  21 warn, typecheck 0, tests **65 files / 719 + 1 todo**, build 0 err (1.72 s).
+- Après : prettier (2 fichiers) OK, eslint ciblé 0/0, lint **0 err / 21 warn** (identique),
+  typecheck 0, tests **66 files / 725 + 1 todo** (+6 nouveaux), build 0 err (1.71 s),
+  `git diff --check` 0.
+
+**Vérification visuelle locale (preview `:4174` + Playwright, 5 routes × FR/EN × 2 viewports)**
+
+- **140/140 checks passed, 0 failures** :
+  - HTTP 200 sur les 5 routes (`/`, `/about`, `/services`, `/work`, `/journal`) × FR/EN ×
+    desktop (1440×900) / mobile (375×812) ;
+  - 0 clé i18n brute (30 rendus) ;
+  - CTAStrip monté (1 CTA par page) ;
+  - visible avant scroll (0 `opacity:0` inline, hauteur/width > 0) ;
+  - visible après `scrollIntoView` (`opacity=1`, whileInView déclenché desktop, 0 `opacity:0`)
+    ;
+  - focus clavier sur le lien `/contact` ;
+  - `prefers-reduced-motion: reduce` : section visible (`opacity=1`), aucun masquage.
+- Locale EN via `localStorage["webxia-locale"]` (`addInitScript`) — pas de préfixe URL.
+
+**Limite** : vérification locale uniquement — **aucune vérification en production** ; le
+change n'est **pas commité ni déployé**.
+
+---
+
+## 28 — Stagger interne CTAStrip — reporté après validation ANIM-1
+
+- **Priorité** : `P3` (polish — hiérarchisation de l'animation interne)
+- **Lot cible** : `ANIM-1` (option, hors périmètre du GO courant)
+- **Statut** : `reporté — à évaluer après validation ANIM-1` — décision prise dans le cadre
+  du GO ANIM-1 (2026-10-21) : **aucun stagger, aucune exit animation, aucun 3D** — items
+  explicitement exclus par le GO.
+- **Date** : `2026-10-21`
+
+**Contexte**
+
+Le reveal de la section `CTAStrip` (item **#27**) est un bloc unique (eyebrow + h2 + body +
+bouton animé ensemble). Un **stagger interne** (révélation séquencée des enfants avec un
+léger décalage) enrichirait la perception de hiérarchie — mais :
+
+- le GO ANIM-1 interdit explicitement stagger / exit / 3D ;
+- le stagger multiplie les points de contrôle a11y (focus pendant l'animation) et les risques
+  de conflit avec le gating mobile ;
+- la valeur UX d'un stagger sur une section CTA courte est **non démontrée** (pas de mesure).
+
+**Décision**
+
+Reporté. À réévaluer **après validation en production** du reveal simple (item **#27**), sur
+la base d'un avis UX explicite et d'une GO dédié. Aucune implémentation dans ce lot.
+
+---
+
 ## Historique
 
 - `2026-10-14` — push `4f481dc`, vérification production `/about` EN OK.
@@ -1488,3 +1613,25 @@ React #418). Décision : **accepté, pas de Edge Function**.
   `USER_VISIBLE_TOOLS` est **vide en V1**, aucun outil visible ; la validation du cycle
   outil reste **limitée au build local et aux contrôles Playwright locaux** (20/20 checks
   avec whitelist patchée en chunk servi). Item **#25** → **`résolu en production`**.
+- `2026-10-21` — **Skills Emil Kowalski installés** : 5 skills (`emil-design-eng`, `animate`,
+  `find-animation-opportunities`, `improve-animations`, `review-animations`) installés via
+  `npx skills@latest add emilkowalski/skills … -a claude-code -y --copy` → `.claude/skills/`
+  (5 SKILL.md présents) ; `skills-lock.json` +5 entrées. Aucun fichier applicatif touché.
+- `2026-10-21` — **Audit animations** (skill `find-animation-opportunities`) : 1 opportunité
+  retenue (CTAStrip reveal), rejets documentés (transitions de page, sticky header, filtres,
+  boutons/liens, formulaires, admin, fade images, switch locale, loops, témoignages
+  inexistants) — verdict « site déjà animé, légèrement au-dessus du budget ».
+- `2026-10-21` — **ANIM-1** préparé localement (non commité, non déployé) : `CTAStrip`
+  converti `<section>` → `<motion.section>` avec reveal `whileInView` gâté mobile —
+  **motif `initial={false}`** (convention LOT 43, verrouillé par `sections-mobile.test.tsx`)
+  et non `initial={{opacity:0}}` de la recette GO (risque section invisible mobile +
+  test cassé — analyse complète en section **#27**). `+12/−2` sur
+  `src/components/site/project-card.tsx` ; 6 tests ajoutés
+  (`src/components/site/ctastrip-reveal.test.tsx`). Gates (avant = après sauf tests) :
+  prettier/eslint fichiers 0, lint **0 err / 21 warn**, typecheck 0, tests
+  **719 + 1 todo → 725 + 1 todo**, build 0 err (1.71 s), `git diff --check` 0.
+  Vérification visuelle locale (preview `:4174` + Playwright, 5 routes × FR/EN ×
+  desktop/mobile) : **140/140 checks, 0 failures** — HTTP 200, 0 clé i18n brute, CTAStrip
+  visible avant/après scroll, focus clavier, reduced-motion. Stagger interne **reporté**
+  (item **#28**). Items **#27** → `corrigé localement, non commité, non déployé` ;
+  **#28** → `reporté`. **Limite : local uniquement, aucune vérification en production.**

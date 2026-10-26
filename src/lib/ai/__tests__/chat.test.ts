@@ -13,7 +13,7 @@ import type { RAGEngine } from "../rag";
 
 vi.mock("../memory/memory-service", () => ({
   createMemoryService: vi.fn(() => ({
-    searchMemory: vi.fn().mockResolvedValue([]),
+    searchMemory: vi.fn().mockResolvedValue({ globalMatches: [], sessionMatches: [] }),
   })),
 }));
 

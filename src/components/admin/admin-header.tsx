@@ -72,7 +72,7 @@ function AdminLinks({
       </Link>
       <Link
         to="/admin/ai-memory"
-        search={{ type: "all", q: "", page: 1 }}
+        search={{ type: "all", scope: "all", q: "", page: 1 }}
         onClick={onNavigate}
         activeProps={{ className: "bg-secondary text-foreground" }}
         inactiveProps={{

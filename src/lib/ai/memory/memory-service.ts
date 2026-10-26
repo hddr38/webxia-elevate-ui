@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import type { AIMemoryType } from "@/types/database";
+import type { AIMemoryType, MemoryScope } from "@/types/database";
 
 type DbClient = SupabaseClient<Database>;
 type MemoryRow = Database["public"]["Tables"]["ai_memory"]["Row"];
@@ -9,7 +9,7 @@ type MemoryType = AIMemoryType;
 /** Agent-facing memory record. `content` lives in the row's `value.content`. */
 interface MemoryEntry {
   id: string;
-  sessionId: string;
+  sessionId: string | null;
   userId?: string;
   memoryType: MemoryType;
   key: string;
@@ -19,6 +19,7 @@ interface MemoryEntry {
   expiresAt?: string;
   createdAt: string;
   updatedAt: string;
+  scope: MemoryScope;
 }
 
 interface MemoryMatch extends MemoryEntry {
@@ -36,6 +37,7 @@ interface CreateMemoryEntry {
 
 interface MemorySearchFilters {
   sessionId?: string;
+  scope?: MemoryScope;
   memoryType?: MemoryType;
   search?: string;
 }
@@ -55,8 +57,13 @@ interface MemoryServiceDeps {
   embedText?: (text: string) => Promise<number[]>;
 }
 
+interface MemorySearchResult {
+  globalMatches: MemoryMatch[];
+  sessionMatches: MemoryMatch[];
+}
+
 interface MemoryService {
-  searchMemory(query: string, options?: MemorySearchOptions): Promise<MemoryMatch[]>;
+  searchMemory(query: string, options?: MemorySearchOptions): Promise<MemorySearchResult>;
   createMemory(entry: CreateMemoryEntry): Promise<MemoryEntry>;
   updateMemory(sessionId: string, id: string, updates: MemoryUpdates): Promise<MemoryEntry>;
   deleteMemory(sessionId: string, id: string): Promise<void>;
@@ -98,7 +105,7 @@ function toEntry(row: MemoryRow): MemoryEntry {
       : JSON.stringify(value ?? null);
   return {
     id: row.id,
-    sessionId: row.session_id,
+    sessionId: row.session_id ?? null,
     userId: row.user_id,
     memoryType: row.memory_type,
     key: row.key,
@@ -108,6 +115,7 @@ function toEntry(row: MemoryRow): MemoryEntry {
     expiresAt: row.expires_at ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    scope: (row.scope ?? "session") as MemoryScope,
   };
 }
 
@@ -123,6 +131,40 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   }
   if (normA === 0 || normB === 0) return 0;
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+/**
+ * Transforme des lignes brutes en MemoryMatch notés, filtrés par seuil,
+ * dédupliqués par contenu normalisé et tronqués à `limit`.
+ */
+function processMatches(
+  rows: MemoryRow[],
+  queryEmbedding: number[] | undefined,
+  threshold: number,
+  limit: number,
+): MemoryMatch[] {
+  const seen = new Set<string>();
+  return rows
+    .map((row) => {
+      const entry = toEntry(row);
+      const stored = entry.embedding;
+      const score = queryEmbedding && stored ? cosineSimilarity(queryEmbedding, stored) : 1;
+      return { ...entry, score };
+    })
+    .filter((m) => m.score >= threshold)
+    .sort((a, b) => b.score - a.score)
+    .filter((m) => {
+      const norm = normalizeContent(m.content);
+      if (seen.has(norm)) return false;
+      seen.add(norm);
+      return true;
+    })
+    .slice(0, Math.max(1, limit));
+}
+
+/** Normalisation pour la déduplication (espace + casse ignorés). */
+function normalizeContent(content: string): string {
+  return content.trim().toLowerCase();
 }
 
 export function createMemoryService(
@@ -142,9 +184,10 @@ export function createMemoryService(
   }>;
   getMemoryRow: (id: string) => Promise<MemoryRow>;
   createMemoryRow: (input: {
-    sessionId: string;
+    sessionId: string | null;
     userId: string;
     memoryType: MemoryType;
+    scope: MemoryScope;
     key: string;
     value: Record<string, string>;
     embedding?: number[] | null;
@@ -159,6 +202,7 @@ export function createMemoryService(
       value?: Record<string, string>;
       metadata?: Record<string, string>;
       expiresAt?: string | null;
+      scope?: MemoryScope;
     },
   ) => Promise<MemoryRow>;
   deleteMemoryRow: (id: string, userId: string) => Promise<void>;
@@ -183,25 +227,54 @@ export function createMemoryService(
   }
 
   return {
-    async searchMemory(query: string, options: MemorySearchOptions = {}): Promise<MemoryMatch[]> {
+    async searchMemory(
+      query: string,
+      options: MemorySearchOptions = {},
+    ): Promise<{
+      globalMatches: MemoryMatch[];
+      sessionMatches: MemoryMatch[];
+    }> {
       const topK = options.topK ?? 10;
       const threshold = options.threshold ?? 0;
       const filters = options.filters ?? {};
 
-      let builder = client.from("ai_memory").select("*").order("created_at", { ascending: false });
-      builder = applyFilters(
-        builder,
+      const now = new Date().toISOString();
+      // Exclut les mémoires expirées (expires_at renseigné et dépassé).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const notExpired = (q: any) => q.or(`expires_at.is.null,expires_at.gte.${now}`) as any;
+
+      // --- Global : scope='global', pas de filtre session, max 5 candidats ---
+      let globalBuilder = client.from("ai_memory").select("*").eq("scope", "global");
+      if (filters.memoryType) {
+        globalBuilder = globalBuilder.eq("memory_type", filters.memoryType);
+      }
+      if (filters.search) {
+        globalBuilder = globalBuilder.ilike("key", `%${filters.search}%`);
+      }
+      globalBuilder = notExpired(globalBuilder);
+      const { data: globalRows, error: globalError } = await globalBuilder
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (globalError) throw new Error(globalError.message ?? "Database error");
+
+      // --- Session : scope='session', filtrée par sessionId, comportement actuel ---
+      let sessionBuilder = client.from("ai_memory").select("*").eq("scope", "session");
+      sessionBuilder = applyFilters(
+        sessionBuilder,
         filters,
         (q, column, value) => q.eq(column, value),
         (q, column, pattern) => q.ilike(column, pattern),
       );
-      const { data, error } = await builder.limit(CANDIDATE_LIMIT);
-      if (error) throw new Error(error.message ?? "Database error");
-      const rows = (data ?? []) as MemoryRow[];
+      sessionBuilder = notExpired(sessionBuilder);
+      const { data: sessionRows, error: sessionError } = await sessionBuilder
+        .order("created_at", { ascending: false })
+        .limit(CANDIDATE_LIMIT);
+      if (sessionError) throw new Error(sessionError.message ?? "Database error");
 
-      // Semantic re-rank when an embedder is available and candidates carry vectors.
+      // Un seul embedder pour global + session (même EMBEDDING_CONFIG que le RAG).
+      const allRows = [...(globalRows ?? []), ...(sessionRows ?? [])];
       let queryEmbedding: number[] | undefined;
-      if (deps.embedText && rows.some((r) => r.embedding)) {
+      if (deps.embedText && allRows.some((r) => r.embedding)) {
         try {
           queryEmbedding = await deps.embedText(query);
         } catch {
@@ -209,16 +282,20 @@ export function createMemoryService(
         }
       }
 
-      return rows
-        .map((row) => {
-          const entry = toEntry(row);
-          const stored = entry.embedding;
-          const score = queryEmbedding && stored ? cosineSimilarity(queryEmbedding, stored) : 1;
-          return { ...entry, score };
-        })
-        .filter((m) => m.score >= threshold)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, Math.max(1, topK));
+      const globalMatches = processMatches(
+        (globalRows ?? []) as MemoryRow[],
+        queryEmbedding,
+        threshold,
+        5,
+      );
+      const sessionMatches = processMatches(
+        (sessionRows ?? []) as MemoryRow[],
+        queryEmbedding,
+        threshold,
+        topK,
+      );
+
+      return { globalMatches, sessionMatches };
     },
 
     async createMemory(entry: CreateMemoryEntry): Promise<MemoryEntry> {
@@ -242,6 +319,7 @@ export function createMemoryService(
         sessionId: entry.sessionId,
         userId: entry.userId,
         memoryType,
+        scope: "session",
         key,
         value: { content: entry.content },
         embedding: embedding ?? null,
@@ -310,6 +388,9 @@ export function createMemoryService(
         (q, column, value) => q.eq(column, value),
         (q, column, pattern) => q.ilike(column, pattern),
       );
+      if (filters.scope) {
+        builder = builder.eq("scope", filters.scope);
+      }
       const { data, error, count } = await builder.range(offset, offset + safeLimit - 1);
       if (error) throw new Error(error.message ?? "Database error");
       const total = count ?? 0;
@@ -335,6 +416,7 @@ export function createMemoryService(
           session_id: input.sessionId,
           user_id: input.userId,
           memory_type: input.memoryType,
+          scope: input.scope,
           key: input.key,
           value: input.value as MemoryRow["value"],
           embedding: input.embedding ? JSON.stringify(input.embedding) : null,
@@ -353,6 +435,7 @@ export function createMemoryService(
       if (patch.value !== undefined) dbPatch.value = patch.value;
       if (patch.metadata !== undefined) dbPatch.metadata = patch.metadata;
       if (patch.expiresAt !== undefined) dbPatch.expires_at = patch.expiresAt;
+      if (patch.scope !== undefined) dbPatch.scope = patch.scope;
       const { data, error } = await client
         .from("ai_memory")
         .update(dbPatch)

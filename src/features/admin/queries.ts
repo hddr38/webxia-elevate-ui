@@ -19,10 +19,12 @@ import {
   updateRealisation,
 } from "@/server/functions/realisations";
 import {
+  createMemory,
   deleteMemory,
   deleteSessionMemories,
   getMemories,
   getMemoryStats,
+  updateMemory,
 } from "@/server/functions/ai-memory";
 import {
   deleteContactMessage,
@@ -30,6 +32,8 @@ import {
   updateContactMessageStatus,
 } from "@/server/functions/contact";
 import { AdminStatsSchema } from "@/lib/admin/schemas";
+import { CreateMemorySchema, UpdateMemorySchema } from "@/lib/admin/schemas";
+import type { MemoryScope } from "@/types/database";
 
 const adminKeys = {
   // "v2" : la forme du payload est désormais validée par Zod (AdminStatsSchema).
@@ -39,8 +43,12 @@ const adminKeys = {
     ["admin", "articles", "list", params] as const,
   realisationsList: (params: { status?: string; search?: string; page: number }) =>
     ["admin", "realisations", "list", params] as const,
-  memoriesList: (params: { type?: string; search?: string; page: number }) =>
-    ["admin", "ai-memory", "list", params] as const,
+  memoriesList: (params: {
+    type?: string;
+    scope?: MemoryScope | "all";
+    search?: string;
+    page: number;
+  }) => ["admin", "ai-memory", "list", params] as const,
   memoryStats: ["admin", "ai-memory", "stats"] as const,
   messagesList: (params: { status?: string; search?: string; page: number }) =>
     ["admin", "messages", "list", params] as const,
@@ -75,13 +83,19 @@ function realisationsListOptions(params: { status?: string; search?: string; pag
   });
 }
 
-function memoriesListOptions(params: { type?: string; search?: string; page: number }) {
+function memoriesListOptions(params: {
+  type?: string;
+  scope?: MemoryScope | "all";
+  search?: string;
+  page: number;
+}) {
   return queryOptions({
     queryKey: adminKeys.memoriesList(params),
     queryFn: () =>
       getMemories({
         data: {
           memory_type: params.type,
+          scope: params.scope,
           search: params.search,
           page: params.page,
         },
@@ -111,7 +125,12 @@ export function useRealisationsList(params: { status?: string; search?: string; 
   return useQuery(realisationsListOptions(params));
 }
 
-export function useMemoriesList(params: { type?: string; search?: string; page: number }) {
+export function useMemoriesList(params: {
+  type?: string;
+  scope?: MemoryScope | "all";
+  search?: string;
+  page: number;
+}) {
   return useQuery(memoriesListOptions(params));
 }
 
@@ -219,5 +238,31 @@ export function useDeleteSessionMemories() {
   return useMutation({
     mutationFn: (sessionId: string) => deleteSessionMemories({ data: { session_id: sessionId } }),
     onSuccess: () => invalidateAdminLists(queryClient, "ai-memory"),
+  });
+}
+
+export function useCreateMemory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: z.infer<typeof CreateMemorySchema>) => createMemory({ data: payload }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: adminKeys.memoriesList({ type: undefined, search: undefined, page: 1 }),
+      });
+      void queryClient.invalidateQueries({ queryKey: adminKeys.memoryStats });
+    },
+  });
+}
+
+export function useUpdateMemory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: z.infer<typeof UpdateMemorySchema>) => updateMemory({ data: payload }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: adminKeys.memoriesList({ type: undefined, search: undefined, page: 1 }),
+      });
+      void queryClient.invalidateQueries({ queryKey: adminKeys.memoryStats });
+    },
   });
 }

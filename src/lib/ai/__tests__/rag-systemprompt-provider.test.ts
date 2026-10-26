@@ -19,7 +19,7 @@ vi.mock("../memory/memory-service", async (importOriginal) => {
   return {
     ...original,
     createMemoryService: () => ({
-      searchMemory: vi.fn().mockResolvedValue([]),
+      searchMemory: vi.fn().mockResolvedValue({ globalMatches: [], sessionMatches: [] }),
     }),
   };
 });

@@ -28,6 +28,7 @@ export const getMemories = createServerFn({ method: "GET" })
       return await service.listMemoryRows(
         {
           sessionId: data.session_id,
+          scope: data.scope,
           memoryType,
           search: search || undefined,
         },
@@ -71,9 +72,10 @@ export const createMemory = createServerFn({ method: "POST" })
 
     const service = createMemoryService(getSupabaseAdmin());
     return service.createMemoryRow({
-      sessionId: data.session_id,
+      sessionId: data.scope === "global" ? null : (data.session_id ?? null),
       userId,
       memoryType: data.memory_type,
+      scope: data.scope,
       key: data.key,
       value: data.value,
       metadata: data.metadata,
@@ -96,6 +98,7 @@ export const updateMemory = createServerFn({ method: "POST" })
       value: updates.value,
       metadata: updates.metadata,
       expiresAt: updates.expires_at,
+      scope: updates.scope,
     });
   });
 

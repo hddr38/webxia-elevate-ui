@@ -5,6 +5,9 @@ export type ArticleStatus = Database["public"]["Enums"]["article_status"];
 export type RealisationStatus = Database["public"]["Enums"]["realisation_status"];
 export type AIMemoryType = Database["public"]["Enums"]["ai_memory_type"];
 
+// --- Mémoire IA : portée ---
+export type MemoryScope = "session" | "global";
+
 // --- Row types ---
 export type AdminUser = Database["public"]["Tables"]["admin_users"]["Row"];
 export type Article = Database["public"]["Tables"]["articles"]["Row"];

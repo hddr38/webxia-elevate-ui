@@ -57,7 +57,9 @@ async function getMemoryStatsFallback() {
       .range(page * pageSize, (page + 1) * pageSize - 1);
     if (error) throw new Error(`ai_memory sessions page ${page} failed: ${error.message}`);
     if (!data || data.length === 0) break;
-    for (const row of data) sessions.add(row.session_id);
+    for (const row of data) {
+      if (row.session_id) sessions.add(row.session_id);
+    }
     if (data.length < pageSize) break;
   }
   return { total: total ?? 0, sessions: sessions.size };

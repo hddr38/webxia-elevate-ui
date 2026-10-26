@@ -89,7 +89,8 @@ export type Database = {
           key: string;
           memory_type: Database["public"]["Enums"]["ai_memory_type"];
           metadata: Json;
-          session_id: string;
+          scope: string;
+          session_id: string | null;
           updated_at: string;
           user_id: string;
           value: Json;
@@ -102,7 +103,8 @@ export type Database = {
           key: string;
           memory_type?: Database["public"]["Enums"]["ai_memory_type"];
           metadata?: Json;
-          session_id: string;
+          scope?: string;
+          session_id?: string | null;
           updated_at?: string;
           user_id?: string;
           value?: Json;
@@ -115,7 +117,8 @@ export type Database = {
           key?: string;
           memory_type?: Database["public"]["Enums"]["ai_memory_type"];
           metadata?: Json;
-          session_id?: string;
+          scope?: string;
+          session_id?: string | null;
           updated_at?: string;
           user_id?: string;
           value?: Json;

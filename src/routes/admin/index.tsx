@@ -373,7 +373,7 @@ function AdminDashboard() {
           <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
             <CardTitle className="text-base">{t("admin.aiMemory.title")}</CardTitle>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/admin/ai-memory" search={{ type: "all", q: "", page: 1 }}>
+              <Link to="/admin/ai-memory" search={{ type: "all", scope: "all", q: "", page: 1 }}>
                 {t("admin.common.viewAll")}
               </Link>
             </Button>

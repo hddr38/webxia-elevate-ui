@@ -54,6 +54,7 @@ export const ListRealisationsSchema = z.object({
 
 export const ListMemoriesSchema = z.object({
   session_id: z.string().uuid("Session invalide").optional(),
+  scope: z.enum(["session", "global"]).optional(),
   memory_type: z.string().max(32).optional(),
   search: AdminSearchSchema,
   page: AdminPageSchema.optional(),
@@ -177,22 +178,54 @@ export const UpdateRealisationSchema = CreateRealisationSchema.partial().extend(
 
 const StringMap = z.record(z.string(), z.string());
 
-export const CreateMemorySchema = z.object({
-  session_id: z.string().uuid("Session invalide"),
-  memory_type: MemoryTypeSchema,
-  key: z.string().trim().min(1, "Clé requise").max(220),
-  value: StringMap,
-  metadata: StringMap.optional(),
-  expires_at: z.string().datetime({ offset: true }).optional(),
-});
+export const CreateMemorySchema = z
+  .object({
+    scope: z.enum(["session", "global"]).default("session"),
+    session_id: z.string().uuid("Session invalide").optional(),
+    memory_type: MemoryTypeSchema,
+    key: z.string().trim().min(1, "Clé requise").max(220),
+    value: StringMap,
+    metadata: StringMap.optional(),
+    expires_at: z.string().datetime({ offset: true }).optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.scope === "global") {
+        return data.session_id === undefined || data.session_id === null;
+      }
+      return typeof data.session_id === "string" && data.session_id.length > 0;
+    },
+    {
+      message: 'session_id requis pour une mémoire "session", interdit pour une mémoire "global"',
+      path: ["session_id"],
+    },
+  );
 
-export const UpdateMemorySchema = z.object({
-  id: AdminIdSchema,
-  key: z.string().trim().min(1).max(220).optional(),
-  value: StringMap.optional(),
-  metadata: StringMap.optional(),
-  expires_at: z.string().datetime({ offset: true }).nullable().optional(),
-});
+export const UpdateMemorySchema = z
+  .object({
+    id: AdminIdSchema,
+    scope: z.enum(["session", "global"]).optional(),
+    session_id: z.string().uuid("Session invalide").optional().nullable(),
+    key: z.string().trim().min(1).max(220).optional(),
+    value: StringMap.optional(),
+    metadata: StringMap.optional(),
+    expires_at: z.string().datetime({ offset: true }).nullable().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.scope === "global") {
+        return data.session_id === undefined || data.session_id === null;
+      }
+      if (data.session_id !== undefined && data.session_id !== null) {
+        return typeof data.session_id === "string" && data.session_id.length > 0;
+      }
+      return true;
+    },
+    {
+      message: 'session_id interdit pour une mémoire "global"',
+      path: ["session_id"],
+    },
+  );
 
 // --- Dashboard stats (réponse getAdminStats, validée côté client) ---
 

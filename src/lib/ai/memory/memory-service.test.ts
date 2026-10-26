@@ -20,6 +20,7 @@ function createFakeClient(queue: DbResponse[]) {
     "select",
     "eq",
     "ilike",
+    "or",
     "order",
     "limit",
     "range",
@@ -56,13 +57,22 @@ const ROW = {
 
 describe("memory-service", () => {
   it("searchMemory filters by sessionId server-side", async () => {
-    const { client, calls } = createFakeClient([{ data: [ROW], error: null }]);
+    const { client, calls } = createFakeClient([
+      { data: [], error: null },
+      { data: [ROW], error: null },
+    ]);
     const service = createMemoryService(client);
 
-    const matches = await service.searchMemory("hello", { filters: { sessionId: "session-1" } });
+    const { sessionMatches } = await service.searchMemory("hello", {
+      filters: { sessionId: "session-1" },
+    });
 
-    expect(matches).toHaveLength(1);
-    expect(matches[0]).toMatchObject({ id: "mem-1", content: "hello world", score: 1 });
+    expect(sessionMatches).toHaveLength(1);
+    expect(sessionMatches[0]).toMatchObject({
+      id: "mem-1",
+      content: "hello world",
+      score: 1,
+    });
     expect(calls.eq as unknown[][]).toContainEqual(["session_id", "session-1"]);
   });
 
@@ -71,16 +81,22 @@ describe("memory-service", () => {
       { ...ROW, id: "a", embedding: JSON.stringify([1, 0]) },
       { ...ROW, id: "b", embedding: JSON.stringify([0, 1]) },
     ];
-    const { client } = createFakeClient([{ data: rows, error: null }]);
+    const { client } = createFakeClient([
+      { data: [], error: null },
+      { data: rows, error: null },
+    ]);
     const embedText = vi.fn(async () => [1, 0]);
     const service = createMemoryService(client, { embedText });
 
-    const matches = await service.searchMemory("query", { topK: 1, threshold: 0.5 });
+    const { sessionMatches } = await service.searchMemory("query", {
+      topK: 1,
+      threshold: 0.5,
+    });
 
     expect(embedText).toHaveBeenCalledWith("query");
-    expect(matches).toHaveLength(1);
-    expect(matches[0].id).toBe("a");
-    expect(matches[0].score).toBeCloseTo(1);
+    expect(sessionMatches).toHaveLength(1);
+    expect(sessionMatches[0].id).toBe("a");
+    expect(sessionMatches[0].score).toBeCloseTo(1);
   });
 
   it("createMemory computes the embedding when absent", async () => {
@@ -176,6 +192,7 @@ describe("memory-service", () => {
       sessionId: "session-1",
       userId: "user-1",
       memoryType: "conversation",
+      scope: "session",
       key: "k1",
       value: { content: "x" },
     });
@@ -197,5 +214,71 @@ describe("memory-service", () => {
     expect(cosineSimilarity([], [])).toBe(0);
     expect(cosineSimilarity([1], [1, 2])).toBe(0);
     expect(cosineSimilarity([0, 0], [1, 1])).toBe(0);
+  });
+
+  it("searchMemory retourne des mémoires globales indépendamment de la session", async () => {
+    const globalRow = { ...ROW, id: "mem-global", scope: "global", session_id: null };
+    const { client } = createFakeClient([
+      { data: [globalRow], error: null }, // global builder
+      { data: [], error: null }, // session builder
+    ]);
+    const service = createMemoryService(client);
+
+    const { globalMatches, sessionMatches } = await service.searchMemory("query", {
+      filters: { sessionId: "session-autre" },
+    });
+
+    expect(globalMatches).toHaveLength(1);
+    expect(globalMatches[0].scope).toBe("global");
+    expect(sessionMatches).toHaveLength(0);
+  });
+
+  it("searchMemory exclut les mémoires de session d'une autre session", async () => {
+    const sessionRow = { ...ROW, scope: "session", session_id: "session-1" };
+    const { client, calls } = createFakeClient([
+      { data: [], error: null }, // global builder
+      { data: [sessionRow], error: null }, // session builder
+    ]);
+    const service = createMemoryService(client);
+
+    await service.searchMemory("query", {
+      filters: { sessionId: "session-autre" },
+    });
+
+    // Le filtre session_id est appliqué dans la requête SQL (applyFilters).
+    const eqCalls = calls.eq as unknown[][];
+    expect(eqCalls).toContainEqual(["session_id", "session-autre"]);
+    expect(eqCalls).toContainEqual(["scope", "session"]);
+  });
+
+  it("searchMemory déduplique les contenus identiques", async () => {
+    const dupRow = { ...ROW, id: "mem-dup", value: { content: "hello world" } };
+    const { client } = createFakeClient([
+      { data: [], error: null }, // global builder
+      { data: [ROW, dupRow], error: null }, // session builder
+    ]);
+    const service = createMemoryService(client);
+
+    const { sessionMatches } = await service.searchMemory("query", {
+      filters: { sessionId: "session-1" },
+    });
+
+    expect(sessionMatches).toHaveLength(1);
+  });
+
+  it("searchMemory retourne les lignes telles quelles (contenu vide filtré côté context-builder)", async () => {
+    const emptyRow = { ...ROW, id: "mem-empty", value: { content: "   " } };
+    const { client } = createFakeClient([
+      { data: [], error: null }, // global builder
+      { data: [emptyRow], error: null }, // session builder
+    ]);
+    const service = createMemoryService(client);
+
+    const { sessionMatches } = await service.searchMemory("query", {
+      filters: { sessionId: "session-1" },
+    });
+
+    // Le service ne filtre pas le contenu vide : c'est le rôle de collectWithinBudget dans context-builder.
+    expect(sessionMatches).toHaveLength(1);
   });
 });

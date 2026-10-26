@@ -1,11 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { toast } from "sonner";
 import {
+  useCreateMemory,
   useDeleteMemory,
   useDeleteSessionMemories,
   useMemoriesList,
   useMemoryStats,
+  useUpdateMemory,
 } from "@/features/admin/queries";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { ListErrorBanner } from "@/components/admin/list-error-banner";
@@ -14,6 +19,9 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { EmptyState } from "@/components/admin/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -49,12 +57,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, SearchX, Trash2, Brain, Eye, Loader2 } from "lucide-react";
-import type { AIMemory } from "@/types/database";
+import {
+  Search,
+  SearchX,
+  Trash2,
+  Brain,
+  Eye,
+  Loader2,
+  Plus,
+  Edit,
+  Save,
+  AlertTriangle,
+} from "lucide-react";
+import type { AIMemory, AIMemoryType, MemoryScope } from "@/types/database";
+import { CreateMemorySchema, UpdateMemorySchema } from "@/lib/admin/schemas";
 import { useLocale } from "@/lib/locale-context";
 
 interface MemorySearch {
   type: string;
+  scope: MemoryScope | "all";
   q: string;
   page: number;
 }
@@ -62,6 +83,10 @@ interface MemorySearch {
 export const Route = createFileRoute("/admin/ai-memory/")({
   validateSearch: (search: Record<string, unknown>): MemorySearch => ({
     type: typeof search.type === "string" ? search.type : "all",
+    scope:
+      typeof search.scope === "string" && (search.scope === "session" || search.scope === "global")
+        ? search.scope
+        : "all",
     q: typeof search.q === "string" ? search.q.slice(0, 100) : "",
     page:
       typeof search.page === "number" && Number.isInteger(search.page) && search.page >= 1
@@ -78,6 +103,28 @@ const memoryTypeBadge: Record<string, string> = {
   preference: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
 };
 
+const memoryScopeBadge: Record<string, string> = {
+  session:
+    "bg-slate-100 text-slate-800 dark:bg-slate-500/15 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50",
+  global:
+    "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300 border border-amber-200/50 dark:border-amber-700/50",
+};
+
+const memoryScopeLabels: Record<string, string> = {
+  all: "Toutes les portées",
+  session: "Session",
+  global: "Global",
+};
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p role="alert" className="text-sm text-destructive">
+      {message}
+    </p>
+  );
+}
+
 function shortSessionId(sessionId: string | null | undefined): string {
   if (!sessionId) return "—";
   return `${sessionId.slice(0, 8)}...`;
@@ -88,6 +135,9 @@ function formatAdminDate(value: string, locale: string): string {
   if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US");
 }
+
+type MemoryFormInput = z.input<typeof CreateMemorySchema>;
+type MemoryFormValues = z.infer<typeof CreateMemorySchema>;
 
 function AIMemoryPage() {
   const { t, locale } = useLocale();
@@ -117,14 +167,46 @@ function AIMemoryPage() {
     preference: t("admin.aiMemory.preference"),
   };
 
+  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [editingMemory, setEditingMemory] = useState<AIMemory | null>(null);
+  const [formError, setFormError] = useState("");
+
+  const createMutation = useCreateMemory();
+  const updateMutation = useUpdateMemory();
+
+  const form = useForm<MemoryFormInput, unknown, MemoryFormValues>({
+    resolver: zodResolver(CreateMemorySchema),
+    defaultValues: {
+      scope: "session",
+      session_id: "",
+      memory_type: "conversation",
+      key: "",
+      value: { content: "" },
+      metadata: {},
+      expires_at: undefined,
+    },
+  });
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = form;
+  const scopeValue = watch("scope") ?? "session";
+
   const listQuery = useMemoriesList({
     type: search.type !== "all" ? search.type : undefined,
+    scope: search.scope !== "all" ? search.scope : undefined,
     search: search.q || undefined,
     page: search.page,
   });
   const statsQuery = useMemoryStats();
-  const deleteMutation = useDeleteMemory();
-  const deleteSessionMutation = useDeleteSessionMemories();
+  const deleteMutation2 = useDeleteMemory();
+  const deleteSessionMutation2 = useDeleteSessionMemories();
 
   const memories = listQuery.data?.data ?? [];
   const total = listQuery.data?.total ?? 0;
@@ -141,12 +223,100 @@ function AIMemoryPage() {
   const setType = (v: string) => {
     navigate({ search: (prev) => ({ ...prev, type: v, page: 1 }) });
   };
+  const setScope = (v: string) => {
+    navigate({ search: (prev) => ({ ...prev, scope: v as MemoryScope | "all", page: 1 }) });
+  };
   const setPage = (p: number) => {
     navigate({ search: (prev) => ({ ...prev, page: p }) });
   };
 
+  const openCreate = () => {
+    setFormMode("create");
+    setEditingMemory(null);
+    setFormError("");
+    reset({
+      scope: "session",
+      session_id: "",
+      memory_type: "conversation",
+      key: "",
+      value: { content: "" },
+      metadata: {},
+      expires_at: undefined,
+    });
+    setFormOpen(true);
+  };
+
+  const openEdit = (memory: AIMemory) => {
+    setFormMode("edit");
+    setEditingMemory(memory);
+    setFormError("");
+    reset({
+      scope: (memory.scope as MemoryScope) ?? "session",
+      session_id: memory.session_id ?? "",
+      memory_type: memory.memory_type,
+      key: memory.key,
+      value:
+        typeof memory.value === "object" && memory.value !== null && "content" in memory.value
+          ? { content: (memory.value as { content: string }).content ?? "" }
+          : { content: "" },
+      metadata:
+        typeof memory.metadata === "object" && memory.metadata !== null
+          ? (memory.metadata as Record<string, string>)
+          : {},
+      expires_at: memory.expires_at ?? undefined,
+    });
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingMemory(null);
+    setFormError("");
+  };
+
+  const onSubmitForm = useCallback(
+    (values: z.infer<typeof CreateMemorySchema>) => {
+      setFormError("");
+      const isGlobal = values.scope === "global";
+      const payload = {
+        scope: values.scope,
+        session_id: isGlobal ? null : values.session_id || undefined,
+        memory_type: values.memory_type,
+        key: values.key,
+        value: values.value,
+        metadata: values.metadata ?? {},
+        expires_at: values.expires_at ?? null,
+      };
+
+      const run = async () => {
+        try {
+          if (formMode === "edit" && editingMemory) {
+            await UpdateMemorySchema.parseAsync({
+              id: editingMemory.id,
+              ...payload,
+            });
+            await updateMutation.mutateAsync({
+              id: editingMemory.id,
+              ...payload,
+            } as z.infer<typeof UpdateMemorySchema>);
+          } else {
+            await CreateMemorySchema.parseAsync(payload);
+            await createMutation.mutateAsync(payload as z.infer<typeof CreateMemorySchema>);
+          }
+          toast.success(t("admin.common.saved"));
+          closeForm();
+        } catch (err) {
+          setFormError(err instanceof Error ? err.message : t("admin.common.saveError"));
+          toast.error(t("admin.common.saveError"));
+        }
+      };
+      void run();
+    },
+    [formMode, editingMemory, createMutation, updateMutation, t],
+  );
+
   const handleDelete = (id: string, isLastRowOfPage: boolean) => {
-    deleteMutation.mutate(id, {
+    deleteMutation2.mutate(id, {
       onSuccess: () => {
         toast.success(t("admin.common.deleted"));
         if (isLastRowOfPage && page > 1) setPage(page - 1);
@@ -156,7 +326,7 @@ function AIMemoryPage() {
   };
 
   const handleDeleteSession = (sessionId: string) => {
-    deleteSessionMutation.mutate(sessionId, {
+    deleteSessionMutation2.mutate(sessionId, {
       onSuccess: () => {
         toast.success(t("admin.common.deleted"));
         setSelectedMemory(null);
@@ -165,10 +335,11 @@ function AIMemoryPage() {
     });
   };
 
-  const deletingId = deleteMutation.isPending ? deleteMutation.variables : undefined;
-  const hasFilters = search.type !== "all" || search.q !== "";
+  const deletingId = deleteMutation2.isPending ? deleteMutation2.variables : undefined;
+
+  const hasFilters = search.type !== "all" || search.scope !== "all" || search.q !== "";
   const clearFilters = () => {
-    navigate({ search: { type: "all", q: "", page: 1 } });
+    navigate({ search: { type: "all", scope: "all", q: "", page: 1 } });
   };
 
   return (
@@ -259,6 +430,22 @@ function AIMemoryPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={search.scope} onValueChange={setScope}>
+          <SelectTrigger className="w-full sm:w-32" aria-label={t("admin.aiMemory.fScope")}>
+            <SelectValue placeholder={memoryScopeLabels.all} />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(memoryScopeLabels).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="button" variant="brand" size="sm" onClick={openCreate} className="shrink-0">
+          <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
+          {t("admin.aiMemory.add")}
+        </Button>
       </div>
 
       {listQuery.isError && (
@@ -278,6 +465,7 @@ function AIMemoryPage() {
                   <TableRow>
                     <TableHead>{t("admin.aiMemory.fKey")}</TableHead>
                     <TableHead>{t("admin.aiMemory.fType")}</TableHead>
+                    <TableHead className="w-20">{t("admin.aiMemory.fScope")}</TableHead>
                     <TableHead>{t("admin.aiMemory.sessionCol")}</TableHead>
                     <TableHead>{t("admin.articles.colCreated")}</TableHead>
                     <TableHead className="text-right">{t("admin.articles.colActions")}</TableHead>
@@ -294,6 +482,9 @@ function AIMemoryPage() {
                           <div className="h-5 w-20 animate-pulse rounded-full bg-muted" />
                         </TableCell>
                         <TableCell>
+                          <div className="h-6 w-16 animate-pulse rounded bg-muted" />
+                        </TableCell>
+                        <TableCell>
                           <div className="h-4 w-24 animate-pulse rounded bg-muted" />
                         </TableCell>
                         <TableCell>
@@ -306,7 +497,7 @@ function AIMemoryPage() {
                     ))
                   ) : memories.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center">
+                      <TableCell colSpan={6} className="text-center">
                         {hasFilters ? (
                           <EmptyState
                             icon={SearchX}
@@ -340,14 +531,31 @@ function AIMemoryPage() {
                               {memoryTypeLabels[memory.memory_type] ?? memory.memory_type}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            <Badge className={memoryScopeBadge[memory.scope] ?? ""}>
+                              {memoryScopeLabels[memory.scope] ?? memory.scope}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-sm text-muted-foreground font-mono">
-                            {shortSessionId(memory.session_id)}
+                            {memory.scope === "global" ? "—" : shortSessionId(memory.session_id)}
                           </TableCell>
                           <TableCell className="text-sm tabular-nums text-muted-foreground">
                             {formatAdminDate(memory.created_at, locale)}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={t("admin.common.edit")}
+                                disabled={isDeleting}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEdit(memory);
+                                }}
+                              >
+                                <Edit className="h-4 w-4" aria-hidden="true" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -477,8 +685,8 @@ function AIMemoryPage() {
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" disabled={deleteSessionMutation.isPending}>
-                  {deleteSessionMutation.isPending
+                <Button variant="outline" disabled={deleteSessionMutation2.isPending}>
+                  {deleteSessionMutation2.isPending
                     ? t("admin.common.deleting")
                     : t("admin.aiMemory.deleteSession")}
                 </Button>
@@ -494,8 +702,12 @@ function AIMemoryPage() {
                   <AlertDialogCancel>{t("admin.aiMemory.deleteCancel")}</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-red-600 hover:bg-red-700"
-                    disabled={deleteSessionMutation.isPending || !selectedMemory}
-                    onClick={() => selectedMemory && handleDeleteSession(selectedMemory.session_id)}
+                    disabled={deleteSessionMutation2.isPending || !selectedMemory}
+                    onClick={() => {
+                      if (selectedMemory?.session_id) {
+                        handleDeleteSession(selectedMemory.session_id);
+                      }
+                    }}
                   >
                     {t("admin.aiMemory.deleteAction")}
                   </AlertDialogAction>
@@ -519,6 +731,131 @@ function AIMemoryPage() {
         pageLabel={(p, tp) => t("admin.common.pageOf", { page: p, total: tp })}
         onPageChange={setPage}
       />
+
+      {/* Formulaire create / edit (mémoire admin) */}
+      <Dialog open={formOpen} onOpenChange={closeForm}>
+        <DialogContent className="max-w-md sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {formMode === "create"
+                ? t("admin.aiMemory.formCreateTitle")
+                : t("admin.aiMemory.formEditTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-4 pt-4">
+            {formError && (
+              <Alert variant="destructive">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label>{t("admin.aiMemory.fScope")}</Label>
+              <Select
+                value={scopeValue ?? ""}
+                onValueChange={(v) => {
+                  setValue("scope", v as MemoryFormInput["scope"]);
+                  setValue("session_id", v === "global" ? undefined : "");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="session">{t("admin.aiMemory.scopeSession")}</SelectItem>
+                  <SelectItem value="global">{t("admin.aiMemory.scopeGlobal")}</SelectItem>
+                </SelectContent>
+              </Select>
+              {scopeValue === "global" && (
+                <p className="text-xs text-muted-foreground">
+                  <AlertTriangle className="mr-1 h-3 w-3" aria-hidden="true" />
+                  {t("admin.aiMemory.scopeGlobalWarning")}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>{t("admin.aiMemory.fType")}</Label>
+              <Select
+                value={watch("memory_type") ?? "conversation"}
+                onValueChange={(v) => setValue("memory_type", v as AIMemoryType)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(memoryTypeLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value as AIMemoryType}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("admin.aiMemory.fKey")}</Label>
+              <Input
+                id="key"
+                placeholder={t("admin.aiMemory.keyPlaceholder")}
+                {...register("key")}
+              />
+              <FieldError message={errors.key?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("admin.aiMemory.fValue")}</Label>
+              <Textarea
+                id="content"
+                rows={3}
+                placeholder={t("admin.aiMemory.contentPlaceholder")}
+                {...register("value.content")}
+              />
+              {scopeValue === "global" && (
+                <p className="text-xs text-muted-foreground">
+                  {t("admin.aiMemory.globalContentHint")}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>{t("admin.aiMemory.fExpiresAt")}</Label>
+              <Input id="expires_at" type="datetime-local" {...register("expires_at")} />
+              <FieldError message={errors.expires_at?.message} />
+            </div>
+            {scopeValue === "session" && (
+              <div className="space-y-2">
+                <Label>{t("admin.aiMemory.fSessionId")}</Label>
+                <Input
+                  id="session_id"
+                  placeholder={t("admin.aiMemory.sessionIdPlaceholder")}
+                  {...register("session_id")}
+                />
+                <FieldError message={errors.session_id?.message} />
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeForm}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {t("admin.common.cancel")}
+              </Button>
+              <Button
+                type="submit"
+                variant="brand"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {createMutation.isPending || updateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                )}
+                {formMode === "create"
+                  ? t("admin.aiMemory.formCreate")
+                  : t("admin.aiMemory.formSave")}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

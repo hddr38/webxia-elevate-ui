@@ -68,7 +68,10 @@ export interface MemoryContext {
   session: SessionInfo;
   user?: UserProfile;
   project?: ProjectInfo;
+  /** Mémoires globales pertinentes (max 3 injectées dans le prompt). */
   summaries: ConversationSummary[];
+  /** Mémoires de session pertinentes (max 3 injectées dans le prompt). */
+  sessionSummaries: ConversationSummary[];
   history: ConversationHistory[];
 }
 

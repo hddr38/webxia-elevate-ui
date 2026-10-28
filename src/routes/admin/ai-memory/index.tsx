@@ -70,7 +70,13 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { AIMemory, AIMemoryType, MemoryScope } from "@/types/database";
-import { CreateMemorySchema, UpdateMemorySchema } from "@/lib/admin/schemas";
+import {
+  CreateMemorySchema,
+  MemoryFormSchema,
+  UpdateMemorySchema,
+  toDateTimeLocalValue,
+  toExpiresAtIso,
+} from "@/lib/admin/schemas";
 import { useLocale } from "@/lib/locale-context";
 
 interface MemorySearch {
@@ -136,8 +142,10 @@ function formatAdminDate(value: string, locale: string): string {
   return date.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US");
 }
 
-type MemoryFormInput = z.input<typeof CreateMemorySchema>;
-type MemoryFormValues = z.infer<typeof CreateMemorySchema>;
+// Le formulaire saisit `expires_at` en datetime-local ; la conversion ISO UTC
+// n'intervient qu'au moment de la soumission (voir onSubmitForm).
+type MemoryFormInput = z.input<typeof MemoryFormSchema>;
+type MemoryFormValues = z.infer<typeof MemoryFormSchema>;
 
 function AIMemoryPage() {
   const { t, locale } = useLocale();
@@ -176,7 +184,7 @@ function AIMemoryPage() {
   const updateMutation = useUpdateMemory();
 
   const form = useForm<MemoryFormInput, unknown, MemoryFormValues>({
-    resolver: zodResolver(CreateMemorySchema),
+    resolver: zodResolver(MemoryFormSchema),
     defaultValues: {
       scope: "session",
       session_id: "",
@@ -263,7 +271,7 @@ function AIMemoryPage() {
         typeof memory.metadata === "object" && memory.metadata !== null
           ? (memory.metadata as Record<string, string>)
           : {},
-      expires_at: memory.expires_at ?? undefined,
+      expires_at: toDateTimeLocalValue(memory.expires_at),
     });
     setFormOpen(true);
   };
@@ -275,7 +283,7 @@ function AIMemoryPage() {
   };
 
   const onSubmitForm = useCallback(
-    (values: z.infer<typeof CreateMemorySchema>) => {
+    (values: z.infer<typeof MemoryFormSchema>) => {
       setFormError("");
       const isGlobal = values.scope === "global";
       const payload = {
@@ -285,7 +293,8 @@ function AIMemoryPage() {
         key: values.key,
         value: values.value,
         metadata: values.metadata ?? {},
-        expires_at: values.expires_at ?? null,
+        // datetime-local (heure locale) -> ISO UTC, uniquement à la soumission.
+        expires_at: toExpiresAtIso(values.expires_at),
       };
 
       const run = async () => {

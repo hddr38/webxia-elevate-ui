@@ -24,11 +24,19 @@
  *    mise à jour aveugle de golden file.
  */
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { translations } from "@/lib/locale-context";
 
 const LOCALES = ["fr", "en"] as const;
 
-const REQUIRED_KEYS = ["about.process.subtitle", "admin.common.prev", "admin.common.next"] as const;
+const REQUIRED_KEYS = [
+  "about.process.subtitle",
+  "admin.common.prev",
+  "admin.common.next",
+  // FIX-MEMORY-DATE : le bouton d'annulation du formulaire mémoire affichait
+  // la clé brute `admin.common.cancel` (clé absente des deux blocs).
+  "admin.common.cancel",
+] as const;
 
 type Locale = (typeof LOCALES)[number];
 
@@ -73,5 +81,35 @@ describe("corrected keys carry a usable value", () => {
 
   it.each(cases)("$key value is not the key itself in $locale", ({ key, locale }) => {
     expect(read(locale, key)).not.toBe(key);
+  });
+});
+
+/**
+ * FIX-MEMORY-DATE — le bouton d'annulation du formulaire mémoire doit passer
+ * par `t("admin.common.cancel")`, pas par un littéral.
+ *
+ * Approche source (comme `-__root.test.tsx` / `hero-blur-guard.test.ts`) :
+ * aucun rendu de la route (ni QueryClient, ni router) — on vérifie le lien
+ * clé <-> composant. L'assertion de valeur FR/EN est portée par les blocs
+ * ci-dessus ; ici on ne prétend pas couvrir le rendu.
+ */
+describe("admin.ai-memory form cancel button uses the translated key", () => {
+  const source = readFileSync(
+    new URL("../routes/admin/ai-memory/index.tsx", import.meta.url),
+    "utf8",
+  );
+
+  it('uses t("admin.common.cancel") as cancel label', () => {
+    expect(source).toContain('t("admin.common.cancel")');
+  });
+
+  it("keeps the key as the only cancel label source (no hardcoded FR/EN literal)", () => {
+    const hasHardcodedCancel = />\s*(Annuler|Cancel)\s*</.test(source);
+    expect(hasHardcodedCancel).toBe(false);
+  });
+
+  it("admin.common.cancel resolves to the expected FR / EN labels", () => {
+    expect(translations.fr["admin.common.cancel"]).toBe("Annuler");
+    expect(translations.en["admin.common.cancel"]).toBe("Cancel");
   });
 });

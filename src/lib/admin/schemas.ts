@@ -178,28 +178,102 @@ export const UpdateRealisationSchema = CreateRealisationSchema.partial().extend(
 
 const StringMap = z.record(z.string(), z.string());
 
-export const CreateMemorySchema = z
-  .object({
-    scope: z.enum(["session", "global"]).default("session"),
-    session_id: z.string().uuid("Session invalide").optional(),
-    memory_type: MemoryTypeSchema,
-    key: z.string().trim().min(1, "Clé requise").max(220),
-    value: StringMap,
-    metadata: StringMap.optional(),
-    expires_at: z.string().datetime({ offset: true }).optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.scope === "global") {
-        return data.session_id === undefined || data.session_id === null;
-      }
-      return typeof data.session_id === "string" && data.session_id.length > 0;
-    },
-    {
-      message: 'session_id requis pour une mémoire "session", interdit pour une mémoire "global"',
-      path: ["session_id"],
-    },
-  );
+// --- expires_at : datetime-local (saisie formulaire) <-> ISO UTC (API) ---
+//
+// FIX-MEMORY-DATE — cause racine : <input type="datetime-local"> produit
+// "YYYY-MM-DDTHH:mm" (heure locale, sans secondes ni fuseau), alors que
+// z.string().datetime({ offset: true }) exige "YYYY-MM-DDTHH:mm:ss" suivi d'un
+// fuseau : toute saisie native était donc rejetée ("Invalid datetime"), y
+// compris la chaîne vide d'un champ non rempli.
+//
+// Règle retenue :
+//   - formulaire -> null | undefined | "" (-> null) | datetime-local strict ;
+//   - API        -> null | undefined | "" (-> null) | ISO 8601 UTC ;
+//   - formats locaux ambigus (28/06/2030, 06/28/2030…) volontairement rejetés.
+const DATETIME_LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+const EXPIRES_FORM_MESSAGE =
+  "Date invalide. Format attendu : AAAA-MM-JJTHH:MM (sélecteur de date natif).";
+const EXPIRES_API_MESSAGE =
+  "Date d'expiration invalide (ISO 8601 attendu, ex. 2030-06-28T10:04:00.000Z).";
+
+const emptyToNull = (value: string | null | undefined): string | null =>
+  value === undefined || value === "" ? null : value;
+
+// Saisie du formulaire (RHF) : la valeur reste au format datetime-local
+// pendant toute la frappe ; la conversion ISO UTC n'a lieu qu'à la soumission.
+export const ExpiresAtFormSchema = z
+  .union([
+    z.null(),
+    z.undefined(),
+    z.literal(""),
+    z.string().regex(DATETIME_LOCAL_RE, EXPIRES_FORM_MESSAGE),
+  ])
+  .transform(emptyToNull);
+
+// Payload create/update réellement envoyé à la Server Function.
+export const ExpiresAtApiSchema = z
+  .union([
+    z.null(),
+    z.undefined(),
+    z.literal(""),
+    z.string().datetime({ offset: true, message: EXPIRES_API_MESSAGE }),
+  ])
+  .transform(emptyToNull);
+
+// datetime-local (heure locale) -> ISO UTC. Appelé au moment de la soumission,
+// jamais pendant la saisie.
+export function toExpiresAtIso(value: string | null | undefined): string | null {
+  const normalized = emptyToNull(value);
+  if (normalized === null) return null;
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+// ISO UTC -> valeur datetime-local, uniquement pour pré-remplir l'input en
+// édition (l'input ne peut pas afficher une chaîne ISO avec secondes + fuseau).
+export function toDateTimeLocalValue(value: string | null | undefined): string {
+  const normalized = emptyToNull(value);
+  if (normalized === null) return "";
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+const CreateMemoryObject = z.object({
+  scope: z.enum(["session", "global"]).default("session"),
+  session_id: z.string().uuid("Session invalide").optional(),
+  memory_type: MemoryTypeSchema,
+  key: z.string().trim().min(1, "Clé requise").max(220),
+  value: StringMap,
+  metadata: StringMap.optional(),
+  expires_at: ExpiresAtApiSchema,
+});
+
+const createMemoryRefine = (data: z.infer<typeof CreateMemoryObject>) => {
+  if (data.scope === "global") {
+    return data.session_id === undefined || data.session_id === null;
+  }
+  return typeof data.session_id === "string" && data.session_id.length > 0;
+};
+
+const CREATE_SESSION_ID_MESSAGE =
+  'session_id requis pour une mémoire "session", interdit pour une mémoire "global"';
+
+// Payload API (create) — validé par la Server Function `createMemory`.
+export const CreateMemorySchema = CreateMemoryObject.refine(createMemoryRefine, {
+  message: CREATE_SESSION_ID_MESSAGE,
+  path: ["session_id"],
+});
+
+// Valeurs du formulaire (create / edit) : mêmes règles métier, mais le champ
+// `expires_at` reste au format datetime-local tant qu'il n'est pas soumis.
+export const MemoryFormSchema = CreateMemoryObject.extend({
+  expires_at: ExpiresAtFormSchema,
+}).refine(createMemoryRefine, {
+  message: CREATE_SESSION_ID_MESSAGE,
+  path: ["session_id"],
+});
 
 export const UpdateMemorySchema = z
   .object({
@@ -209,7 +283,7 @@ export const UpdateMemorySchema = z
     key: z.string().trim().min(1).max(220).optional(),
     value: StringMap.optional(),
     metadata: StringMap.optional(),
-    expires_at: z.string().datetime({ offset: true }).nullable().optional(),
+    expires_at: ExpiresAtApiSchema,
   })
   .refine(
     (data) => {

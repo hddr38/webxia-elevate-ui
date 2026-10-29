@@ -240,9 +240,53 @@ export function toDateTimeLocalValue(value: string | null | undefined): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// --- session_id : contrat selon le scope ---
+//
+// FIX-MEMORY-SCHEMA — cause racine : `session_id` était déclaré
+// `z.string().uuid().optional()` dans le schéma de création. `.optional()`
+// n'accepte que `undefined`, jamais `null` : le payload formulaire d'une
+// mémoire globale (`session_id: null`, explicite) était donc rejeté par le
+// parser AVANT le refine scope/session, d'où l'erreur Zod observée en
+// production — path ["session_id"], expected "string", received "null".
+//
+// Contrat final (create, update et formulaire partagent la même règle) :
+//   - scope "global"  -> session_id null ou undefined (jamais d'UUID) ;
+//   - scope "session" -> session_id = UUID valide, obligatoire ;
+//   - hors scope fourni -> aucune contrainte de présence (update partiel) ;
+//   - UUID invalide, chaîne vide ou tout autre type -> rejeté par le parser.
+const SESSION_ID_FORBIDDEN_GLOBAL = 'session_id interdit pour une mémoire "global" (null attendu)';
+const SESSION_ID_REQUIRED_SESSION = 'session_id (UUID valide) requis pour une mémoire "session"';
+
+const addSessionScopeIssues = (
+  data: { scope?: "session" | "global"; session_id?: string | null },
+  ctx: z.RefinementCtx,
+): void => {
+  if (data.scope === "global") {
+    if (data.session_id !== null && data.session_id !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: SESSION_ID_FORBIDDEN_GLOBAL,
+        path: ["session_id"],
+      });
+    }
+    return;
+  }
+  // scope "session" : le format UUID est déjà garanti par le parser
+  // (`z.string().uuid()`), il ne reste qu'à exiger la présence.
+  if (data.scope === "session" && (data.session_id === null || data.session_id === undefined)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: SESSION_ID_REQUIRED_SESSION,
+      path: ["session_id"],
+    });
+  }
+};
+
 const CreateMemoryObject = z.object({
   scope: z.enum(["session", "global"]).default("session"),
-  session_id: z.string().uuid("Session invalide").optional(),
+  // `.nullish()` = `.nullable().optional()` : accepte l'UUID, `null`
+  // (contrat mémoire globale) et `undefined` — le refine ci-dessous arbitre.
+  session_id: z.string().uuid("Session invalide").nullish(),
   memory_type: MemoryTypeSchema,
   key: z.string().trim().min(1, "Clé requise").max(220),
   value: StringMap,
@@ -250,56 +294,26 @@ const CreateMemoryObject = z.object({
   expires_at: ExpiresAtApiSchema,
 });
 
-const createMemoryRefine = (data: z.infer<typeof CreateMemoryObject>) => {
-  if (data.scope === "global") {
-    return data.session_id === undefined || data.session_id === null;
-  }
-  return typeof data.session_id === "string" && data.session_id.length > 0;
-};
-
-const CREATE_SESSION_ID_MESSAGE =
-  'session_id requis pour une mémoire "session", interdit pour une mémoire "global"';
-
 // Payload API (create) — validé par la Server Function `createMemory`.
-export const CreateMemorySchema = CreateMemoryObject.refine(createMemoryRefine, {
-  message: CREATE_SESSION_ID_MESSAGE,
-  path: ["session_id"],
-});
+export const CreateMemorySchema = CreateMemoryObject.superRefine(addSessionScopeIssues);
 
 // Valeurs du formulaire (create / edit) : mêmes règles métier, mais le champ
 // `expires_at` reste au format datetime-local tant qu'il n'est pas soumis.
 export const MemoryFormSchema = CreateMemoryObject.extend({
   expires_at: ExpiresAtFormSchema,
-}).refine(createMemoryRefine, {
-  message: CREATE_SESSION_ID_MESSAGE,
-  path: ["session_id"],
-});
+}).superRefine(addSessionScopeIssues);
 
 export const UpdateMemorySchema = z
   .object({
     id: AdminIdSchema,
     scope: z.enum(["session", "global"]).optional(),
-    session_id: z.string().uuid("Session invalide").optional().nullable(),
+    session_id: z.string().uuid("Session invalide").nullish(),
     key: z.string().trim().min(1).max(220).optional(),
     value: StringMap.optional(),
     metadata: StringMap.optional(),
     expires_at: ExpiresAtApiSchema,
   })
-  .refine(
-    (data) => {
-      if (data.scope === "global") {
-        return data.session_id === undefined || data.session_id === null;
-      }
-      if (data.session_id !== undefined && data.session_id !== null) {
-        return typeof data.session_id === "string" && data.session_id.length > 0;
-      }
-      return true;
-    },
-    {
-      message: 'session_id interdit pour une mémoire "global"',
-      path: ["session_id"],
-    },
-  );
+  .superRefine(addSessionScopeIssues);
 
 // --- Dashboard stats (réponse getAdminStats, validée côté client) ---
 

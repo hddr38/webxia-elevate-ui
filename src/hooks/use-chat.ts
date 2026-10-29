@@ -95,6 +95,7 @@ export function useChat(): UseChatReturn {
     setTemporaryError,
     setConversationId,
     clearMessages,
+    resetSessionId,
   } = useChatStore();
 
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -517,12 +518,19 @@ export function useChat(): UseChatReturn {
     resetConversation: useCallback(() => {
       abortActiveStream();
       clearMessages();
+      // CHAT-CLEAR-FIX (Politique A) — regenerate the session id so the server
+      // creates a NEW conversation (no previous history re-injected) and
+      // searches session memories under the new id only. Global memories stay
+      // available; no server-side data is deleted (history, leads, audit kept).
+      // Persistence in the `webxia-chat` blob is handled by the store's
+      // persist middleware on this very `set`.
+      resetSessionId();
       setConversationId(null);
       lastUserMessageRef.current = null;
       historyRestoreRef.current = null;
       setErrorCode(null);
       setCanRetry(false);
       localStorage.removeItem("webxia-conversation-id");
-    }, [clearMessages, setConversationId]),
+    }, [clearMessages, resetSessionId, setConversationId]),
   };
 }

@@ -281,4 +281,46 @@ describe("memory-service", () => {
     // Le service ne filtre pas le contenu vide : c'est le rôle de collectWithinBudget dans context-builder.
     expect(sessionMatches).toHaveLength(1);
   });
+
+  // --- CHAT-CLEAR-FIX (Politique A) — après « Effacer », le client régénère ---
+  // --- son sessionId : les requêtes serveur doivent suivre le nouveau filtre. ---
+
+  it("CHAT-CLEAR-FIX 8. les mémoires globales restent recherchées avec le nouveau sessionId", async () => {
+    const ANCIENNE_SESSION = "aaaaaaaa-1111-4222-8333-444444444444";
+    const NOUVELLE_SESSION = "bbbbbbbb-2222-4333-8444-555555555555";
+    const globalRow = { ...ROW, id: "mem-global", scope: "global", session_id: null };
+    const { client } = createFakeClient([
+      { data: [globalRow], error: null }, // global builder (aucun filtre session)
+      { data: [], error: null }, // session builder bornée à la NOUVELLE session
+    ]);
+    const service = createMemoryService(client);
+
+    const { globalMatches } = await service.searchMemory("Bororo", {
+      filters: { sessionId: NOUVELLE_SESSION },
+    });
+
+    expect(NOUVELLE_SESSION).not.toBe(ANCIENNE_SESSION);
+    expect(globalMatches).toHaveLength(1);
+    expect(globalMatches[0]).toMatchObject({ scope: "global", content: "hello world" });
+  });
+
+  it("CHAT-CLEAR-FIX 9. les mémoires de l'ancienne session ne sont plus recherchées", async () => {
+    const ANCIENNE_SESSION = "aaaaaaaa-1111-4222-8333-444444444444";
+    const NOUVELLE_SESSION = "bbbbbbbb-2222-4333-8444-555555555555";
+    const { client, calls } = createFakeClient([
+      { data: [], error: null }, // global builder
+      { data: [], error: null }, // session builder
+    ]);
+    const service = createMemoryService(client);
+
+    await service.searchMemory("Bororo", {
+      filters: { sessionId: NOUVELLE_SESSION },
+    });
+
+    const eqCalls = calls.eq as unknown[][];
+    // La portée session est interrogée sur le NOUVELLE id uniquement :
+    // les mémoires indexées sur l'ancienne session ne sont jamais atteintes.
+    expect(eqCalls).toContainEqual(["session_id", NOUVELLE_SESSION]);
+    expect(eqCalls).not.toContainEqual(["session_id", ANCIENNE_SESSION]);
+  });
 });

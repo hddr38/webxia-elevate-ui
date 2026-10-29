@@ -30,6 +30,8 @@ interface ChatState {
   setConversationId: (id: string | null) => void;
   setSessionId: (id: string | null) => void;
   ensureSessionId: () => string;
+  /** CHAT-CLEAR-FIX (Politique A) — regenerate the anonymous Webi session id. */
+  resetSessionId: () => void;
   clearMessages: () => void;
   reset: () => void;
   incrementMessageCount: () => void;
@@ -129,6 +131,13 @@ export const useChatStore = create<ChatState>()(
         set({ sessionId: created });
         return created;
       },
+
+      // CHAT-CLEAR-FIX (Politique A) — a fresh id makes the server open a NEW
+      // conversation (no history re-injection) and scope session memories to a
+      // brand new session, while every server-side record is left untouched.
+      // Same generator as ensureSessionId, never a second one. The persist
+      // middleware writes the new id to the `webxia-chat` blob synchronously.
+      resetSessionId: () => set({ sessionId: createWebiSessionId() }),
 
       clearMessages: () => set({ messages: [] }),
 

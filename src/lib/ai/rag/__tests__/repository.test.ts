@@ -21,6 +21,7 @@ function createFakeClient(queue: DbResponse[]) {
   for (const m of [
     "select",
     "eq",
+    "is",
     "order",
     "limit",
     "range",

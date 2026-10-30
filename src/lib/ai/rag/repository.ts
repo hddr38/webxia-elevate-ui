@@ -14,16 +14,33 @@ type DocumentRow = Database["public"]["Tables"]["knowledge_documents"]["Row"];
 type ChunkRow = Database["public"]["Tables"]["knowledge_chunks"]["Row"];
 type MatchRow = Database["public"]["Functions"]["match_knowledge_chunks"]["Returns"][number];
 
+/**
+ * Source descriptor accepted on write.
+ *
+ * The DB enum (`knowledge_doc_type`) is wider than the shared RAG contract
+ * (`DocumentSource`): since migration 021 it also carries the business types
+ * (article | realisation | service) written by the business pipeline.
+ */
+export interface KnowledgeSource extends Omit<DocumentSource, "type"> {
+  type: KnowledgeDocType;
+}
+
 /** Input for creating a knowledge document (ingestion). */
 interface KnowledgeDocumentInput {
   /** Explicit id (compat/migration paths). Omitted -> database generates one. */
   id?: string;
   title: string;
   content: string;
-  source: DocumentSource;
+  source: KnowledgeSource;
   metadata: DocumentMetadata;
   /** sha256 of the normalized content. Enables idempotent ingestion. */
   contentHash?: string;
+  /**
+   * Stable business identity key (migration 021):
+   * `<sourceType>:<slug>:<locale>:<version>`. NULL = legacy document
+   * (identity = content_hash only).
+   */
+  sourceKey?: string | null;
 }
 
 /** Patch for updating a knowledge document. */
@@ -43,9 +60,11 @@ export interface StoredKnowledgeDocument {
   id: string;
   title: string;
   content: string;
-  source: DocumentSource;
+  source: KnowledgeSource;
   metadata: DocumentMetadata;
   contentHash: string | null;
+  /** Stable business identity key (migration 021). NULL = legacy document. */
+  sourceKey?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -165,12 +184,24 @@ function toDocumentMetadata(row: DocumentRow): DocumentMetadata {
 
 function toSource(
   row: Pick<DocumentRow, "source_type" | "source_url" | "source_path">,
-): DocumentSource {
+): KnowledgeSource {
   return {
     type: row.source_type,
     url: row.source_url ?? undefined,
     path: row.source_path ?? undefined,
   };
+}
+
+/**
+ * Narrows a DB document type to the shared RAG contract.
+ *
+ * The DB enum (migration 021) also carries the business types
+ * (article | realisation | service) while `DocumentSource` still models the 6
+ * legacy types. The runtime value is preserved as-is; the shared contract is
+ * widened in INGEST-3b (contracts/domain.ts is out of the INGEST-3a scope).
+ */
+function toSharedSourceType(type: KnowledgeDocType): DocumentSource["type"] {
+  return type as DocumentSource["type"];
 }
 
 function toStoredDocument(row: DocumentRow): StoredKnowledgeDocument {
@@ -181,6 +212,7 @@ function toStoredDocument(row: DocumentRow): StoredKnowledgeDocument {
     source: toSource(row),
     metadata: toDocumentMetadata(row),
     contentHash: row.content_hash,
+    sourceKey: row.source_key,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -207,7 +239,7 @@ function toMatch(row: MatchRow): KnowledgeMatch {
     chunkMetadata: toRecord(row.chunk_metadata),
     documentTitle: row.document_title,
     source: {
-      type: row.document_source_type,
+      type: toSharedSourceType(row.document_source_type),
       url: row.document_source_url ?? undefined,
       path: row.document_source_path ?? undefined,
     },
@@ -248,7 +280,19 @@ export interface KnowledgeRepository {
   ): Promise<{ data: StoredKnowledgeDocument[]; total: number }>;
   updateDocument(id: string, patch: KnowledgeDocumentPatch): Promise<StoredKnowledgeDocument>;
   deleteDocument(id: string): Promise<void>;
+  /**
+   * LEGACY identity lookup: matches a content hash ONLY on legacy rows
+   * (`source_key IS NULL`). Business rows are never returned here.
+   */
   findDocumentByHash(contentHash: string): Promise<StoredKnowledgeDocument | null>;
+  /**
+   * Business identity lookup (migration 021): matches `source_key`.
+   *
+   * Optional on the interface so the legacy test doubles stay valid; the
+   * Supabase repository always implements it. Ingestion REQUIRES it as soon
+   * as an identity is provided.
+   */
+  findDocumentByKey?(sourceKey: string): Promise<StoredKnowledgeDocument | null>;
   createChunks(documentId: string, chunks: NewKnowledgeChunk[]): Promise<StoredKnowledgeChunk[]>;
   deleteChunks(documentId: string): Promise<void>;
   searchChunks(params: ChunkSearchParams): Promise<KnowledgeMatch[]>;
@@ -273,6 +317,7 @@ export function createKnowledgeRepository(client: KnowledgeDbClient): KnowledgeR
           priority: input.metadata.priority,
           metadata: toJson({ ...input.metadata }),
           content_hash: input.contentHash ?? null,
+          source_key: input.sourceKey ?? null,
         })
         .select()
         .single();
@@ -360,12 +405,25 @@ export function createKnowledgeRepository(client: KnowledgeDbClient): KnowledgeR
     },
 
     async findDocumentByHash(contentHash: string): Promise<StoredKnowledgeDocument | null> {
+      // LEGACY scope: only rows without a business identity (migration 021).
       const { data, error } = await client
         .from("knowledge_documents")
         .select("*")
         .eq("content_hash", contentHash)
+        .is("source_key", null)
         .limit(1);
       if (error) throw dbError("findDocumentByHash failed", error);
+      const row = (data ?? [])[0];
+      return row ? toStoredDocument(row) : null;
+    },
+
+    async findDocumentByKey(sourceKey: string): Promise<StoredKnowledgeDocument | null> {
+      const { data, error } = await client
+        .from("knowledge_documents")
+        .select("*")
+        .eq("source_key", sourceKey)
+        .limit(1);
+      if (error) throw dbError("findDocumentByKey failed", error);
       const row = (data ?? [])[0];
       return row ? toStoredDocument(row) : null;
     },

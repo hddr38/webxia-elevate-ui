@@ -1,12 +1,18 @@
 import type { DocumentMetadata, DocumentSource } from "../contracts";
-import type { KnowledgeRepository, StoredKnowledgeDocument } from "./repository";
+import { buildSourceKey, type MemorySourceIdentity } from "../contracts/source-key";
+import type { KnowledgeDocType, KnowledgeRepository, StoredKnowledgeDocument } from "./repository";
 import { chunkTextIntoPieces, DEFAULT_CHUNKER_OPTIONS } from "./chunker";
 import { assertEmbeddingDimensions } from "../embeddings/config";
 
 export interface IngestionSourceInput {
   title: string;
   rawContent: string;
-  sourceType: DocumentSource["type"];
+  /**
+   * Document type of a LEGACY document (website | pdf | manual | faq | blog |
+   * case_study). Omit it when an identity is provided: the identity owns the
+   * source type (article | realisation | service), the locale and the version.
+   */
+  sourceType?: DocumentSource["type"];
   sourceUrl?: string;
   sourcePath?: string;
   version?: string;
@@ -29,6 +35,13 @@ interface IngestionOptions {
   batchSize?: number;
   maxChars?: number;
   overlapChars?: number;
+  /**
+   * Business identity (migration 021). When provided, the document is
+   * deduplicated by `source_key` (stable identity) instead of `content_hash`
+   * (legacy). The identity owns the source type, the locale and the version:
+   * they must NOT be passed through the input as well.
+   */
+  identity?: MemorySourceIdentity;
 }
 
 type IngestionStatus = "created" | "already_exists" | "reindexed";
@@ -39,9 +52,17 @@ interface IngestionResult {
   status: IngestionStatus;
   chunkCount: number;
   contentHash: string;
+  /** Stable business identity key (migration 021). NULL = legacy document. */
+  sourceKey?: string | null;
 }
 
-type IngestionErrorCode = "EMPTY_CONTENT" | "EMBEDDING_FAILED" | "PERSIST_FAILED";
+type IngestionErrorCode =
+  | "EMPTY_CONTENT"
+  | "EMBEDDING_FAILED"
+  | "PERSIST_FAILED"
+  | "INVALID_INPUT"
+  | "INVALID_IDENTITY"
+  | "REPOSITORY_UNSUPPORTED";
 
 export class IngestionError extends Error {
   readonly code: IngestionErrorCode;
@@ -80,6 +101,70 @@ export async function computeContentHash(normalized: string): Promise<string> {
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+/** Lookup by stable business identity (migration 021). */
+type SourceKeyLookup = (sourceKey: string) => Promise<StoredKnowledgeDocument | null>;
+
+/**
+ * Returns the repository capability required to deduplicate a business
+ * identity. The capability is optional on the interface (legacy test
+ * doubles), so it is checked explicitly instead of being assumed.
+ */
+function requireSourceKeyLookup(repository: KnowledgeRepository): SourceKeyLookup {
+  const lookup = repository.findDocumentByKey;
+  if (!lookup) {
+    throw new IngestionError(
+      "REPOSITORY_UNSUPPORTED",
+      "KnowledgeRepository.findDocumentByKey is required to ingest a business identity",
+    );
+  }
+  return (sourceKey) => lookup.call(repository, sourceKey);
+}
+
+/**
+ * Validates a business identity and derives its stable source key.
+ *
+ * The identity owns the source type, the locale and the version: passing
+ * them twice (and possibly differently) would make the row inconsistent
+ * with its own key, so it is rejected.
+ */
+function resolveIdentity(
+  identity: MemorySourceIdentity,
+  input: IngestionSourceInput,
+): { sourceKey: string; sourceType: KnowledgeDocType; locale: string; version: string } {
+  if (input.sourceType !== undefined) {
+    throw new IngestionError(
+      "INVALID_IDENTITY",
+      "sourceType must be omitted when an identity is provided",
+    );
+  }
+  if (input.locale !== undefined) {
+    throw new IngestionError(
+      "INVALID_IDENTITY",
+      "locale must be omitted when an identity is provided",
+    );
+  }
+  if (input.version !== undefined) {
+    throw new IngestionError(
+      "INVALID_IDENTITY",
+      "version must be omitted when an identity is provided",
+    );
+  }
+  try {
+    const sourceKey = buildSourceKey(identity);
+    return {
+      sourceKey,
+      sourceType: identity.sourceType,
+      locale: identity.locale,
+      version: identity.version,
+    };
+  } catch (error) {
+    throw new IngestionError(
+      "INVALID_IDENTITY",
+      `Invalid source identity: ${error instanceof Error ? error.message : "unknown"}`,
+    );
+  }
 }
 
 async function batchEmbedAll(
@@ -122,8 +207,16 @@ async function batchEmbedAll(
 
 /**
  * Full pipeline: normalize -> hash -> dedupe -> chunk -> batch-embed -> persist.
- * Same normalized content + no forceReindex -> "already_exists" WITHOUT any
- * re-embedding. Throws IngestionError (typed) on empty content, embedding or
+ *
+ * Deduplication has two modes:
+ * - business identity (migration 021): `source_key` lookup, stable across
+ *   metadata-only edits, distinct per locale/version;
+ * - legacy (no identity): `content_hash` lookup, scoped to the rows without
+ *   a `source_key`.
+ *
+ * Same identity (or same normalized content in legacy mode) + no
+ * forceReindex -> "already_exists" WITHOUT any re-embedding. Throws
+ * IngestionError (typed) on empty content, invalid identity, embedding or
  * persistence failures.
  */
 export async function ingestDocument(
@@ -138,7 +231,36 @@ export async function ingestDocument(
   const contentHash = await computeContentHash(normalized);
   const forceReindex = options.forceReindex ?? false;
 
-  const existing = await deps.repository.findDocumentByHash(contentHash);
+  let sourceKey: string | null = null;
+  let sourceType: KnowledgeDocType;
+  let locale: string;
+  let version: string | undefined;
+
+  if (options.identity) {
+    const resolved = resolveIdentity(options.identity, input);
+    sourceKey = resolved.sourceKey;
+    sourceType = resolved.sourceType;
+    locale = resolved.locale;
+    version = resolved.version;
+  } else {
+    if (!input.sourceType) {
+      throw new IngestionError(
+        "INVALID_INPUT",
+        "sourceType is required when no business identity is provided",
+      );
+    }
+    sourceType = input.sourceType;
+    locale = input.locale ?? "fr";
+    version = input.version;
+  }
+
+  // Business identity wins over the legacy hash when it is provided.
+  const findExisting: (token: string) => Promise<StoredKnowledgeDocument | null> = sourceKey
+    ? requireSourceKeyLookup(deps.repository)
+    : (hash) => deps.repository.findDocumentByHash(hash);
+  const lookupToken = sourceKey ?? contentHash;
+
+  const existing = await findExisting(lookupToken);
   if (existing && !forceReindex) {
     return {
       documentId: existing.id,
@@ -146,6 +268,7 @@ export async function ingestDocument(
       status: "already_exists",
       chunkCount: 0,
       contentHash,
+      sourceKey,
     };
   }
   if (existing && forceReindex) {
@@ -167,7 +290,6 @@ export async function ingestDocument(
     batchSize,
   );
 
-  const locale = input.locale ?? "fr";
   const metadata: DocumentMetadata = {
     author: input.author,
     createdAt: Date.now(),
@@ -183,17 +305,18 @@ export async function ingestDocument(
       title: input.title,
       content: normalized,
       source: {
-        type: input.sourceType,
+        type: sourceType,
         url: input.sourceUrl,
         path: input.sourcePath,
-        version: input.version,
+        version,
       },
       metadata,
       contentHash,
+      sourceKey,
     });
   } catch (error) {
     // Race-safe idempotence: a concurrent ingest may have won the UNIQUE.
-    const raced = await deps.repository.findDocumentByHash(contentHash).catch(() => null);
+    const raced = await findExisting(lookupToken).catch(() => null);
     if (raced) {
       return {
         documentId: raced.id,
@@ -201,6 +324,7 @@ export async function ingestDocument(
         status: "already_exists",
         chunkCount: 0,
         contentHash,
+        sourceKey,
       };
     }
     throw new IngestionError(
@@ -237,5 +361,6 @@ export async function ingestDocument(
     status: existing ? "reindexed" : "created",
     chunkCount: pieces.length,
     contentHash,
+    sourceKey,
   };
 }

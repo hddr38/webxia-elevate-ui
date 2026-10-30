@@ -1,3 +1,15 @@
+/**
+ * NOTE (INGEST-3a, TEMPORARY): the `source_key` column and the business
+ * values of `knowledge_doc_type` (article | realisation | service) were added
+ * BY HAND to keep the typecheck green BEFORE migration 021 is applied.
+ *
+ * Once `supabase/migrations/021_knowledge_source_key.sql` has been applied
+ * manually on Supabase, regenerate these types:
+ *
+ *   npx supabase gen types typescript --project-id <id> --schema public > src/lib/supabase/database.types.ts
+ *
+ * See docs/rag/identity.md.
+ */
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
@@ -299,6 +311,7 @@ export type Database = {
           locale: string;
           metadata: Json;
           priority: number;
+          source_key: string | null;
           source_path: string | null;
           source_type: Database["public"]["Enums"]["knowledge_doc_type"];
           source_url: string | null;
@@ -316,6 +329,7 @@ export type Database = {
           locale?: string;
           metadata?: Json;
           priority?: number;
+          source_key?: string | null;
           source_path?: string | null;
           source_type?: Database["public"]["Enums"]["knowledge_doc_type"];
           source_url?: string | null;
@@ -333,6 +347,7 @@ export type Database = {
           locale?: string;
           metadata?: Json;
           priority?: number;
+          source_key?: string | null;
           source_path?: string | null;
           source_type?: Database["public"]["Enums"]["knowledge_doc_type"];
           source_url?: string | null;
@@ -583,7 +598,16 @@ export type Database = {
       ai_audit_severity: "low" | "medium" | "high" | "critical";
       ai_memory_type: "conversation" | "context" | "knowledge" | "preference";
       article_status: "draft" | "published" | "archived";
-      knowledge_doc_type: "website" | "pdf" | "manual" | "faq" | "blog" | "case_study";
+      knowledge_doc_type:
+        | "website"
+        | "pdf"
+        | "manual"
+        | "faq"
+        | "blog"
+        | "case_study"
+        | "article"
+        | "realisation"
+        | "service";
       realisation_status: "draft" | "published" | "archived";
     };
     CompositeTypes: {
@@ -726,7 +750,17 @@ export const Constants = {
       ai_audit_severity: ["low", "medium", "high", "critical"],
       ai_memory_type: ["conversation", "context", "knowledge", "preference"],
       article_status: ["draft", "published", "archived"],
-      knowledge_doc_type: ["website", "pdf", "manual", "faq", "blog", "case_study"],
+      knowledge_doc_type: [
+        "website",
+        "pdf",
+        "manual",
+        "faq",
+        "blog",
+        "case_study",
+        "article",
+        "realisation",
+        "service",
+      ],
       realisation_status: ["draft", "published", "archived"],
     },
   },

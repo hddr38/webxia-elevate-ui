@@ -11,6 +11,10 @@ export const STATUS_BADGE: Record<string, string> = {
   archived: "bg-gray-100 text-gray-800 dark:bg-gray-500/15 dark:text-gray-300",
 };
 
+// URL publique canonique du site (utilisée pour construire les URLs de
+// citation des documents RAG ingérés — voir docs/rag/identity.md).
+export const SITE_BASE_URL = "https://webxia.fr";
+
 // Cal.com — lien de réservation affiché sur la page contact.
 // Lien validé : cal.com/webxia/30min (ne pas modifier sans valider le compte Cal).
 export const CAL_USERNAME = "webxia";

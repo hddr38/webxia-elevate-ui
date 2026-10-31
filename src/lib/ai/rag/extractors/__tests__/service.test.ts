@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { ServiceSectionData } from "@/content/services-fr";
 import { extractServices } from "../service";
+import { buildSourceKey, SourceKeySchema } from "../../../contracts/source-key";
 
 const baseSection: ServiceSectionData = {
   eyebrow: "01 . SITES INTERNET",
@@ -111,5 +112,35 @@ describe("extractServices", () => {
   it("lève sur une eyebrow invalide", async () => {
     const bad = section({ eyebrow: "Mauvais format" });
     await expect(extractServices([bad], [bad])).rejects.toThrow(/Eyebrow de service/);
+  });
+
+  it("FR et EN coexistent pour le même slug : deux identités distinctes, pas de collision", async () => {
+    const docs = await extractServices(frSections, enSections);
+
+    const fr01 = docs.find((d) => d.identity.slug === "section-01" && d.identity.locale === "fr");
+    const en01 = docs.find((d) => d.identity.slug === "section-01" && d.identity.locale === "en");
+
+    expect(fr01).toBeDefined();
+    expect(en01).toBeDefined();
+    expect(buildSourceKey(fr01!.identity)).not.toBe(buildSourceKey(en01!.identity));
+    // Les 14 clés sont uniques (7 slugs × 2 locales).
+    const keys = docs.map((d) => buildSourceKey(d.identity));
+    expect(new Set(keys).size).toBe(14);
+  });
+
+  it("les source_key sont au format valide, uniques et déterministes", async () => {
+    const docs = await extractServices(frSections, enSections);
+    const keys = docs.map((d) => buildSourceKey(d.identity));
+
+    // Format attendu : service:section-NN:(fr|en):12-hex.
+    for (const key of keys) {
+      expect(SourceKeySchema.safeParse(key).success, key).toBe(true);
+      expect(key).toMatch(/^service:section-0[1-7]:(fr|en):[0-9a-f]{12}$/);
+    }
+    expect(new Set(keys).size).toBe(14);
+
+    // Déterminisme : un second passage produit exactement les mêmes clés.
+    const second = await extractServices(frSections, enSections);
+    expect(second.map((d) => buildSourceKey(d.identity))).toEqual(keys);
   });
 });

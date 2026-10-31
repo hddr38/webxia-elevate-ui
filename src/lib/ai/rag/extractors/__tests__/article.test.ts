@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { ArticleRow } from "../types";
 import { extractArticle } from "../article";
 import { MIN_CONTENT_CHARS } from "../types";
+import { buildSourceKey, computeContentVersion } from "../../../contracts/source-key";
 
 const baseRow: ArticleRow = {
   id: "a-1",
@@ -74,5 +75,53 @@ describe("extractArticle", () => {
     const doc = await extractArticle(row());
 
     expect(doc!.content.length).toBeGreaterThanOrEqual(MIN_CONTENT_CHARS);
+  });
+
+  it("détecte la limite MIN_CONTENT_CHARS : exactement 200 accepté, 199 rejeté", async () => {
+    const atLimit = row({ content_md: "x".repeat(MIN_CONTENT_CHARS) });
+    expect(await extractArticle(atLimit)).not.toBeNull();
+
+    const belowLimit = row({ content_md: "x".repeat(MIN_CONTENT_CHARS - 1) });
+    expect(await extractArticle(belowLimit)).toBeNull();
+  });
+
+  it("la version change quand le contenu change, et reste stable sinon", async () => {
+    const base = await extractArticle(row());
+    const same = await extractArticle(row());
+    const edited = await extractArticle(row({ content_md: `${baseRow.content_md} Édition.` }));
+
+    expect(same!.identity.version).toBe(base!.identity.version);
+    expect(edited!.identity.version).not.toBe(base!.identity.version);
+
+    // La version est l'empreinte du contenu markdown seul (pas du titre).
+    expect(base!.identity.version).toBe(await computeContentVersion(baseRow.content_md));
+  });
+
+  it("construit une source_key valide via buildSourceKey", async () => {
+    const doc = await extractArticle(row());
+
+    expect(buildSourceKey(doc!.identity)).toBe(
+      `article:audit-seo-2026:fr:${doc!.identity.version}`,
+    );
+  });
+
+  it("transporte tags, category, excerpt, readingMinutes, publishedAt dans metadata", async () => {
+    const doc = await extractArticle(row());
+
+    expect(doc!.metadata).toMatchObject({
+      slug: "audit-seo-2026",
+      tags: ["audit", "seo"],
+      category: ["seo"],
+      readingMinutes: 5,
+      publishedAt: "2026-09-01T10:00:00Z",
+    });
+    expect(doc!.metadata["excerpt"]).toBeNull();
+  });
+
+  it("fonction pure : deux appels produisent le même document (déterminisme)", async () => {
+    const a = await extractArticle(row());
+    const b = await extractArticle(row());
+
+    expect(a).toEqual(b);
   });
 });

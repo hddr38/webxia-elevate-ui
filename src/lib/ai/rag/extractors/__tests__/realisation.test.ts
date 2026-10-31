@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import type { RealisationRow } from "../types";
 import { extractRealisation } from "../realisation";
+import { MIN_CONTENT_CHARS } from "../types";
+import { buildSourceKey, computeContentVersion } from "../../../contracts/source-key";
 
 const baseRow: RealisationRow = {
   id: "r-1",
@@ -82,5 +84,51 @@ describe("extractRealisation", () => {
     expect(doc!.metadata).not.toHaveProperty("gallery_images");
     expect(doc!.metadata).not.toHaveProperty("project_url");
     expect(doc!.metadata).not.toHaveProperty("github_url");
+  });
+
+  it("détecte la limite MIN_CONTENT_CHARS : exactement 200 accepté, 199 rejeté", async () => {
+    const atLimit = row({ description_md: "x".repeat(MIN_CONTENT_CHARS) });
+    expect(await extractRealisation(atLimit)).not.toBeNull();
+
+    const belowLimit = row({ description_md: "x".repeat(MIN_CONTENT_CHARS - 1) });
+    expect(await extractRealisation(belowLimit)).toBeNull();
+  });
+
+  it("la version change quand le contenu change, et reste stable sinon", async () => {
+    const base = await extractRealisation(row());
+    const same = await extractRealisation(row());
+    const edited = await extractRealisation(
+      row({ description_md: `${baseRow.description_md} Édition.` }),
+    );
+
+    expect(same!.identity.version).toBe(base!.identity.version);
+    expect(edited!.identity.version).not.toBe(base!.identity.version);
+
+    // La version est l'empreinte de description_md seul (pas du chapeau ni du titre).
+    expect(base!.identity.version).toBe(await computeContentVersion(baseRow.description_md));
+  });
+
+  it("construit une source_key valide via buildSourceKey", async () => {
+    const doc = await extractRealisation(row());
+
+    expect(buildSourceKey(doc!.identity)).toBe(
+      `realisation:site-vitrine-acme:fr:${doc!.identity.version}`,
+    );
+  });
+
+  it("transporte shortDescription et category dans metadata", async () => {
+    const doc = await extractRealisation(row());
+
+    expect(doc!.metadata).toMatchObject({
+      shortDescription: baseRow.short_description,
+      category: ["web"],
+    });
+  });
+
+  it("fonction pure : deux appels produisent le même document (déterminisme)", async () => {
+    const a = await extractRealisation(row());
+    const b = await extractRealisation(row());
+
+    expect(a).toEqual(b);
   });
 });
